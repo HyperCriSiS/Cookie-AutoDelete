@@ -403,6 +403,8 @@ void onStartUp()
   })
   .catch((error) => {
     // The store may not be available when hydration itself fails, so avoid
-    // using state-dependent logging here.
+    // using state-dependent logging here. Reject pending UI/event readiness
+    // requests as well so callers fail explicitly instead of hanging forever.
+    StoreUser.markFailed(error);
     console.error('Cookie AutoDelete background initialization failed.', error);
   });
