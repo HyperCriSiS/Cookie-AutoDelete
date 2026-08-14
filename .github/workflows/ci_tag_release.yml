@@ -5,6 +5,9 @@ on:
     tags:
       - 'v[0-9].[0-9]+.[0-9]+'
 
+permissions:
+  contents: write
+
 jobs:
   all_jobs:
     name: Tests, Builds, Coverage, Release Uploads
@@ -12,10 +15,10 @@ jobs:
     steps:
       - name: Checkout Commit
         uses: actions/checkout@v4
-      - name: Use Node.js 18.x
-        uses: actions/setup-node@v3
+      - name: Use Node.js LTS 22.x
+        uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '22.x'
       - name: Install Dependencies (npm ci)
         run: npm ci --no-fund
       - name: Run Tests
@@ -28,7 +31,8 @@ jobs:
         id: runbuild
         run: |
           npm run build
-          echo "ffxpi=$(ls builds/*Firefox.xpi)" >> $GITHUB_OUTPUT
+          node ./tools/generateManifest.js firefox builds/firefox-manifest.json
+          echo "ffxpi=$(ls builds/*Firefox.xpi)" >> "$GITHUB_OUTPUT"
       - name: Archive Production Build Artifacts
         if: success()
         uses: actions/upload-artifact@v4
@@ -50,7 +54,7 @@ jobs:
           files: |
             builds/Cookie-AutoDelete_*_Chrome.zip
             builds/Cookie-AutoDelete_*_Firefox.xpi
-          body: This is an auto-generated tagged release - Change log will be manually inserted soon!  Latest versions have been submitted to the relevant browser extension store for review.
+          body: This is an auto-generated tagged release - Change log will be manually inserted soon! Latest versions have been submitted to the relevant browser extension store for review.
           prerelease: ${{ endsWith(github.ref, 'alpha') || endsWith(github.ref, 'beta') }}
           draft: true
       - name: Google Chrome WebStore Upload
@@ -71,4 +75,4 @@ jobs:
           api-secret: ${{ secrets.FIREFOX_API_SECRET }}
           uuid: 'CookieAutoDelete@kennydo.com'
           xpi: ${{ steps.runbuild.outputs.ffxpi }}
-          manifest: extension/manifest.json
+          manifest: builds/firefox-manifest.json
