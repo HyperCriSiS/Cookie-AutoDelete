@@ -12,7 +12,7 @@
  */
 
 import { combineReducers } from 'redux';
-import shortid from 'shortid';
+import { generateId } from '../services/IdService';
 import { ReduxAction, ReduxConstants } from '../typings/ReduxConstants';
 import { initialState } from './State';
 
@@ -34,7 +34,7 @@ const newExpressionObject = (
     : action.payload.cleanSiteData,
   // Preserve IDs from imports/updates. Generate a new one only for genuinely
   // new expressions that do not already carry an ID.
-  id: action.payload.id || shortid.generate(),
+  id: action.payload.id || generateId(),
   listType: !action.payload.listType ? ListType.WHITE : action.payload.listType,
 });
 
