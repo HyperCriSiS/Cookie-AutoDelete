@@ -70,7 +70,11 @@ const firefoxFilename = `${EXTNAME}${tag}Firefox`;
 
 const shouldCopyToPackage = (source) => {
   const basename = path.basename(source);
-  return !basename.endsWith('.map') && basename !== '.DS_Store';
+  return (
+    !basename.endsWith('.map') &&
+    basename !== '.DS_Store' &&
+    basename !== 'redux-webext.js'
+  );
 };
 
 const prepareStage = (target) => {

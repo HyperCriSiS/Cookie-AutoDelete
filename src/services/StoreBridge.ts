@@ -4,10 +4,9 @@
  * Licensed under MIT
  * (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/blob/3.X.X-Branch/LICENSE)
  *
- * Background-side compatibility bridge for the tiny redux-webext wire
- * protocol. Popup/settings can keep their existing UI store temporarily, while
- * the MV3 worker registers the wake-up relevant runtime listeners immediately
- * at module load rather than after asynchronous state hydration.
+ * Background-side compatibility bridge for the former redux-webext wire
+ * protocol. It registers wake-up relevant runtime listeners immediately at
+ * module load rather than after asynchronous state hydration.
  */
 
 import {
@@ -24,12 +23,19 @@ import {
   updateExpression,
   updateSetting,
 } from '../redux/Actions';
+import {
+  STORE_CONNECTION_NAME,
+  STORE_DISPATCH,
+  STORE_UPDATE_STATE,
+} from '../redux/StoreProtocol';
 import { ReduxConstants } from '../typings/ReduxConstants';
 import StoreUser from './StoreUser';
 
-export const STORE_CONNECTION_NAME = 'redux-webext';
-export const STORE_DISPATCH = '@@STORE_DISPATCH';
-export const STORE_UPDATE_STATE = '@@STORE_UPDATE_STATE';
+export {
+  STORE_CONNECTION_NAME,
+  STORE_DISPATCH,
+  STORE_UPDATE_STATE,
+} from '../redux/StoreProtocol';
 
 const actions: { [key in ReduxConstants]?: any } = {
   ADD_EXPRESSION: addExpression,
@@ -111,8 +117,5 @@ export const handleStoreConnection = (
     });
 };
 
-// Register synchronously as this module is loaded by the background entry
-// graph. browser-polyfill translates Promise-returning onMessage listeners to
-// Chromium's callback protocol for the supported browser range.
 browser.runtime.onConnect.addListener(handleStoreConnection);
 browser.runtime.onMessage.addListener(handleStoreMessage);

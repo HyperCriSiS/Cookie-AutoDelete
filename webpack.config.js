@@ -27,10 +27,6 @@ const resolve = {
   extensions: ['.mjs', '.tsx', '.ts', '.js', '.json', '.png'],
 };
 
-const externals = {
-  'redux-webext': 'ReduxWebExt',
-};
-
 const output = {
   path: `${__dirname}/extension/bundles`,
 };
@@ -42,7 +38,6 @@ const backgroundConfig = {
   entry: {
     background: `${__dirname}/src/background.ts`,
   },
-  externals,
   output: {
     ...output,
     filename: 'background.bundle.js',
@@ -63,7 +58,6 @@ const uiConfig = {
     popup: `${__dirname}/src/ui/popup/index.tsx`,
     setting: `${__dirname}/src/ui/settings/index.tsx`,
   },
-  externals,
   output: {
     ...output,
     filename: '[name].bundle.js',
