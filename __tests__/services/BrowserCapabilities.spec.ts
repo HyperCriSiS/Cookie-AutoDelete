@@ -4,10 +4,12 @@ import {
 } from '../../src/services/BrowserCapabilities';
 
 describe('BrowserCapabilities', () => {
-  it('supports all targeted storage types on Chromium', () => {
-    expect(
-      getStorageTypeSupport({ browserDetect: browserName.Chrome }),
-    ).toEqual({
+  it.each([
+    browserName.Chrome,
+    browserName.EdgeChromium,
+    browserName.Opera,
+  ])('supports all targeted storage types on %s', (name) => {
+    expect(getStorageTypeSupport({ browserDetect: name })).toEqual({
       cache: true,
       indexedDb: true,
       localStorage: true,
