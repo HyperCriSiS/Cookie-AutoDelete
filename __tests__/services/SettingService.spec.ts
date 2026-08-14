@@ -20,7 +20,7 @@ import * as BrowserActionService from '../../src/services/BrowserActionService';
 import ContextualIdentitiesEvents from '../../src/services/ContextualIdentitiesEvents';
 import SettingService from '../../src/services/SettingService';
 import StoreUser from '../../src/services/StoreUser';
-import { ReduxAction } from '../../src/typings/ReduxConstants';
+import { ReduxAction, ReduxConstants } from '../../src/typings/ReduxConstants';
 import { resetSettings, updateSetting } from '../../src/redux/Actions';
 import ContextMenuEvents from '../../src/services/ContextMenuEvents';
 
@@ -92,6 +92,14 @@ const defaultTab: browser.tabs.Tab = {
 
 describe('SettingService', () => {
   beforeEach(() => {
+    store.dispatch({
+      type: ReduxConstants.ADD_CACHE,
+      payload: { key: 'browserDetect', value: browserName.Chrome },
+    });
+    store.dispatch({
+      type: ReduxConstants.ADD_CACHE,
+      payload: { key: 'platformOs', value: 'linux' },
+    });
     when(global.browser.runtime.getManifest)
       .calledWith()
       .mockReturnValue({ version: '0.12.34' });
@@ -155,6 +163,25 @@ describe('SettingService', () => {
       TestStore.changeSetting(SettingID.CLEANUP_CACHE, true);
       await SettingService.onSettingsChange();
       expect(global.browser.browsingData.remove).toHaveBeenCalledTimes(1);
+    });
+    it('should not invoke browsingData for unsupported site data', async () => {
+      store.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserDetect', value: browserName.Firefox },
+      });
+      store.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserVersion', value: 84 },
+      });
+      store.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'platformOs', value: 'android' },
+      });
+
+      TestStore.changeSetting(SettingID.CLEANUP_CACHE, true);
+      await SettingService.onSettingsChange();
+
+      expect(global.browser.browsingData.remove).not.toHaveBeenCalled();
     });
     it('should NOT clean that site data if it was recently enabled and clean site data on enable is false', async () => {
       TestStore.changeSetting(SettingID.SITEDATA_EMPTY_ON_ENABLE, false);
