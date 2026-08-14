@@ -18,6 +18,7 @@ import {
   setGlobalIcon,
 } from './services/BrowserActionService';
 import ContextMenuEvents from './services/ContextMenuEvents';
+import DomainChangeEvents from './services/DomainChangeEvents';
 import CookieEvents from './services/CookieEvents';
 import {
   cadLog,
@@ -364,7 +365,7 @@ const handleInstalled = async (details: any): Promise<void> => {
 // for asynchronous state hydration before invoking services that depend on the
 // shared Redux store.
 browser.tabs.onUpdated.addListener(
-  StoreUser.withStoreReady(TabEvents.onDomainChange),
+  StoreUser.withStoreReady(DomainChangeEvents.onDomainChange),
 );
 browser.tabs.onUpdated.addListener(
   StoreUser.withStoreReady(TabEvents.onTabDiscarded),
@@ -373,7 +374,7 @@ browser.tabs.onUpdated.addListener(
   StoreUser.withStoreReady(TabEvents.onTabUpdate),
 );
 browser.tabs.onRemoved.addListener(
-  StoreUser.withStoreReady(TabEvents.onDomainChangeRemove),
+  StoreUser.withStoreReady(DomainChangeEvents.onDomainChangeRemove),
 );
 browser.tabs.onRemoved.addListener(
   StoreUser.withStoreReady(TabEvents.cleanFromTabEvents),
