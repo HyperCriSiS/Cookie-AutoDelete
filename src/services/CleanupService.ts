@@ -290,13 +290,12 @@ export const isSafeToClean = (
   };
 };
 
-/** Clean cookies */
+/** Clean cookies and return only entries the browser confirms were removed. */
 export const cleanCookies = async (
   state: State,
   markedForDeletion: CleanReasonObject[],
-): Promise<void> => {
-  const promiseArr: Promise<browser.cookies.Cookie | null>[] = [];
-  markedForDeletion.forEach((obj) => {
+): Promise<CleanReasonObject[]> => {
+  const operations = markedForDeletion.map(async (obj) => {
     const cookieProperties = obj.cookie;
     const cookieAPIProperties = returnOptionalCookieAPIAttributes(state, {
       firstPartyDomain: cookieProperties.firstPartyDomain,
@@ -307,7 +306,6 @@ export const cleanCookies = async (
       name: cookieProperties.name,
       url: cookieProperties.preparedCookieDomain,
     };
-    // url: "http://domain.com" + cookies[i].path
     cadLog(
       {
         msg: 'CleanupService.cleanCookies: Cookie being removed through browser.cookies.remove via Promises:',
@@ -315,12 +313,38 @@ export const cleanCookies = async (
       },
       getSetting(state, SettingID.DEBUG_MODE) as boolean,
     );
-    const promise = browser.cookies.remove(cookieRemove);
-    promiseArr.push(promise);
+
+    return {
+      obj,
+      result: await browser.cookies.remove(cookieRemove),
+    };
   });
-  await Promise.all(promiseArr).catch((e) => {
-    throw e;
+
+  const results = await Promise.all(operations);
+  const removed: CleanReasonObject[] = [];
+
+  results.forEach((result) => {
+    if (result.result !== null) {
+      removed.push(result.obj);
+      return;
+    }
+
+    cadLog(
+      {
+        msg: 'CleanupService.cleanCookies: browser.cookies.remove returned null; cookie was not removed.',
+        type: 'warn',
+        x: {
+          domain: result.obj.cookie.domain,
+          name: result.obj.cookie.name,
+          path: result.obj.cookie.path,
+          storeId: result.obj.cookie.storeId,
+        },
+      },
+      getSetting(state, SettingID.DEBUG_MODE) as boolean,
+    );
   });
+
+  return removed;
 };
 
 // Cleanup of all cookies for domain.
@@ -391,20 +415,51 @@ export const clearCookiesForThisDomain = async (
   return cookies.length > 0;
 };
 
+type StorageClearResult = {
+  local: number;
+  session: number;
+};
+
+type ScriptingApi = {
+  executeScript: (details: {
+    target: { tabId: number };
+    func: () => StorageClearResult;
+  }) => Promise<Array<{ result?: StorageClearResult }>>;
+};
+
+const clearWebStorageInPage = (): StorageClearResult => {
+  const result = {
+    local: window.localStorage.length,
+    session: window.sessionStorage.length,
+  };
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+  return result;
+};
+
 export const clearLocalStorageForThisDomain = async (
   state: State,
   tab: browser.tabs.Tab,
 ): Promise<boolean> => {
-  // Using this method to ensure cross browser compatibility
   try {
+    if (tab.id === undefined) return false;
+
+    const scripting = (browser as unknown as { scripting?: ScriptingApi })
+      .scripting;
+    if (!scripting) {
+      throw new Error('browser.scripting.executeScript is unavailable.');
+    }
+
     let local = 0;
     let session = 0;
-    const result = await browser.tabs.executeScript(undefined, {
-      code: `var cad_r = {local: window.localStorage.length, session: window.sessionStorage.length};window.localStorage.clear();window.sessionStorage.clear();cad_r;`,
+    const result = await scripting.executeScript({
+      target: { tabId: tab.id },
+      func: clearWebStorageInPage,
     });
-    result.forEach((frame: { [key: string]: any }) => {
-      local += frame.local;
-      session += frame.session;
+    result.forEach((frame) => {
+      if (!frame.result) return;
+      local += frame.result.local;
+      session += frame.result.session;
     });
     showNotification(
       {
@@ -458,14 +513,17 @@ export const clearSiteDataForThisDomain = async (
   const domains = prepareCleanupDomains(hostname, state.cache.browserDetect);
   if (siteData === 'All') {
     const siteDataAll: string[] = [];
+    const results: boolean[] = [];
     for (const sd of SITEDATATYPES) {
-      await removeSiteData(
-        state,
-        sd,
-        state.cache.browserDetect,
-        domains,
-        debug,
-        false,
+      results.push(
+        await removeSiteData(
+          state,
+          sd,
+          state.cache.browserDetect,
+          domains,
+          debug,
+          false,
+        ),
       );
       siteDataAll.push(browser.i18n.getMessage(`${siteDataToBrowser(sd)}Text`));
     }
@@ -481,17 +539,17 @@ export const clearSiteDataForThisDomain = async (
       },
       getSetting(state, SettingID.NOTIFY_MANUAL) as boolean,
     );
-  } else {
-    await removeSiteData(
-      state,
-      siteData,
-      state.cache.browserDetect,
-      domains,
-      debug,
-      true,
-    );
+    return results.every(Boolean);
   }
-  return true;
+
+  return removeSiteData(
+    state,
+    siteData,
+    state.cache.browserDetect,
+    domains,
+    debug,
+    true,
+  );
 };
 
 export const removeSiteData = async (
@@ -694,7 +752,7 @@ export const filterSiteData = (
   const isExpiredRestart = obj.reason === ReasonClean.ExpiredCookieRestart;
   const isCADCookieNoExpression =
     (obj.reason === ReasonClean.CADSiteDataCookie ||
-      ReasonClean.CADSiteDataCookieRestart) &&
+      obj.reason === ReasonClean.CADSiteDataCookieRestart) &&
     obj.expression === undefined;
   const nonBlankCookieHostName = obj.cookie.hostname.trim() !== '';
   const cleanSiteDataInExpression = parseCleanSiteData(
@@ -936,8 +994,9 @@ export const cleanCookiesOperation = async (
       );
     }
 
+    let successfullyRemoved: CleanReasonObject[] = [];
     try {
-      await cleanCookies(state, markedForDeletion);
+      successfullyRemoved = await cleanCookies(state, markedForDeletion);
     } catch (e: unknown) {
       cadLog(
         {
@@ -954,8 +1013,8 @@ export const cleanCookiesOperation = async (
       }
     }
 
-    // Extract away the CAD Internal Cookie from Clean Entries.
-    const removedCookies = markedForDeletion.filter((c) => {
+    // Extract away the CAD Internal Cookie from entries that were actually removed.
+    const removedCookies = successfullyRemoved.filter((c) => {
       return c.cookie.name !== CADCOOKIENAME;
     });
 
