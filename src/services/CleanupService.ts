@@ -16,6 +16,10 @@ import {
   usesBrowsingDataOrigins,
 } from './BrowserCapabilities';
 import {
+  cookiePartitionDetails,
+  getAllCookiesIncludingPartitions,
+} from './CookieApi';
+import {
   CADCOOKIENAME,
   cadLog,
   extractMainDomain,
@@ -307,6 +311,7 @@ export const cleanCookies = async (
     });
     const cookieRemove = {
       ...cookieAPIProperties,
+      ...cookiePartitionDetails(cookieProperties),
       name: cookieProperties.name,
       url: cookieProperties.preparedCookieDomain,
     };
@@ -357,7 +362,8 @@ export const clearCookiesForThisDomain = async (
   tab: browser.tabs.Tab,
 ): Promise<boolean> => {
   const hostname = getHostname(tab.url);
-  const getCookies = await browser.cookies.getAll(
+  const getCookies = await getAllCookiesIncludingPartitions(
+    state,
     returnOptionalCookieAPIAttributes(state, {
       domain: hostname,
       storeId: tab.cookieStoreId,
@@ -372,6 +378,7 @@ export const clearCookiesForThisDomain = async (
       const r = await browser.cookies.remove(
         returnOptionalCookieAPIAttributes(state, {
           firstPartyDomain: cookie.firstPartyDomain,
+          ...cookiePartitionDetails(cookie),
           name: cookie.name,
           storeId: cookie.storeId,
           url: prepareCookieDomain(cookie),
@@ -910,7 +917,8 @@ export const cleanCookiesOperation = async (
   for (const id of cookieStoreIds) {
     let cookies: browser.cookies.Cookie[] = [];
     try {
-      cookies = await browser.cookies.getAll(
+      cookies = await getAllCookiesIncludingPartitions(
+        state,
         returnOptionalCookieAPIAttributes(state, {
           storeId: id,
         }),
