@@ -47,4 +47,15 @@ describe('StoreUser readiness', () => {
     StoreUser.markReady();
     await expect(waiting).resolves.toBe(fakeStore);
   });
+
+  it('rejects pending and future readiness requests after startup fails', async () => {
+    const StoreUser = require('../../src/services/StoreUser').default;
+    const failure = new Error('corrupt persisted state');
+
+    const waiting = StoreUser.ready();
+    StoreUser.markFailed(failure);
+
+    await expect(waiting).rejects.toBe(failure);
+    await expect(StoreUser.ready()).rejects.toBe(failure);
+  });
 });
