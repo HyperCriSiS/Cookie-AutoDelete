@@ -1,92 +1,103 @@
+[link-amo]: https://addons.mozilla.org/firefox/addon/cookie-autodelete/
+[link-cws]: https://chrome.google.com/webstore/detail/cookie-autodelete/fhcgjolkccmbidfldomjliifgaodjagh
+[link-edge]: https://microsoftedge.microsoft.com/addons/detail/djkjpnciiommncecmdefpdllknjdmmmo
+
+| Latest Release Tests ![Latest Release](https://img.shields.io/github/v/release/Cookie-AutoDelete/Cookie-AutoDelete) | Development Tests | Localization | Coverage |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![Tagged Release Distribution](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/workflows/Tagged%20Release%20Distribution/badge.svg) | ![Node.js CI Tests](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/workflows/CI/badge.svg?branch=3.X.X-Branch) | [![Crowdin](https://d322cqt584bo4o.cloudfront.net/cookie-autodelete/localized.svg)](https://crowdin.com/project/cookie-autodelete) | [![Coverage Status](https://coveralls.io/repos/github/Cookie-AutoDelete/Cookie-AutoDelete/badge.svg?branch=3.X.X-Branch)](https://coveralls.io/github/Cookie-AutoDelete/Cookie-AutoDelete?branch=3.X.X-Branch) [![codecov](https://codecov.io/gh/Cookie-AutoDelete/Cookie-AutoDelete/branch/3.X.X-Branch/graph/badge.svg)](https://codecov.io/gh/Cookie-AutoDelete/Cookie-AutoDelete) |
+
 # Cookie AutoDelete
 
-[![Mozilla Add-on](https://img.shields.io/amo/v/cookie-autodelete.svg)](https://addons.mozilla.org/firefox/addon/cookie-autodelete/)
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/fhcgjolkccmbidfldomjliifgaodjagh.svg)](https://chrome.google.com/webstore/detail/cookie-autodelete/fhcgjolkccmbidfldomjliifgaodjagh)
-[![Microsoft Edge Add-ons](https://img.shields.io/badge/dynamic/json?label=edge&query=%24.version&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Fdjkjpnciiommncecmdefpdllknjdmmmo)](https://microsoftedge.microsoft.com/addons/detail/djkjpnciiommncecmdefpdllknjdmmmo)
-[![GitHub license](https://img.shields.io/github/license/Cookie-AutoDelete/Cookie-AutoDelete.svg)](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/blob/3.X.X-Branch/LICENSE)
-[![GitHub release](https://img.shields.io/github/release/Cookie-AutoDelete/Cookie-AutoDelete.svg)](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/releases)
-[![GitHub issues](https://img.shields.io/github/issues/Cookie-AutoDelete/Cookie-AutoDelete.svg)](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/Cookie-AutoDelete/Cookie-AutoDelete.svg)](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/pulls)
-[![Coverage Status](https://coveralls.io/repos/github/Cookie-AutoDelete/Cookie-AutoDelete/badge.svg?branch=3.X.X-Branch)](https://coveralls.io/github/Cookie-AutoDelete/Cookie-AutoDelete?branch=3.X.X-Branch)
-[![codecov](https://codecov.io/gh/Cookie-AutoDelete/Cookie-AutoDelete/branch/3.X.X-Branch/graph/badge.svg?token=r3lpRXe5Vf)](https://codecov.io/gh/Cookie-AutoDelete/Cookie-AutoDelete)
+Control your cookies! This extension is inspired by [Self-Destructing Cookies](https://addons.mozilla.org/firefox/addon/self-destructing-cookies/). When a tab closes, any cookies not being used are automatically deleted. Prevent tracking by other cookies and add only the ones you trust. Easily import and export your cookie whitelist.
 
-Control your cookies! This extension is inspired by [Self-Destructing Cookies](https://addons.mozilla.org/firefox/addon/self-destructing-cookies/). When a tab closes, any cookies not being used are automatically deleted. Keep the ones you trust (forever/until restart) while deleting the rest. Containers Supported!
+## Main features
 
-## Main Features
+- Automatically deletes cookies from closed tabs
+- Whitelist/Greylist support for cookies
+- Easily export/import your configurations
+- Clear all cookies for a domain
+- Supports manual mode cleaning from the popup
+- Easily see the number of cookies for a site
+- Support for Container Tabs (Firefox 53+ only)
 
-- Auto Deletes Cookies from Closed Tabs
-- WhiteList/GreyList Support for Cookies
-- Easily Export/Import your Whitelist/Greylist
-- Clear All Cookies for a Domain
-- Supports Manual Mode Cleaning from the popup
-- Easily See the Number of Cookies for a site
-- Support for Container Tabs (Firefox 53+)
-- LocalStorage Support (Firefox 58+)
-- Protect Cookies via Open Tabs
-- Domain Change Cookie Cleanup
-- Support for List of Expressions
-- Easily Create an Expression for a Site
-- Clean Cookies from Discarded/Unloaded Tabs
-- Cookie Cleanup on Startup
-- Support for Cleaning the following Browsing Data:
-  - Cache
-  - IndexedDB
-  - LocalStorage
-  - Plugin Data
-  - Service Workers
-
-## Usage
+### Usage
 
 1. Add the sites you want to keep cookies for to the whitelist (permanently) or greylist (until browser restart)
 2. Enable "Automatic Cleaning" in settings or "Auto-Clean" in popup
 3. Watch those unused cookies disappear :)
 
+## Installation
+
+### via Official Channels
+
+- [Google Chrome][link-cws]
+
+  - [![Chrome Lastest](https://img.shields.io/chrome-web-store/v/fhcgjolkccmbidfldomjliifgaodjagh)][link-cws] [![Chrome Users](https://img.shields.io/chrome-web-store/users/fhcgjolkccmbidfldomjliifgaodjagh)][link-cws]
+
+- [Mozilla Firefox][link-amo]
+  - [![Firefox Latest](https://img.shields.io/amo/v/cookie-autodelete)][link-amo] [![Firefox Users](https://img.shields.io/amo/users/cookie-autodelete)][link-amo]
+- [Microsoft Edge Chromium][link-edge]
+  - Should have the exact same features as Google Chrome
+  - [![](https://img.shields.io/badge/dynamic/json?label=edge%20chromium%20add-on&prefix=v&query=%24.version&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Fdjkjpnciiommncecmdefpdllknjdmmmo)][link-edge]
+
+### via Self Installation
+
+- [Github Releases](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/releases)
+
+> Please keep in mind that at this time only Mozilla Firefox and Google Chrome (as well as its development branches e.g. Developer Edition, Canary) will be supported.  
+> Microsoft Edge Chromium will be considered partially official as it is using the same code as Google Chrome for now.
+> While you may be able to install this extension on other browsers (i.e. Varations of Edge, Chrome, Firefox, Android), there will be no official support from the authors and maintainers through Github Discussions and/or Issues.
+
 ## Contributing
 
-### Found a bug? Have a suggestion?
+### Donations
 
-- Read the [FAQ](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/wiki/FAQ:-Common-Questions-and-Issues)
-- Read the [Documentation](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/wiki/Documentation)
-- Check the [existing issues](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/issues)
-- Create a [new issue](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/issues/new/choose)
+[Donations are done through Liberapay/PayPal](https://liberapay.com/CAD_Developers/). If this webextension has helped you in any way, we would appreciate a small donation to assist in our efforts to make this even better. Note that although Liberapay has recurring donation model, you can opt to 'manually' donate a one time amount as well.
 
-### Want to help with translations?
+### Internationalization (i18n)
 
-- Visit our [Crowdin](https://crowdin.com/project/cookie-autodelete) project
+[Translate Cookie AutoDelete in your language or help fix a translation on Crowdin!](https://crowdin.com/project/cookie-autodelete)
+Some translations were taken from Machine Translations - if you believe there is a better translation for them, please submit an updated translation and raise an issue through CrowdIn.
 
-### Want to develop?
+### Contributing code
 
-We follow the [GitHub Flow](https://guides.github.com/introduction/flow/) process for contributing code.
+If there are any bugs that only a certain browser has, and you have the fix for it, feel free to submit a PR for it, as long as it does not affect the functionality to other browsers. The easiest is to wrap your bugfix with check for that browser.
 
-1. Fork this repository to your own GitHub account and then clone it to your local device
-2. Install dependencies: `npm install`
-3. Create an unpacked MV3 development build for the browser you want to test:
-   - Chromium/Chrome/Brave/Edge: `npm run dev:chromium`
+#### Requirements
+
+- Latest version of Node.js
+
+#### Development
+
+- `npm install` - Installs all dependencies
+- `npm run dev:chromium` - Builds an unpacked Chromium MV3 extension in `/builds/dev-chromium`
+- `npm run dev:firefox` - Builds an unpacked Firefox MV3 extension in `/builds/dev-firefox`
+- `npm run lint` - Runs the eslinter for JS files
+- `npm test` - Runs the test suite located in `/test`
+- `npm run build` - Builds the Firefox (.xpi/.zip) and Chrome (.zip) builds
+
+#### Testing
+
+1. Run `npm install` (if you haven't already)
+2. Run the development build for the browser you want to test:
    - Firefox: `npm run dev:firefox`
-4. Load the generated extension from:
-   - Chromium: `builds/dev-chromium`
-   - Firefox: select `builds/dev-firefox/manifest.json` as a temporary add-on in `about:debugging`
-5. Re-run the corresponding `dev:*` command after source changes.
+   - Chromium/Chrome: `npm run dev:chromium`
+3. Load the generated extension in the browser
 
-The development build is generated from the same shared Manifest V3 base and browser-specific overlays used by release packaging. Source manifests are not rewritten during the build.
+- Firefox
 
-If there are any bugs that only a certain browser has, and you have the fix for it, please provide as much documentation as possible. Thank you!
+  - Easiest way would be to run the tool [web-ext](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/#Testing_out_an_extension)
+  - Another way is go into `about:debugging` and load `/builds/dev-firefox/manifest.json`
 
-## Other Cookie Managers
+- Chrome
+  - In the extension tab, enable Developer Mode, then `load unpacked extension` and load the `/builds/dev-chromium` folder
 
-If you are looking for an alternative cookie manager, see:
+#### Building
 
-- [CookieBro](https://nodetics.com/cookiebro/)
-- [Cookie Quick Manager](https://addons.mozilla.org/firefox/addon/cookie-quick-manager/)
+1. Run `npm install` (if you haven't already)
+2. Run `npm run build`
+3. The build files should be in a new folder called `/builds`
 
-## Contributors
+## Documentation
 
-See the full [contributors graph](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/graphs/contributors).
-
-## Support / Donations
-
-If you find this extension useful, you can support the project through [Liberapay](https://liberapay.com/Cookie-AutoDelete/).
-
-## License
-
-Cookie AutoDelete is licensed under the [MIT License](LICENSE).
+Full documentation can be found in the [wiki](https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/wiki/Documentation).
