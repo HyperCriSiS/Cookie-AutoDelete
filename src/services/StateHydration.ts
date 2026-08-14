@@ -37,17 +37,21 @@ export const parsePersistedState = (
     throw new Error('Persisted Cookie AutoDelete state is not an object.');
   }
 
-  if (
-    parsed.lists !== undefined &&
-    !isRecord(parsed.lists)
-  ) {
+  // All supported 3.x persisted Redux states contain both core slices. An
+  // existing state without them is treated as incomplete/corrupt instead of
+  // letting Redux silently recreate empty lists and then persist them.
+  if (!Object.prototype.hasOwnProperty.call(parsed, 'lists')) {
+    throw new Error('Persisted Cookie AutoDelete state is missing expression lists.');
+  }
+  if (!Object.prototype.hasOwnProperty.call(parsed, 'settings')) {
+    throw new Error('Persisted Cookie AutoDelete state is missing settings.');
+  }
+
+  if (!isRecord(parsed.lists)) {
     throw new Error('Persisted Cookie AutoDelete expression lists are invalid.');
   }
 
-  if (
-    parsed.settings !== undefined &&
-    !isRecord(parsed.settings)
-  ) {
+  if (!isRecord(parsed.settings)) {
     throw new Error('Persisted Cookie AutoDelete settings are invalid.');
   }
 
