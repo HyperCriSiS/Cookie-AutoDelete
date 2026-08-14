@@ -25,7 +25,6 @@ import {
   eventListenerActions,
   extractMainDomain,
   getSetting,
-  sleep,
 } from './services/Libs';
 import StoreUser from './services/StoreUser';
 import TabEvents from './services/TabEvents';
@@ -131,15 +130,6 @@ const onStartUp = async () => {
 
   await checkIfProtected(store.getState());
 
-  browser.tabs.onUpdated.addListener(TabEvents.onDomainChange);
-  browser.tabs.onUpdated.addListener(TabEvents.onTabDiscarded);
-  browser.tabs.onUpdated.addListener(TabEvents.onTabUpdate);
-  browser.tabs.onRemoved.addListener(TabEvents.onDomainChangeRemove);
-  browser.tabs.onRemoved.addListener(TabEvents.cleanFromTabEvents);
-
-  // This should update the cookie badge count when cookies are changed.
-  browser.cookies.onChanged.addListener(CookieEvents.onCookieChanged);
-
   if (browser.contextMenus) {
     ContextMenuEvents.menuInit();
   }
@@ -211,17 +201,27 @@ function handleConnect(p: browser.runtime.Port) {
 
 browser.runtime.onConnect.addListener(handleConnect);
 
-onStartUp().then(() => {
-  cadLog(
-    {
-      msg: `background.onStartUp has been executed`,
-      type: 'info',
-    },
-    getSetting(store.getState(), SettingID.DEBUG_MODE) as boolean,
-  );
-});
-browser.runtime.onStartup.addListener(async () => {
-  await awaitStore();
+const greyCleanup = () => {
+  if (getSetting(store.getState(), SettingID.ACTIVE_MODE)) {
+    cadLog(
+      {
+        msg: `background.greyCleanup:  dispatching browser restart greyCleanup.`,
+      },
+      getSetting(store.getState(), SettingID.DEBUG_MODE) as boolean,
+    );
+    store.dispatch<any>(
+      cookieCleanup({
+        greyCleanup: true,
+        ignoreOpenTabs: getSetting(
+          store.getState(),
+          SettingID.CLEAN_OPEN_TABS_STARTUP,
+        ),
+      }),
+    );
+  }
+};
+
+const handleBrowserStartup = async (): Promise<void> => {
   if (getSetting(store.getState(), SettingID.ACTIVE_MODE) === true) {
     if (getSetting(store.getState(), SettingID.ENABLE_GREYLIST) === true) {
       let isFFSessionRestore = false;
@@ -251,9 +251,9 @@ browser.runtime.onStartup.addListener(async () => {
     }
   }
   await checkIfProtected(store.getState());
-});
-browser.runtime.onInstalled.addListener(async (details) => {
-  await awaitStore();
+};
+
+const handleInstalled = async (details: any): Promise<void> => {
   await checkIfProtected(store.getState());
   switch (details.reason) {
     case 'install':
@@ -336,30 +336,53 @@ browser.runtime.onInstalled.addListener(async (details) => {
     default:
       break;
   }
-});
-
-const awaitStore = async () => {
-  while (!store) {
-    await sleep(250);
-  }
 };
 
-const greyCleanup = () => {
-  if (getSetting(store.getState(), SettingID.ACTIVE_MODE)) {
+// Register all core browser event listeners synchronously. The wrappers wait
+// for asynchronous state hydration before invoking services that depend on the
+// shared Redux store.
+browser.tabs.onUpdated.addListener(
+  StoreUser.withStoreReady(TabEvents.onDomainChange),
+);
+browser.tabs.onUpdated.addListener(
+  StoreUser.withStoreReady(TabEvents.onTabDiscarded),
+);
+browser.tabs.onUpdated.addListener(
+  StoreUser.withStoreReady(TabEvents.onTabUpdate),
+);
+browser.tabs.onRemoved.addListener(
+  StoreUser.withStoreReady(TabEvents.onDomainChangeRemove),
+);
+browser.tabs.onRemoved.addListener(
+  StoreUser.withStoreReady(TabEvents.cleanFromTabEvents),
+);
+
+// This should update the cookie badge count when cookies are changed.
+browser.cookies.onChanged.addListener(
+  StoreUser.withStoreReady(CookieEvents.onCookieChanged),
+);
+
+browser.runtime.onStartup.addListener(
+  StoreUser.withStoreReady(handleBrowserStartup),
+);
+browser.runtime.onInstalled.addListener(
+  StoreUser.withStoreReady(handleInstalled),
+);
+
+// Start hydration only after all core event listeners above have been
+// registered synchronously.
+void onStartUp()
+  .then(() => {
     cadLog(
       {
-        msg: `background.greyCleanup:  dispatching browser restart greyCleanup.`,
+        msg: `background.onStartUp has been executed`,
+        type: 'info',
       },
       getSetting(store.getState(), SettingID.DEBUG_MODE) as boolean,
     );
-    store.dispatch<any>(
-      cookieCleanup({
-        greyCleanup: true,
-        ignoreOpenTabs: getSetting(
-          store.getState(),
-          SettingID.CLEAN_OPEN_TABS_STARTUP,
-        ),
-      }),
-    );
-  }
-};
+  })
+  .catch((error) => {
+    // The store may not be available when hydration itself fails, so avoid
+    // using state-dependent logging here.
+    console.error('Cookie AutoDelete background initialization failed.', error);
+  });
