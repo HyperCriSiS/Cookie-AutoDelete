@@ -122,7 +122,7 @@ module.exports = {
   // The path to a module that runs some code to configure or set up the testing framework before each test
   // setupTestFrameworkScriptFile: null,
 
-  // A list of paths to snapshot serializer modules that jest should use for snapshot testing
+  // A list of paths to snapshot serializer modules Jest should use for snapshot testing
   // snapshotSerializers: [],
 
   // The test environment that will be used for testing
