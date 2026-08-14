@@ -55,6 +55,30 @@ const isChromiumFamily = (name: browserName | undefined): boolean =>
   name === browserName.EdgeChromium ||
   name === browserName.Opera;
 
+export const getBrowserMajorVersionFromUserAgent = (
+  name: browserName | undefined,
+  userAgent: string,
+): number | undefined => {
+  const patterns: Partial<Record<browserName, RegExp>> = {
+    [browserName.Chrome]: /(?:Chrome|CriOS)\/(\d+)/i,
+    [browserName.EdgeChromium]: /Edg(?:A|iOS)?\/(\d+)/i,
+    [browserName.Opera]: /(?:OPR|Opera)\/(\d+)/i,
+    [browserName.Firefox]: /Firefox\/(\d+)/i,
+  };
+  const pattern = name ? patterns[name] : undefined;
+  const match = pattern?.exec(userAgent);
+  if (!match) return undefined;
+  const version = Number.parseInt(match[1], 10);
+  return Number.isFinite(version) ? version : undefined;
+};
+
+export const supportsPartitionedCookies = (cache: CacheMap): boolean => {
+  const version = Number.parseInt(String(cache.browserVersion), 10);
+  if (!Number.isFinite(version)) return false;
+  if (cache.browserDetect === browserName.Firefox) return version >= 94;
+  return isChromiumFamily(cache.browserDetect) && version >= 119;
+};
+
 export const usesBrowsingDataOrigins = (
   name: browserName | undefined,
 ): boolean => isChromiumFamily(name);

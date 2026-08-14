@@ -1,6 +1,8 @@
 import {
+  getBrowserMajorVersionFromUserAgent,
   getRuntimeCapabilities,
   getStorageTypeSupport,
+  supportsPartitionedCookies,
   supportsStorageType,
   usesBrowsingDataOrigins,
 } from '../../src/services/BrowserCapabilities';
@@ -87,6 +89,48 @@ describe('BrowserCapabilities', () => {
     expect(usesBrowsingDataOrigins(browserName.EdgeChromium)).toBe(true);
     expect(usesBrowsingDataOrigins(browserName.Opera)).toBe(true);
     expect(usesBrowsingDataOrigins(browserName.Firefox)).toBe(false);
+  });
+
+  it('parses Chromium-family major versions from user agents', () => {
+    expect(
+      getBrowserMajorVersionFromUserAgent(
+        browserName.Chrome,
+        'Mozilla/5.0 Chrome/119.0.0.0 Safari/537.36',
+      ),
+    ).toBe(119);
+    expect(
+      getBrowserMajorVersionFromUserAgent(
+        browserName.EdgeChromium,
+        'Mozilla/5.0 Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0',
+      ),
+    ).toBe(130);
+    expect(
+      getBrowserMajorVersionFromUserAgent(
+        browserName.Opera,
+        'Mozilla/5.0 Chrome/130.0.0.0 Safari/537.36 OPR/115.0.0.0',
+      ),
+    ).toBe(115);
+  });
+
+  it('enables partitioned-cookie queries only on supported browser versions', () => {
+    expect(
+      supportsPartitionedCookies({
+        browserDetect: browserName.Chrome,
+        browserVersion: 118,
+      }),
+    ).toBe(false);
+    expect(
+      supportsPartitionedCookies({
+        browserDetect: browserName.Chrome,
+        browserVersion: 119,
+      }),
+    ).toBe(true);
+    expect(
+      supportsPartitionedCookies({
+        browserDetect: browserName.Firefox,
+        browserVersion: 94,
+      }),
+    ).toBe(true);
   });
 
   it('detects runtime APIs by capability instead of browser name', () => {

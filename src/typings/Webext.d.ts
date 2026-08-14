@@ -32,6 +32,15 @@ declare namespace browser.browsingData {
 }
 
 declare namespace browser.cookies {
+  interface CookiePartitionKey {
+    topLevelSite?: string;
+    hasCrossSiteAncestor?: boolean;
+  }
+
+  interface Cookie {
+    partitionKey?: CookiePartitionKey;
+  }
+
   interface CookieProperties extends browser.cookies.Cookie {
     firstPartyDomain?: string;
   }
