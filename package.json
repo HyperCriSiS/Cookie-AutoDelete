@@ -63,7 +63,8 @@
     "webpack-cli": "^4.10.0"
   },
   "scripts": {
-    "build": "npm run compile && node ./tools/buildFilesDev.js",
+    "build": "npm run clean && npm run compile && node ./tools/buildFilesDev.js",
+    "clean": "node ./tools/cleanBuildArtifacts.js",
     "compile": "webpack --config webpack.config.js --color",
     "dev": "webpack --config webpack.config.js --progress --color --watch",
     "lint": "eslint -c .eslintrc.json --ext .ts src/",
