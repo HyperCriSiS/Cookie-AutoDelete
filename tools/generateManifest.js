@@ -55,6 +55,9 @@ const validateManifest = (manifest, target) => {
   if (!manifest.host_permissions.includes('<all_urls>')) {
     throw new Error('Expected <all_urls> host permission is missing.');
   }
+  if (manifest.permissions.includes('tabs')) {
+    throw new Error('tabs permission is redundant when <all_urls> is granted.');
+  }
 
   if (target === 'chromium') {
     if (!manifest.background?.service_worker) {

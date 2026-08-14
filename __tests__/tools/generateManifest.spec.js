@@ -39,6 +39,7 @@ describe('generateManifest', () => {
     expect(manifest.background.service_worker).toBe('background.js');
     expect(manifest.permissions).not.toContain('contextualIdentities');
     expect(manifest.permissions).not.toContain('<all_urls>');
+    expect(manifest.permissions).not.toContain('tabs');
     expect(manifest.host_permissions).toContain('<all_urls>');
     expect(() => validateManifest(manifest, 'chromium')).not.toThrow();
   });
@@ -57,6 +58,17 @@ describe('generateManifest', () => {
       'CookieAutoDelete@kennydo.com',
     );
     expect(() => validateManifest(manifest, 'firefox')).not.toThrow();
+  });
+
+  it('rejects redundant tabs permission when host access is already global', () => {
+    const output = path.join(tempDir, 'chromium.json');
+    generateManifest('chromium', output);
+    const manifest = JSON.parse(fs.readFileSync(output, 'utf8'));
+    manifest.permissions.push('tabs');
+
+    expect(() => validateManifest(manifest, 'chromium')).toThrow(
+      'tabs permission is redundant',
+    );
   });
 
   it('rejects unknown targets', () => {
