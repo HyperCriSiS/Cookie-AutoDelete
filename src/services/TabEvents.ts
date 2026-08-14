@@ -11,7 +11,7 @@
  * SOFTWARE.
  */
 
-import shortid from 'shortid';
+import { generateId } from './IdService';
 import AlarmEvents from './AlarmEvents';
 import {
   checkIfProtected,
@@ -307,7 +307,7 @@ export default class TabEvents extends StoreUser {
             ? extractMainDomain(getHostname(tab.url))
             : '',
           name: CADCOOKIENAME,
-          path: `/${shortid.generate()}`,
+          path: `/${generateId()}`,
           storeId: tab.cookieStoreId,
           url: tab.url,
           value: CADCOOKIENAME,
