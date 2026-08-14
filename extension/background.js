@@ -11,6 +11,5 @@
 importScripts(
   'global_files/browser-polyfill.min.js',
   'global_files/browserDetect.js',
-  'global_files/redux-webext.js',
   'bundles/background.bundle.js',
 );
