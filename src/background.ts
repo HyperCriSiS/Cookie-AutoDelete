@@ -203,6 +203,18 @@ if (browser.contextMenus) {
   );
 }
 
+if (browser.contextualIdentities) {
+  browser.contextualIdentities.onCreated.addListener(
+    StoreUser.withStoreReady(ContextualIdentitiesEvents.onContainerCreated),
+  );
+  browser.contextualIdentities.onRemoved.addListener(
+    StoreUser.withStoreReady(ContextualIdentitiesEvents.onContainerRemoved),
+  );
+  browser.contextualIdentities.onUpdated.addListener(
+    StoreUser.withStoreReady(ContextualIdentitiesEvents.onContainerUpdated),
+  );
+}
+
 const greyCleanup = () => {
   if (getSetting(store.getState(), SettingID.ACTIVE_MODE)) {
     cadLog(
