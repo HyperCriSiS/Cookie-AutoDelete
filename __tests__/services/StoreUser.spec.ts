@@ -28,4 +28,23 @@ describe('StoreUser readiness', () => {
     await expect(result).resolves.toBe('handled:event');
     expect(handler).toHaveBeenCalledWith('event');
   });
+
+  it('can attach the store without releasing events until markReady', async () => {
+    const StoreUser = require('../../src/services/StoreUser').default;
+    const fakeStore = { getState: jest.fn() };
+
+    StoreUser.init(fakeStore, false);
+
+    let resolved = false;
+    const waiting = StoreUser.ready().then((store: unknown) => {
+      resolved = true;
+      return store;
+    });
+
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    StoreUser.markReady();
+    await expect(waiting).resolves.toBe(fakeStore);
+  });
 });
