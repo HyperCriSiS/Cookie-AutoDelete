@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020-2022 Kenneth Tran and CAD Team (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/graphs/contributors)
+ * Copyright (c) 2017-2022 Kenny Do and CAD Team (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/graphs/contributors)
  * Licensed under MIT (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/blob/3.X.X-Branch/LICENSE)
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
@@ -278,102 +278,119 @@ export default class ContextMenuEvents extends StoreUser {
                 ? 'action'
                 : 'browser_action',
               'page',
-            ] as browser.menus.ContextType[]),
+            ] as any),
       },
       ContextMenuEvents.onCreatedOrUpdated,
     );
   }
 
-  protected static onCreatedOrUpdated(): void {
-    if (browser.runtime.lastError) {
-      cadLog(
-        {
-          msg: 'Context Menu Create/Update Error',
-          type: 'error',
-          x: browser.runtime.lastError,
-        },
-        getSetting(StoreUser.store.getState(), SettingID.DEBUG_MODE) as boolean,
-      );
-    }
+  public static updateMenuItemCheckbox(id: string, checked: boolean): void {
+    browser.contextMenus
+      .update(id, {
+        checked,
+      })
+      .finally(this.onCreatedOrUpdated);
+    cadLog(
+      {
+        msg: `ContextMenuEvents.updateMenuItemCheckbox: Updated Menu Item.`,
+        x: { id, checked },
+      },
+      getSetting(StoreUser.store.getState(), SettingID.DEBUG_MODE) as boolean,
+    );
   }
 
-  public static updateMenuItemCheckbox(id: string, value: boolean): void {
-    if (!ContextMenuEvents.isInitialized) return;
-    browser.contextMenus.update(id, { checked: value });
-  }
-
-  protected static setMenuEnabled(id: string, value: boolean): void {
-    if (!ContextMenuEvents.isInitialized) return;
-    browser.contextMenus.update(id, { enabled: value });
-  }
-
-  public static async onContextMenuClicked(
-    info: browser.contextMenus.OnClickData,
-    tab?: browser.tabs.Tab,
-  ): Promise<void> {
-    if (!tab) return;
+  public static onCreatedOrUpdated(): void {
     const debug = getSetting(
       StoreUser.store.getState(),
       SettingID.DEBUG_MODE,
     ) as boolean;
+    if (browser.runtime.lastError) {
+      cadLog(
+        {
+          msg: `ContextMenuEvents.onCreatedOrUpdated received an error: ${browser.runtime.lastError}`,
+          type: 'error',
+        },
+        true,
+      );
+    } else {
+      cadLog(
+        {
+          msg: `ContextMenuEvents.onCreatedOrUpdated:  Create/Update contextMenuItem was successful.`,
+        },
+        debug,
+      );
+    }
+  }
+
+  public static async onContextMenuClicked(
+    info: browser.contextMenus.OnClickData,
+    tab: browser.tabs.Tab,
+  ): Promise<void> {
+    const debug = getSetting(
+      StoreUser.store.getState(),
+      SettingID.DEBUG_MODE,
+    ) as boolean;
+    const contextualIdentities = getSetting(
+      StoreUser.store.getState(),
+      SettingID.CONTEXTUAL_IDENTITIES,
+    ) as boolean;
     cadLog(
       {
         msg: `ContextMenuEvents.onContextMenuClicked:  Data received`,
-        x: { info, tab: { ...tab, favIconUrl: undefined } },
+        x: { info, tab },
       },
       debug,
     );
-
+    const cookieStoreId = (tab && tab.cookieStoreId) || '';
+    const selectionText = (info && info.selectionText) || '';
     if (
-      typeof info.menuItemId === 'string' &&
-      info.menuItemId.startsWith(ContextMenuEvents.MenuID.MANUAL_CLEAN_SITEDATA)
+      info.menuItemId
+        .toString()
+        .startsWith(ContextMenuEvents.MenuID.MANUAL_CLEAN_SITEDATA)
     ) {
-      const siteData = info.menuItemId.substring(
-        ContextMenuEvents.MenuID.MANUAL_CLEAN_SITEDATA.length,
-      ) as SiteDataType | 'All' | 'Cookies';
+      const siteData = info.menuItemId
+        .toString()
+        .slice(ContextMenuEvents.MenuID.MANUAL_CLEAN_SITEDATA.length);
       const hostname = getHostname(tab.url);
       if (!hostname) {
-        showNotification(
-          browser.i18n.getMessage('notificationClearDomainError'),
-          browser.i18n.getMessage('notificationClearDomainErrorTitle'),
-          getSetting(
-            StoreUser.store.getState(),
-            SettingID.NOTIFY_DURATION,
-          ) as number,
-        );
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked cannot clean ${siteData} from tab:`,
             type: 'warn',
-            x: tab,
+            x: { tab },
           },
           debug,
         );
+        showNotification({
+          duration: getSetting(
+            StoreUser.store.getState(),
+            SettingID.NOTIFY_DURATION,
+          ) as number,
+          msg: `${browser.i18n.getMessage('manualCleanError', [
+            browser.i18n.getMessage(
+              `${siteDataToBrowser(siteData as SiteDataType)}Text`,
+            ),
+          ])}\n
+              ${tab.title}\n\n
+              ${tab.url}
+              `,
+        });
         return;
       }
       cadLog(
         {
           msg: `ContextMenuEvents.onContextMenuClicked triggered Clean Site Data (${siteData}) For This Domain.`,
-          x: { hostname, siteData },
         },
         debug,
       );
+      if (siteData === 'Cookies') {
+        await clearCookiesForThisDomain(StoreUser.store.getState(), tab);
+        return;
+      }
       switch (siteData) {
         case 'All':
-          await clearSiteDataForThisDomain(
-            StoreUser.store.getState(),
-            'All',
-            hostname,
-          );
-          await clearCookiesForThisDomain(StoreUser.store.getState(), tab);
-          await clearLocalStorageForThisDomain(StoreUser.store.getState(), tab);
-          break;
-        case 'Cookies':
-          await clearCookiesForThisDomain(StoreUser.store.getState(), tab);
-          break;
         case SiteDataType.CACHE:
         case SiteDataType.INDEXEDDB:
-        case SiteDataType.LOCALSTORAGE:
         case SiteDataType.PLUGINDATA:
         case SiteDataType.SERVICEWORKERS:
           await clearSiteDataForThisDomain(
@@ -382,11 +399,15 @@ export default class ContextMenuEvents extends StoreUser {
             hostname,
           );
           break;
+        case SiteDataType.LOCALSTORAGE:
+          await clearLocalStorageForThisDomain(StoreUser.store.getState(), tab);
+          break;
         default:
           cadLog(
             {
               msg: `ContextMenuEvents.onContextMenuClicked received unknown manual clean site data type: ${info.menuItemId}`,
               type: 'warn',
+              x: { info, tab },
             },
             debug,
           );
@@ -428,247 +449,331 @@ export default class ContextMenuEvents extends StoreUser {
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was LINK_ADD_GREY_DOMAIN.`,
+            x: {
+              linkUrl: info.linkUrl,
+              hostname: getHostname(info.linkUrl),
+              cookieStoreId,
+            },
           },
           debug,
         );
         ContextMenuEvents.addNewExpression(
           getHostname(info.linkUrl),
           ListType.GREY,
-          tab.cookieStoreId || '',
+          cookieStoreId,
         );
         break;
       case ContextMenuEvents.MenuID.LINK_ADD_WHITE_DOMAIN:
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was LINK_ADD_WHITE_DOMAIN.`,
+            x: {
+              linkUrl: info.linkUrl,
+              hostname: getHostname(info.linkUrl),
+              cookieStoreId,
+            },
           },
           debug,
         );
         ContextMenuEvents.addNewExpression(
           getHostname(info.linkUrl),
           ListType.WHITE,
-          tab.cookieStoreId || '',
+          cookieStoreId,
         );
         break;
       case ContextMenuEvents.MenuID.LINK_ADD_GREY_SUBS:
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was LINK_ADD_GREY_SUBS.`,
+            x: {
+              linkUrl: info.linkUrl,
+              hostname: getHostname(info.linkUrl),
+              cookieStoreId,
+            },
           },
           debug,
         );
         ContextMenuEvents.addNewExpression(
           `*.${getHostname(info.linkUrl)}`,
           ListType.GREY,
-          tab.cookieStoreId || '',
+          cookieStoreId,
         );
         break;
       case ContextMenuEvents.MenuID.LINK_ADD_WHITE_SUBS:
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was LINK_ADD_WHITE_SUBS.`,
+            x: {
+              linkUrl: info.linkUrl,
+              hostname: getHostname(info.linkUrl),
+              cookieStoreId,
+            },
           },
           debug,
         );
         ContextMenuEvents.addNewExpression(
           `*.${getHostname(info.linkUrl)}`,
           ListType.WHITE,
-          tab.cookieStoreId || '',
+          cookieStoreId,
         );
         break;
       case ContextMenuEvents.MenuID.PAGE_ADD_GREY_DOMAIN:
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was PAGE_ADD_GREY_DOMAIN.`,
+            x: {
+              pageURL: info.pageUrl,
+              hostname: getHostname(info.pageUrl),
+              cookieStoreId,
+              parsedCookieStoreId: parseCookieStoreId(
+                contextualIdentities,
+                cookieStoreId,
+              ),
+            },
           },
           debug,
         );
         ContextMenuEvents.addNewExpression(
           getHostname(info.pageUrl),
           ListType.GREY,
-          tab.cookieStoreId || '',
+          cookieStoreId,
         );
         break;
       case ContextMenuEvents.MenuID.PAGE_ADD_WHITE_DOMAIN:
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was PAGE_ADD_WHITE_DOMAIN.`,
+            x: {
+              pageURL: info.pageUrl,
+              hostname: getHostname(info.pageUrl),
+              cookieStoreId,
+              parsedCookieStoreId: parseCookieStoreId(
+                contextualIdentities,
+                cookieStoreId,
+              ),
+            },
           },
           debug,
         );
         ContextMenuEvents.addNewExpression(
           getHostname(info.pageUrl),
           ListType.WHITE,
-          tab.cookieStoreId || '',
+          cookieStoreId,
         );
         break;
       case ContextMenuEvents.MenuID.PAGE_ADD_GREY_SUBS:
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was PAGE_ADD_GREY_SUBS.`,
+            x: {
+              pageURL: info.pageUrl,
+              hostname: getHostname(info.pageUrl),
+              cookieStoreId,
+              parsedCookieStoreId: parseCookieStoreId(
+                contextualIdentities,
+                cookieStoreId,
+              ),
+            },
           },
           debug,
         );
         ContextMenuEvents.addNewExpression(
           `*.${getHostname(info.pageUrl)}`,
           ListType.GREY,
-          tab.cookieStoreId || '',
+          cookieStoreId,
         );
         break;
       case ContextMenuEvents.MenuID.PAGE_ADD_WHITE_SUBS:
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was PAGE_ADD_WHITE_SUBS.`,
+            x: {
+              pageURL: info.pageUrl,
+              hostname: getHostname(info.pageUrl),
+              cookieStoreId,
+              parsedCookieStoreId: parseCookieStoreId(
+                contextualIdentities,
+                cookieStoreId,
+              ),
+            },
           },
           debug,
         );
         ContextMenuEvents.addNewExpression(
           `*.${getHostname(info.pageUrl)}`,
           ListType.WHITE,
-          tab.cookieStoreId || '',
+          cookieStoreId,
         );
         break;
       case ContextMenuEvents.MenuID.SELECT_ADD_GREY_DOMAIN:
-        cadLog(
-          {
-            msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was SELECT_ADD_GREY_DOMAIN.`,
-          },
-          debug,
-        );
-        if (info.selectionText) {
-          info.selectionText.split(',').forEach((selection) => {
-            const selectionText = selection.trim();
-            if (!selectionText) return;
-            let encodedSelectionText = selectionText;
-            try {
-              encodedSelectionText = encodeURI(selectionText);
-            } catch (e) {
-              cadLog(
-                {
-                  msg: `ContextMenuEvents.onContextMenuClicked:  encodeURI on selected text`,
-                  type: 'error',
-                  x: e,
+        {
+          const texts = selectionText.trim().split(',');
+          cadLog(
+            {
+              msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was SELECT_ADD_GREY_DOMAIN.`,
+              x: {
+                selectionText: info.selectionText,
+                texts,
+                cookieStoreId,
+                parsedCookieStoreId: parseCookieStoreId(
+                  contextualIdentities,
+                  cookieStoreId,
+                ),
+              },
+            },
+            debug,
+          );
+          texts.forEach((text) => {
+            cadLog(
+              {
+                msg: `ContextMenuEvents.onContextMenuClicked:  encodeURI on selected text`,
+                x: {
+                  rawInput: text.trim(),
+                  encodedInput: encodeURI(text.trim()),
                 },
-                debug,
-              );
-            }
+              },
+              debug,
+            );
             ContextMenuEvents.addNewExpression(
-              getHostname(encodedSelectionText) || selectionText,
+              encodeURI(text.trim()),
               ListType.GREY,
-              tab.cookieStoreId || '',
+              cookieStoreId,
             );
           });
         }
         break;
       case ContextMenuEvents.MenuID.SELECT_ADD_WHITE_DOMAIN:
-        cadLog(
-          {
-            msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was SELECT_ADD_WHITE_DOMAIN.`,
-          },
-          debug,
-        );
-        if (info.selectionText) {
-          info.selectionText.split(',').forEach((selection) => {
-            const selectionText = selection.trim();
-            if (!selectionText) return;
-            let encodedSelectionText = selectionText;
-            try {
-              encodedSelectionText = encodeURI(selectionText);
-            } catch (e) {
-              cadLog(
-                {
-                  msg: `ContextMenuEvents.onContextMenuClicked:  encodeURI on selected text`,
-                  type: 'error',
-                  x: e,
+        {
+          const texts = selectionText.trim().split(',');
+          cadLog(
+            {
+              msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was SELECT_ADD_WHITE_DOMAIN.`,
+              x: {
+                selectionText: info.selectionText,
+                texts,
+                cookieStoreId,
+                parsedCookieStoreId: parseCookieStoreId(
+                  contextualIdentities,
+                  cookieStoreId,
+                ),
+              },
+            },
+            debug,
+          );
+          texts.forEach((text) => {
+            cadLog(
+              {
+                msg: `ContextMenuEvents.onContextMenuClicked:  encodeURI on selected text`,
+                x: {
+                  rawInput: text.trim(),
+                  encodedInput: encodeURI(text.trim()),
                 },
-                debug,
-              );
-            }
+              },
+              debug,
+            );
             ContextMenuEvents.addNewExpression(
-              getHostname(encodedSelectionText) || selectionText,
+              encodeURI(text.trim()),
               ListType.WHITE,
-              tab.cookieStoreId || '',
+              cookieStoreId,
             );
           });
         }
         break;
       case ContextMenuEvents.MenuID.SELECT_ADD_GREY_SUBS:
-        cadLog(
-          {
-            msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was SELECT_ADD_GREY_SUBS.`,
-          },
-          debug,
-        );
-        if (info.selectionText) {
-          info.selectionText.split(',').forEach((selection) => {
-            const selectionText = selection.trim();
-            if (!selectionText) return;
-            let encodedSelectionText = selectionText;
-            try {
-              encodedSelectionText = encodeURI(selectionText);
-            } catch (e) {
-              cadLog(
-                {
-                  msg: `ContextMenuEvents.onContextMenuClicked:  encodeURI on selected text`,
-                  type: 'error',
-                  x: e,
+        {
+          const texts = selectionText.trim().split(',');
+          cadLog(
+            {
+              msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was SELECT_ADD_GREY_SUBS.`,
+              x: {
+                selectionText: info.selectionText,
+                texts,
+                cookieStoreId,
+                parsedCookieStoreId: parseCookieStoreId(
+                  contextualIdentities,
+                  cookieStoreId,
+                ),
+              },
+            },
+            debug,
+          );
+          texts.forEach((text) => {
+            cadLog(
+              {
+                msg: `ContextMenuEvents.onContextMenuClicked:  encodeURI on selected text`,
+                x: {
+                  rawInput: text.trim(),
+                  encodedInput: encodeURI(text.trim()),
                 },
-                debug,
-              );
-            }
+              },
+              debug,
+            );
             ContextMenuEvents.addNewExpression(
-              `*.${getHostname(encodedSelectionText) || selectionText}`,
+              `*.${encodeURI(text.trim())}`,
               ListType.GREY,
-              tab.cookieStoreId || '',
+              cookieStoreId,
             );
           });
         }
         break;
       case ContextMenuEvents.MenuID.SELECT_ADD_WHITE_SUBS:
-        cadLog(
-          {
-            msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was SELECT_ADD_WHITE_SUBS.`,
-          },
-          debug,
-        );
-        if (info.selectionText) {
-          info.selectionText.split(',').forEach((selection) => {
-            const selectionText = selection.trim();
-            if (!selectionText) return;
-            let encodedSelectionText = selectionText;
-            try {
-              encodedSelectionText = encodeURI(selectionText);
-            } catch (e) {
-              cadLog(
-                {
-                  msg: `ContextMenuEvents.onContextMenuClicked:  encodeURI on selected text`,
-                  type: 'error',
-                  x: e,
+        {
+          const texts = selectionText.trim().split(',');
+          cadLog(
+            {
+              msg: `ContextMenuEvents.onContextMenuClicked:  menuItemId was SELECT_ADD_WHITE_SUBS.`,
+              x: {
+                selectionText: info.selectionText,
+                texts,
+                cookieStoreId,
+                parsedCookieStoreId: parseCookieStoreId(
+                  contextualIdentities,
+                  cookieStoreId,
+                ),
+              },
+            },
+            debug,
+          );
+          texts.forEach((text) => {
+            cadLog(
+              {
+                msg: `ContextMenuEvents.onContextMenuClicked:  encodeURI on selected text`,
+                x: {
+                  rawInput: text.trim(),
+                  encodedInput: encodeURI(text.trim()),
                 },
-                debug,
-              );
-            }
+              },
+              debug,
+            );
             ContextMenuEvents.addNewExpression(
-              `*.${getHostname(encodedSelectionText) || selectionText}`,
+              `*.${encodeURI(text.trim())}`,
               ListType.WHITE,
-              tab.cookieStoreId || '',
+              cookieStoreId,
             );
           });
         }
         break;
       case ContextMenuEvents.MenuID.ACTIVE_MODE:
-        StoreUser.store.dispatch(
-          updateSetting({
-            name: SettingID.ACTIVE_MODE,
-            value: info.checked as boolean,
-          }),
-        );
-        cadLog(
-          {
-            msg: `ContextMenuEvents.onContextMenuClicked changed Automatic Cleaning value to:  ${info.checked}.`,
-          },
-          debug,
-        );
+        if (
+          Object.prototype.hasOwnProperty.call(info, 'checked') &&
+          Object.prototype.hasOwnProperty.call(info, 'wasChecked') &&
+          info.checked !== info.wasChecked
+        ) {
+          cadLog(
+            {
+              msg: `ContextMenuEvents.onContextMenuClicked changed Automatic Cleaning value to:  ${info.checked}.`,
+            },
+            debug,
+          );
+          // Setting Updated.
+          StoreUser.store.dispatch<any>(
+            updateSetting({
+              name: SettingID.ACTIVE_MODE,
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              value: info.checked!,
+            }),
+          );
+        }
         break;
       case ContextMenuEvents.MenuID.SETTINGS:
         cadLog(
@@ -677,13 +782,17 @@ export default class ContextMenuEvents extends StoreUser {
           },
           debug,
         );
-        await browser.runtime.openOptionsPage();
+        await browser.tabs.create({
+          index: tab.index + 1,
+          url: '/settings/settings.html#tabSettings',
+        });
         break;
       default:
         cadLog(
           {
             msg: `ContextMenuEvents.onContextMenuClicked received unknown menu id: ${info.menuItemId}`,
             type: 'warn',
+            x: { info, tab },
           },
           debug,
         );
@@ -692,41 +801,60 @@ export default class ContextMenuEvents extends StoreUser {
   }
 
   protected static addNewExpression(
-    expression: string | undefined,
+    input: string,
     listType: ListType,
-    cookieStoreId: string,
+    cookieStoreId: string | undefined,
   ): void {
-    if (expression === undefined) {
-      showNotification(
-        browser.i18n.getMessage('addNewExpressionNotificationError'),
-        browser.i18n.getMessage('errorText'),
-        getSetting(
+    if (input.trim() === '' || input === '*.') {
+      showNotification({
+        duration: getSetting(
           StoreUser.store.getState(),
           SettingID.NOTIFY_DURATION,
         ) as number,
-      );
+        msg: `${browser.i18n.getMessage('addNewExpressionNotificationFailed')}`,
+      });
       return;
     }
-    const storeId = parseCookieStoreId(StoreUser.store.getState(), cookieStoreId);
-    StoreUser.store.dispatch<any>(
-      addExpressionUI({
-        expression: localFileToRegex(expression),
-        listType,
-        storeId,
-      }),
+    const payload = {
+      expression: localFileToRegex(input.trim()),
+      listType,
+      storeId: parseCookieStoreId(
+        getSetting(
+          StoreUser.store.getState(),
+          SettingID.CONTEXTUAL_IDENTITIES,
+        ) as boolean,
+        cookieStoreId,
+      ),
+    };
+    cadLog(
+      {
+        msg: `background.addNewExpression - Parsed from Right-Click:`,
+        x: payload,
+      },
+      getSetting(StoreUser.store.getState(), SettingID.DEBUG_MODE) as boolean,
     );
-    showNotification(
-      browser.i18n.getMessage('addNewExpressionNotification', [
-        expression,
-        listType,
-        storeId,
-      ]),
-      browser.i18n.getMessage('extensionName'),
-      getSetting(
+    const cache = StoreUser.store.getState().cache;
+    showNotification({
+      duration: getSetting(
         StoreUser.store.getState(),
         SettingID.NOTIFY_DURATION,
       ) as number,
-    );
+      msg: `${browser.i18n.getMessage('addNewExpressionNotification', [
+        payload.expression,
+        payload.listType,
+        `${payload.storeId}${
+          (getSetting(
+            StoreUser.store.getState(),
+            SettingID.CONTEXTUAL_IDENTITIES,
+          ) as boolean)
+            ? cache[payload.storeId] !== undefined
+              ? ` (${cache[payload.storeId]})`
+              : ''
+            : ''
+        }`,
+      ])}\n${browser.i18n.getMessage('addNewExpressionNotificationIgnore')}`,
+    });
+    StoreUser.store.dispatch<any>(addExpressionUI(payload));
   }
 
   protected static isInitialized = false;
