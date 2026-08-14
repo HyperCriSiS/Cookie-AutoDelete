@@ -23,9 +23,9 @@ export default class AlarmEvents extends StoreUser {
    *
    * A real browser alarm acts as a cross-worker lock and wake-up fallback. For
    * short delays we additionally keep the existing timer semantics so a normal
-   * 1-29 second delay is not silently stretched to Chromium's packed-extension
-   * alarm minimum. If that timer is lost because the worker dies, the browser
-   * alarm still guarantees an eventual cleanup.
+   * 1-59 second delay is not silently stretched on older supported Chromium
+   * versions. If that timer is lost because the worker dies, the browser alarm
+   * still guarantees an eventual cleanup.
    */
   public static createActiveModeAlarm = async (): Promise<void> => {
     const existing = await browser.alarms.get(AlarmEvents.ACTIVE_MODE_ALARM);
@@ -83,10 +83,10 @@ export default class AlarmEvents extends StoreUser {
     );
   }
 
-  // Chromium currently enforces a 30-second minimum for packed extension
-  // alarms. Shorter configured delays therefore use the timer above as the
-  // precise primary path and the browser alarm as a persistent fallback.
-  private static readonly RELIABLE_ALARM_DELAY_MS = 30 * 1000;
+  // Chrome only reduced the packed-extension alarm minimum from 60 to 30
+  // seconds in Chrome 120. Because our current Chromium floor is 102, delays
+  // below one minute use the precise timer path and keep the alarm as fallback.
+  private static readonly RELIABLE_ALARM_DELAY_MS = 60 * 1000;
 }
 
 // Register synchronously when this background-only service module is loaded.
