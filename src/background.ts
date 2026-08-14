@@ -32,6 +32,7 @@ import TabEvents from './services/TabEvents';
 import { ReduxAction, ReduxConstants } from './typings/ReduxConstants';
 import ContextualIdentitiesEvents from './services/ContextualIdentitiesEvents';
 import SettingService from './services/SettingService';
+import { actionApi } from './services/BrowserApi';
 
 let store: Store<State, ReduxAction>;
 
@@ -51,7 +52,7 @@ const saveToStorage = () => {
 
 const onStartUp = async () => {
   const mf = browser.runtime.getManifest();
-  browser.browserAction.setTitle({
+  actionApi.setTitle({
     title: `${mf.name} ${mf.version} [STARTING UP...] (0)`,
   });
   const storage = await browser.storage.local.get();
@@ -146,7 +147,7 @@ const onStartUp = async () => {
   if (browser.contextualIdentities) {
     await ContextualIdentitiesEvents.init();
   }
-  browser.browserAction.setTitle({
+  actionApi.setTitle({
     title: `${mf.name} ${mf.version} [READY] (0)`,
   });
 };
