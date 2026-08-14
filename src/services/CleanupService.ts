@@ -12,6 +12,10 @@
  */
 
 import {
+  getStorageTypeSupport,
+  usesBrowsingDataOrigins,
+} from './BrowserCapabilities';
+import {
   CADCOOKIENAME,
   cadLog,
   extractMainDomain,
@@ -560,16 +564,7 @@ export const removeSiteData = async (
   debug: boolean,
   manual = false,
 ): Promise<boolean> => {
-  const listName = ((b: browserName) => {
-    switch (b) {
-      case browserName.Chrome:
-      case browserName.Opera:
-        return 'origins';
-      case browserName.Firefox:
-      default:
-        return 'hostnames';
-    }
-  })(bName);
+  const listName = usesBrowsingDataOrigins(bName) ? 'origins' : 'hostnames';
   const sd = siteDataToBrowser(siteData);
   cadLog(
     {
@@ -627,10 +622,11 @@ export const otherBrowsingDataCleanup = async (
   const chrome = isChrome(state.cache);
   const debug = getSetting(state, SettingID.DEBUG_MODE) as boolean;
   const browsingDataResult: ActivityLog['browsingDataCleanup'] = {};
+  const storageSupport = getStorageTypeSupport(state.cache);
   const ffVersion = Number.parseInt(state.cache.browserVersion);
   if (
     getSetting(state, SettingID.CLEANUP_CACHE) &&
-    ((isFirefoxNotAndroid(state.cache) && ffVersion >= 78) || chrome)
+    storageSupport.cache
   ) {
     browsingDataResult[SiteDataType.CACHE] = await cleanSiteData(
       state,
@@ -642,7 +638,7 @@ export const otherBrowsingDataCleanup = async (
   }
   if (
     getSetting(state, SettingID.CLEANUP_INDEXEDDB) &&
-    ((isFirefoxNotAndroid(state.cache) && ffVersion >= 77) || chrome)
+    storageSupport.indexedDb
   ) {
     browsingDataResult[SiteDataType.INDEXEDDB] = await cleanSiteData(
       state,
@@ -654,7 +650,7 @@ export const otherBrowsingDataCleanup = async (
   }
   if (
     getSetting(state, SettingID.CLEANUP_LOCALSTORAGE) &&
-    ((isFirefoxNotAndroid(state.cache) && ffVersion >= 58) || chrome)
+    storageSupport.localStorage
   ) {
     browsingDataResult[SiteDataType.LOCALSTORAGE] = await cleanSiteData(
       state,
@@ -678,7 +674,7 @@ export const otherBrowsingDataCleanup = async (
   }
   if (
     getSetting(state, SettingID.CLEANUP_SERVICEWORKERS) &&
-    ((isFirefoxNotAndroid(state.cache) && ffVersion >= 77) || chrome)
+    storageSupport.serviceWorkers
   ) {
     browsingDataResult[SiteDataType.SERVICEWORKERS] = await cleanSiteData(
       state,
