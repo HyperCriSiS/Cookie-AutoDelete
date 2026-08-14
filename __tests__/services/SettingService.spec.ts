@@ -163,16 +163,34 @@ describe('SettingService', () => {
       await SettingService.onSettingsChange();
       expect(global.browser.browsingData.remove).not.toHaveBeenCalled();
     });
-    it('should enable global icon if active mode was recently enabled', async () => {
+    it('should enable global icon and update an existing context-menu checkbox if active mode was recently enabled', async () => {
       TestStore.changeSetting(SettingID.ACTIVE_MODE, true);
       await SettingService.onSettingsChange();
       expect(spyBrowserActions.setGlobalIcon).toHaveBeenCalledWith(true);
+      expect(global.browser.contextMenus.update).toHaveBeenCalledWith(
+        ContextMenuEvents.MenuID.ACTIVE_MODE,
+        { checked: true },
+      );
     });
-    it('should make global icon greyscale and clear alarms if active mode was recently disabled', async () => {
+    it('should make global icon greyscale, clear alarms and update an existing context-menu checkbox if active mode was recently disabled', async () => {
       TestStore.changeSetting(SettingID.ACTIVE_MODE, false);
       await SettingService.onSettingsChange();
       expect(global.browser.alarms.clear).toHaveBeenCalledTimes(1);
       expect(spyBrowserActions.setGlobalIcon).toHaveBeenCalledWith(false);
+      expect(global.browser.contextMenus.update).toHaveBeenCalledWith(
+        ContextMenuEvents.MenuID.ACTIVE_MODE,
+        { checked: false },
+      );
+    });
+    it('should not update a context-menu checkbox while context menus are disabled', async () => {
+      TestStore.changeSetting(SettingID.CONTEXT_MENUS, false);
+      await SettingService.onSettingsChange();
+      jest.clearAllMocks();
+
+      TestStore.changeSetting(SettingID.ACTIVE_MODE, true);
+      await SettingService.onSettingsChange();
+
+      expect(global.browser.contextMenus.update).not.toHaveBeenCalled();
     });
     it('should clear contextMenus if recently disabled', async () => {
       TestStore.changeSetting(SettingID.CONTEXT_MENUS, false);
