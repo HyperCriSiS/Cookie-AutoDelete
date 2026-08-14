@@ -71,6 +71,27 @@ export const getStorageTypeSupport = (
   };
 };
 
+export const supportsStorageType = (
+  cache: CacheMap,
+  siteData: SiteDataType,
+): boolean => {
+  const support = getStorageTypeSupport(cache);
+  switch (siteData) {
+    case SiteDataType.CACHE:
+      return support.cache;
+    case SiteDataType.INDEXEDDB:
+      return support.indexedDb;
+    case SiteDataType.LOCALSTORAGE:
+      return support.localStorage;
+    case SiteDataType.PLUGINDATA:
+      return support.pluginData;
+    case SiteDataType.SERVICEWORKERS:
+      return support.serviceWorkers;
+    default:
+      return false;
+  }
+};
+
 export const getRuntimeCapabilities = (): RuntimeCapabilities => {
   const api = browser as any;
   return {
