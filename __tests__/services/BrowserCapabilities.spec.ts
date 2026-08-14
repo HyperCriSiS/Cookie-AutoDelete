@@ -1,6 +1,8 @@
 import {
   getRuntimeCapabilities,
   getStorageTypeSupport,
+  supportsStorageType,
+  usesBrowsingDataOrigins,
 } from '../../src/services/BrowserCapabilities';
 
 describe('BrowserCapabilities', () => {
@@ -8,12 +10,12 @@ describe('BrowserCapabilities', () => {
     browserName.Chrome,
     browserName.EdgeChromium,
     browserName.Opera,
-  ])('supports all targeted storage types on %s', (name) => {
+  ])('supports modern Chromium storage types on %s', (name) => {
     expect(getStorageTypeSupport({ browserDetect: name })).toEqual({
       cache: true,
       indexedDb: true,
       localStorage: true,
-      pluginData: true,
+      pluginData: false,
       serviceWorkers: true,
     });
   });
@@ -69,6 +71,22 @@ describe('BrowserCapabilities', () => {
       pluginData: false,
       serviceWorkers: false,
     });
+  });
+
+  it('treats Chromium pluginData as unsupported because the API ignores it', () => {
+    expect(
+      supportsStorageType(
+        { browserDetect: browserName.Chrome },
+        SiteDataType.PLUGINDATA,
+      ),
+    ).toBe(false);
+  });
+
+  it('uses origins for Chromium-family targeted browsing-data cleanup', () => {
+    expect(usesBrowsingDataOrigins(browserName.Chrome)).toBe(true);
+    expect(usesBrowsingDataOrigins(browserName.EdgeChromium)).toBe(true);
+    expect(usesBrowsingDataOrigins(browserName.Opera)).toBe(true);
+    expect(usesBrowsingDataOrigins(browserName.Firefox)).toBe(false);
   });
 
   it('detects runtime APIs by capability instead of browser name', () => {

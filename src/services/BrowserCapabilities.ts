@@ -33,7 +33,16 @@ const NONE: StorageTypeSupport = Object.freeze({
   serviceWorkers: false,
 });
 
-const ALL: StorageTypeSupport = Object.freeze({
+const CHROMIUM_STORAGE: StorageTypeSupport = Object.freeze({
+  cache: true,
+  indexedDb: true,
+  localStorage: true,
+  // Chromium has ignored pluginData since Chrome 88 after Flash removal.
+  pluginData: false,
+  serviceWorkers: true,
+});
+
+const FIREFOX_MODERN_STORAGE: StorageTypeSupport = Object.freeze({
   cache: true,
   indexedDb: true,
   localStorage: true,
@@ -46,10 +55,14 @@ const isChromiumFamily = (name: browserName | undefined): boolean =>
   name === browserName.EdgeChromium ||
   name === browserName.Opera;
 
+export const usesBrowsingDataOrigins = (
+  name: browserName | undefined,
+): boolean => isChromiumFamily(name);
+
 export const getStorageTypeSupport = (
   cache: CacheMap,
 ): StorageTypeSupport => {
-  if (isChromiumFamily(cache.browserDetect)) return ALL;
+  if (isChromiumFamily(cache.browserDetect)) return CHROMIUM_STORAGE;
   if (cache.browserDetect !== browserName.Firefox) return NONE;
 
   const version = Number.parseInt(String(cache.browserVersion), 10);
@@ -59,7 +72,7 @@ export const getStorageTypeSupport = (
   // support as a group. Our current Firefox floor (115) is above this, but the
   // threshold is retained here so imported/test states are evaluated safely.
   if (cache.platformOs === 'android') {
-    return version >= 85 ? ALL : NONE;
+    return version >= 85 ? FIREFOX_MODERN_STORAGE : NONE;
   }
 
   return {
