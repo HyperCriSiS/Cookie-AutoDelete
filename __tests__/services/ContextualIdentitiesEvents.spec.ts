@@ -119,19 +119,19 @@ describe('ContextualIdentitiesEvents', () => {
       ContextualIdentitiesEvents.init();
       expect(TestContextualIdentitiesEvents.getIsInitialized()).toEqual(false);
     });
-    it('should populate cache with existing container maps and add listeners.', async () => {
-      when(global.browser.contextualIdentities.onCreated.hasListener)
-        .calledWith(expect.any(Function))
-        .mockReturnValue(false);
+    it('should populate cache with existing container maps.', async () => {
       TestStore.changeSetting(SettingID.CONTEXTUAL_IDENTITIES, true);
       await ContextualIdentitiesEvents.init();
       expect(TestContextualIdentitiesEvents.getIsInitialized()).toEqual(true);
-      expect(spyLib.eventListenerActions).toHaveBeenCalledTimes(3);
+      expect(TestStore.getCacheValue('firefox-container-0')).toEqual(
+        'Testing Container',
+      );
     });
-    it('should do nothing if contextualIdentities was already initialized', () => {
+    it('should do nothing if contextualIdentities was already initialized', async () => {
       TestStore.changeSetting(SettingID.CONTEXTUAL_IDENTITIES, true);
-      ContextualIdentitiesEvents.init();
-      expect(spyLib.eventListenerActions).not.toHaveBeenCalled();
+      TestContextualIdentitiesEvents.setIsInitialized(true);
+      await ContextualIdentitiesEvents.init();
+      expect(global.browser.contextualIdentities.query).not.toHaveBeenCalled();
     });
   });
 
@@ -139,27 +139,36 @@ describe('ContextualIdentitiesEvents', () => {
     it('should do nothing if it was not initialized previously', async () => {
       TestContextualIdentitiesEvents.setIsInitialized(false);
       await ContextualIdentitiesEvents.deInit();
-      expect(spyLib.eventListenerActions).not.toHaveBeenCalled();
+      expect(global.browser.contextualIdentities.query).not.toHaveBeenCalled();
     });
-    it('should remove all listeners and existing containers in cache', async () => {
+    it('should clear existing container names from cache', async () => {
       TestStore.addCache({
         payload: {
           key: 'firefox-container-99',
           value: 'TestContainer',
         },
       });
-      when(global.browser.contextualIdentities.onCreated.hasListener)
-        .calledWith(expect.any(Function))
-        .mockReturnValue(true);
       TestContextualIdentitiesEvents.setIsInitialized(true);
       await ContextualIdentitiesEvents.deInit();
-      expect(spyLib.eventListenerActions).toHaveBeenCalledTimes(3);
       expect(TestContextualIdentitiesEvents.getIsInitialized()).toEqual(false);
       expect(TestStore.getCacheValue('firefox-container-99')).toBeUndefined();
     });
   });
 
   describe('onContainerCreated()', () => {
+    beforeEach(() => {
+      TestStore.changeSetting(SettingID.CONTEXTUAL_IDENTITIES, true);
+    });
+    it('should ignore container events while support is disabled', () => {
+      TestStore.changeSetting(SettingID.CONTEXTUAL_IDENTITIES, false);
+      ContextualIdentitiesEvents.onContainerCreated({
+        contextualIdentity: {
+          ...defaultContextualIdentity,
+          cookieStoreId: 'disabled-container-1',
+        },
+      });
+      expect(TestStore.getCacheValue('disabled-container-1')).toBeUndefined();
+    });
     it('should add the new container map into the cache', () => {
       ContextualIdentitiesEvents.onContainerCreated({
         contextualIdentity: {
@@ -174,6 +183,9 @@ describe('ContextualIdentitiesEvents', () => {
   });
 
   describe('onContainerRemoved()', () => {
+    beforeEach(() => {
+      TestStore.changeSetting(SettingID.CONTEXTUAL_IDENTITIES, true);
+    });
     it('should set undefined that cookieStoreId from cache', () => {
       TestStore.addCache({
         key: 'remove-container-1',
@@ -221,6 +233,9 @@ describe('ContextualIdentitiesEvents', () => {
   });
 
   describe('onContainerUpdated()', () => {
+    beforeEach(() => {
+      TestStore.changeSetting(SettingID.CONTEXTUAL_IDENTITIES, true);
+    });
     it('should do nothing if for some reason the container updated was not in the cache', () => {
       ContextualIdentitiesEvents.onContainerUpdated({
         contextualIdentity: {
