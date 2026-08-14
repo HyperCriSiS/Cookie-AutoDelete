@@ -107,8 +107,9 @@ const onStartUp = async () => {
     type: ReduxConstants.ADD_CACHE,
   });
 
-  // This is important to initialize the Store for all classes that extend from this
-  StoreUser.init(store);
+  // The store is available to initialization services now, but browser event
+  // handlers and UI requests remain gated until markReady() below.
+  StoreUser.init(store, false);
 
   SettingService.init();
   store.subscribe(SettingService.onSettingsChange);
@@ -128,6 +129,10 @@ const onStartUp = async () => {
   actionApi.setTitle({
     title: `${mf.name} ${mf.version} [READY] (0)`,
   });
+
+  // Only release synchronously registered browser listeners and UI store
+  // requests after the entire background initialization completed.
+  StoreUser.markReady();
 };
 
 // Keeps a memory of all runtime ports for popups.  Should only be one but just in case.
