@@ -16,27 +16,83 @@ import { getSetting, sleep } from './Libs';
 import StoreUser from './StoreUser';
 
 export default class AlarmEvents extends StoreUser {
+  public static readonly ACTIVE_MODE_ALARM = 'activeModeAlarm';
+
+  /**
+   * Schedule one cleanup for tab-driven events.
+   *
+   * A real browser alarm acts as a cross-worker lock and wake-up fallback. For
+   * short delays we additionally keep the existing timer semantics so a normal
+   * 1-29 second delay is not silently stretched to Chromium's packed-extension
+   * alarm minimum. If that timer is lost because the worker dies, the browser
+   * alarm still guarantees an eventual cleanup.
+   */
   public static createActiveModeAlarm = async (): Promise<void> => {
-    const seconds = parseInt(
-      getSetting(StoreUser.store.getState(), SettingID.CLEAN_DELAY) as string,
+    const existing = await browser.alarms.get(AlarmEvents.ACTIVE_MODE_ALARM);
+    if (existing) return;
+
+    const configuredSeconds = Number.parseInt(
+      String(
+        getSetting(StoreUser.store.getState(), SettingID.CLEAN_DELAY) as string,
+      ),
       10,
     );
-    const milliseconds = (seconds > 0 ? seconds : 0.5) * 1000;
-    if (AlarmEvents.alarmFlag) {
-      return;
+    const milliseconds =
+      (Number.isFinite(configuredSeconds) && configuredSeconds > 0
+        ? configuredSeconds
+        : 0.5) * 1000;
+
+    browser.alarms.create(AlarmEvents.ACTIVE_MODE_ALARM, {
+      when: Date.now() + milliseconds,
+    });
+
+    if (milliseconds < AlarmEvents.RELIABLE_ALARM_DELAY_MS) {
+      void AlarmEvents.runShortDelay(milliseconds);
     }
-    AlarmEvents.alarmFlag = true;
-    await sleep(milliseconds);
-    if (getSetting(StoreUser.store.getState(), SettingID.ACTIVE_MODE)) {
-      StoreUser.store.dispatch<any>(
-        cookieCleanup({
-          greyCleanup: false,
-          ignoreOpenTabs: false,
-        }),
-      );
-    }
-    AlarmEvents.alarmFlag = false;
   };
-  // Create an alarm delay or use setTimeout before cookie cleanup
-  private static alarmFlag = false;
+
+  public static onAlarm = async (alarm: browser.alarms.Alarm): Promise<void> => {
+    if (alarm.name !== AlarmEvents.ACTIVE_MODE_ALARM) return;
+    AlarmEvents.dispatchCleanup();
+  };
+
+  private static async runShortDelay(milliseconds: number): Promise<void> {
+    await sleep(milliseconds);
+
+    // If the alarm already fired, or active mode was disabled and the alarm was
+    // cleared, there is nothing left for the short timer to claim.
+    const alarm = await browser.alarms.get(AlarmEvents.ACTIVE_MODE_ALARM);
+    if (!alarm) return;
+
+    // Claim the scheduled cleanup by clearing the alarm. If it fired between
+    // get() and clear(), the onAlarm handler owns the cleanup instead.
+    const claimed = await browser.alarms.clear(AlarmEvents.ACTIVE_MODE_ALARM);
+    if (!claimed) return;
+
+    AlarmEvents.dispatchCleanup();
+  }
+
+  private static dispatchCleanup(): void {
+    if (!getSetting(StoreUser.store.getState(), SettingID.ACTIVE_MODE)) return;
+
+    StoreUser.store.dispatch<any>(
+      cookieCleanup({
+        greyCleanup: false,
+        ignoreOpenTabs: false,
+      }),
+    );
+  }
+
+  // Chromium currently enforces a 30-second minimum for packed extension
+  // alarms. Shorter configured delays therefore use the timer above as the
+  // precise primary path and the browser alarm as a persistent fallback.
+  private static readonly RELIABLE_ALARM_DELAY_MS = 30 * 1000;
+}
+
+// Register synchronously when this background-only service module is loaded.
+// The wrapper defers the handler body until state hydration is complete.
+if (browser.alarms?.onAlarm) {
+  browser.alarms.onAlarm.addListener(
+    StoreUser.withStoreReady(AlarmEvents.onAlarm),
+  );
 }
