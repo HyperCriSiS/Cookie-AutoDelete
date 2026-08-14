@@ -25,9 +25,6 @@ const moduleRules = [
 
 const resolve = {
   extensions: ['.mjs', '.tsx', '.ts', '.js', '.json', '.png'],
-  alias: {
-    shortid: `${__dirname}/src/services/IdService.ts`,
-  },
 };
 
 const output = {

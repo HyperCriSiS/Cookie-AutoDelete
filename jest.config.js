@@ -70,9 +70,6 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js'],
 
   // A map from regular expressions to module names that allow to stub out resources with a single module
-  moduleNameMapper: {
-    '^shortid$': '<rootDir>/src/services/IdService.ts',
-  },
 
   // An array of regexp pattern strings, matched against all module paths before considered 'visible' to the module loader
   // modulePathIgnorePatterns: [],
@@ -125,7 +122,7 @@ module.exports = {
   // The path to a module that runs some code to configure or set up the testing framework before each test
   // setupTestFrameworkScriptFile: null,
 
-  // A list of paths to snapshot serializer modules Jest should use for snapshot testing
+  // A list of paths to snapshot serializer modules that jest should use for snapshot testing
   // snapshotSerializers: [],
 
   // The test environment that will be used for testing
