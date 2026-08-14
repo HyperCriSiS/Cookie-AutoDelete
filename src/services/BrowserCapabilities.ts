@@ -41,10 +41,15 @@ const ALL: StorageTypeSupport = Object.freeze({
   serviceWorkers: true,
 });
 
+const isChromiumFamily = (name: browserName | undefined): boolean =>
+  name === browserName.Chrome ||
+  name === browserName.EdgeChromium ||
+  name === browserName.Opera;
+
 export const getStorageTypeSupport = (
   cache: CacheMap,
 ): StorageTypeSupport => {
-  if (cache.browserDetect === browserName.Chrome) return ALL;
+  if (isChromiumFamily(cache.browserDetect)) return ALL;
   if (cache.browserDetect !== browserName.Firefox) return NONE;
 
   const version = Number.parseInt(String(cache.browserVersion), 10);
