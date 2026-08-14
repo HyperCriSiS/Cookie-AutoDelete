@@ -13,6 +13,9 @@ module.exports = {
     },
   },
   moduleFileExtensions: ['ts', 'tsx', 'js'],
+  moduleNameMapper: {
+    '^shortid$': '<rootDir>/src/services/IdService.ts',
+  },
   preset: 'ts-jest',
   setupFilesAfterEnv: [
     'jest-date-mock',
