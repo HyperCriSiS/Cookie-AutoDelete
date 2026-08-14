@@ -29,6 +29,7 @@ import {
 } from './services/Libs';
 import StoreUser from './services/StoreUser';
 import StatePersistence from './services/StatePersistence';
+import { parsePersistedState } from './services/StateHydration';
 import TabEvents from './services/TabEvents';
 import { ReduxAction, ReduxConstants } from './typings/ReduxConstants';
 import ContextualIdentitiesEvents from './services/ContextualIdentitiesEvents';
@@ -50,16 +51,7 @@ const onStartUp = async () => {
     title: `${mf.name} ${mf.version} [STARTING UP...] (0)`,
   });
   const storage = await browser.storage.local.get();
-  let stateFromStorage;
-  try {
-    if (storage.state) {
-      stateFromStorage = JSON.parse(storage.state as string);
-    } else {
-      stateFromStorage = {};
-    }
-  } catch (err) {
-    stateFromStorage = {};
-  }
+  const stateFromStorage = parsePersistedState(storage);
   store = createStore(stateFromStorage);
 
   // Store the FF version in cache
