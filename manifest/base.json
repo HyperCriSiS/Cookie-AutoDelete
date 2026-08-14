@@ -22,7 +22,6 @@
     "open_in_tab": true
   },
   "permissions": [
-    "activeTab",
     "alarms",
     "browsingData",
     "contextMenus",
