@@ -28,6 +28,7 @@
     "contextMenus",
     "cookies",
     "notifications",
+    "scripting",
     "storage",
     "tabs"
   ],
