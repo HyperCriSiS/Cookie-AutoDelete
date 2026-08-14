@@ -17,6 +17,7 @@ describe('StoreBridge', () => {
   };
 
   beforeEach(() => {
+    jest.clearAllMocks();
     StoreUser.init(store as never);
   });
 
@@ -70,8 +71,8 @@ describe('StoreBridge', () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('ignores unrelated messages and ports', async () => {
-    await expect(handleStoreMessage({ type: 'other' })).resolves.toBeUndefined();
+  it('does not claim unrelated runtime messages or ports', () => {
+    expect(handleStoreMessage({ type: 'other' })).toBeUndefined();
 
     handleStoreConnection({
       name: 'other',
