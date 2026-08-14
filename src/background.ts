@@ -121,10 +121,6 @@ const onStartUp = async () => {
 
   await checkIfProtected(store.getState());
 
-  if (browser.contextMenus) {
-    ContextMenuEvents.menuInit();
-  }
-
   if (browser.contextualIdentities) {
     await ContextualIdentitiesEvents.init();
   }
@@ -270,6 +266,17 @@ const handleBrowserStartup = async (): Promise<void> => {
 
 const handleInstalled = async (details: any): Promise<void> => {
   await checkIfProtected(store.getState());
+
+  if (
+    browser.contextMenus &&
+    (details.reason === 'install' || details.reason === 'update')
+  ) {
+    await ContextMenuEvents.menuClear();
+    if (getSetting(store.getState(), SettingID.CONTEXT_MENUS)) {
+      ContextMenuEvents.menuInit();
+    }
+  }
+
   switch (details.reason) {
     case 'install':
       await browser.runtime.openOptionsPage();
