@@ -21,7 +21,6 @@ import {
 import {
   CADCOOKIENAME,
   extractMainDomain,
-  getAllCookiesForDomain,
   getHostname,
   getSetting,
   isAnIP,
@@ -30,6 +29,9 @@ import {
   localFileToRegex,
   parseCookieStoreId,
 } from '../../services/Libs';
+import {
+  getAllCookiesForDomainIncludingPartitions,
+} from '../../services/CookieDomainService';
 import { FilterOptions } from '../../typings/Enums';
 import { ReduxAction } from '../../typings/ReduxConstants';
 import ActivityTable from '../common_components/ActivityTable';
@@ -100,7 +102,7 @@ class App extends Component<PopupAppComponentProps, InitialState> {
     const { state } = this.props;
     const { tab } = this.state;
     if (!tab || !tab.url) return;
-    const cookies = await getAllCookiesForDomain(state, tab);
+    const cookies = await getAllCookiesForDomainIncludingPartitions(state, tab);
 
     this.setState({
       cookieCount: cookies
@@ -237,215 +239,58 @@ class App extends Component<PopupAppComponentProps, InitialState> {
                 : browser.i18n.getMessage('notificationDisabledText')
             }
           />
-          <div
-            id="cleanButtonContainer"
-            className="btn-group m-1"
-            role="group"
-            aria-label="Clean Actions Group"
-          >
+          <div className="btn-group" role="group">
             <IconButton
-              iconName="eraser"
-              className="btn-warning"
-              type="button"
+              iconName="trash-alt"
+              className="btn-info m-1"
               onClick={() => {
-                onCookieCleanup({
-                  greyCleanup: false,
-                  ignoreOpenTabs: false,
-                });
-                animateFlash(
-                  document.getElementById('cleanButtonContainer'),
-                  true,
-                );
+                onCookieCleanup({ greyCleanup: false, ignoreOpenTabs: true });
+                animateFlash(true, 'cadPopup');
               }}
-              title={browser.i18n.getMessage('cookieCleanupText')}
-              text={browser.i18n.getMessage('cleanText')}
+              title={browser.i18n.getMessage('manualCleanText')}
+              text={browser.i18n.getMessage('manualCleanText')}
             />
-
-            <button
-              aria-controls="cleanCollapse"
-              aria-expanded="false"
-              className="btn btn-warning dropdown-toggle dropdown-toggle-split"
-              data-disabled="true"
-              data-target="#cleanCollapse"
-              data-toggle="collapse"
-              role="button"
-              style={{
-                borderLeftColor: 'rgb(176, 132, 0)',
-                transform: 'translate3d(-3px, 0px, 0px)',
-              }}
-            >
-              <span className="sr-only">
-                {browser.i18n.getMessage('dropdownAdditionalCleaningOptions')}
-              </span>
-            </button>
-          </div>
-          <IconButton
-            iconName="cog"
-            className="btn-info m-1"
-            onClick={() => {
-              if (isFirefoxNotAndroid(cache)) {
-                browser.tabs.create({
-                  cookieStoreId: tab.cookieStoreId,
-                  index: tab.index + 1,
-                  url: '/settings/settings.html#tabSettings',
-                });
-              } else {
-                browser.tabs.create({
-                  index: tab.index + 1,
-                  url: '/settings/settings.html#tabSettings',
-                });
-              }
-              window.close();
-            }}
-            title={browser.i18n.getMessage('preferencesText')}
-            text={browser.i18n.getMessage('preferencesText')}
-          />
-        </div>
-        <CleanCollapseGroup hostname={hostname || ''} tab={tab} />
-
-        <div
-          className="row no-gutters"
-          style={{
-            alignItems: 'center',
-            margin: '8px 0',
-          }}
-        >
-          {tab.favIconUrl && !tab.favIconUrl.startsWith('chrome:') && (
-            <img
-              alt={'favIcon'}
-              src={tab.favIconUrl}
-              style={{
-                height: '20px',
-                marginRight: '7px',
-                verticalAlign: 'middle',
-                width: '20px',
-              }}
+            <IconButton
+              iconName="caret-down"
+              className="btn-info dropdown-toggle dropdown-toggle-split m-1 ml-n1"
+              dataTarget="#cleanCollapse"
+              aria-expanded={false}
+              aria-haspopup={true}
+              title={browser.i18n.getMessage('manualCleanText')}
             />
-          )}
-          <div className="col">
-            <span
-              style={{
-                fontSize: '1.25em',
-                marginRight: '8px',
-                verticalAlign: 'middle',
-              }}
-            >
-              {`${hostname}${
-                contextualIdentities && cache[storeId] !== undefined
-                  ? ` (${cache[storeId]})`
-                  : ''
-              }`}
-            </span>
-          </div>
-          <div
-            className="col-3"
-            style={{
-              fontSize: '1.1em',
-              textAlign: 'center',
-            }}
-          >
-            <span id="CADCookieText">
-              {browser.i18n.getMessage('popupCookieCountText')}
-            </span>
-            :&nbsp;
-            <span
-              id="CADCookieCount"
-              style={{
-                fontWeight: 'bold',
-              }}
-            >
-              {this.state.cookieCount}
-            </span>
           </div>
         </div>
-
-        {addableHostnames.map((addableHostname) => (
-          <div
-            key={addableHostname}
-            style={{
-              alignItems: 'center',
-              display: 'flex',
-              margin: '8px 0',
-            }}
-            className="row"
-          >
-            <div
-              style={{
-                flex: 1,
-              }}
-            >
-              {addableHostname}
-            </div>
-            <div
-              className="btn-group"
-              style={{
-                marginLeft: '8px',
-              }}
-            >
-              <IconButton
-                className="btn-secondary"
-                onClick={() => {
-                  onNewExpression({
-                    expression: localFileToRegex(addableHostname),
-                    listType: ListType.GREY,
-                    storeId,
-                  });
-                }}
-                iconName="plus"
-                title={browser.i18n.getMessage('toGreyListText')}
-                text={browser.i18n.getMessage('greyListWordText')}
-              />
-
-              <IconButton
-                className="btn-primary"
-                onClick={() => {
-                  onNewExpression({
-                    expression: localFileToRegex(addableHostname),
-                    listType: ListType.WHITE,
-                    storeId,
-                  });
-                }}
-                iconName="plus"
-                title={browser.i18n.getMessage('toWhiteListText')}
-                text={browser.i18n.getMessage('whiteListWordText')}
-              />
-            </div>
-          </div>
-        ))}
-
-        <div
-          className="row"
-          style={{
-            margin: '8px 0',
-          }}
-        >
-          <FilteredExpression url={hostname} storeId={storeId} />
-        </div>
-        <ActivityTable numberToShow={3} decisionFilter={FilterOptions.CLEAN} />
+        <CleanCollapseGroup tab={tab} />
+        <FilteredExpression
+          state={state}
+          tab={tab}
+          storeId={storeId}
+          addableHostnames={addableHostnames}
+          onNewExpression={onNewExpression}
+        />
+        <ActivityTable state={state} />
       </div>
     );
   }
 }
 
-const mapStateToProps = (state: State) => {
-  return {
-    contextualIdentities: getSetting(
-      state,
-      SettingID.CONTEXTUAL_IDENTITIES,
-    ) as boolean,
+const mapStateToProps = (state: State) => ({
+  contextualIdentities: getSetting(
     state,
-  };
-};
+    SettingID.CONTEXTUAL_IDENTITIES,
+  ) as boolean,
+  state,
+});
 
 const mapDispatchToProps = (dispatch: Dispatch<ReduxAction>) => ({
-  onUpdateSetting(newSetting: Setting) {
-    dispatch(updateSetting(newSetting));
+  onCookieCleanup(payload: CleanupProperties) {
+    dispatch(cookieCleanupUI(payload));
   },
   onNewExpression(payload: Expression) {
     dispatch(addExpressionUI(payload));
   },
-  onCookieCleanup(payload: CleanupProperties) {
-    dispatch(cookieCleanupUI(payload));
+  onUpdateSetting(payload: Setting) {
+    dispatch(updateSetting(payload));
   },
 });
 
