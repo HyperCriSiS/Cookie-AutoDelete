@@ -18,6 +18,7 @@ import { cadLog, siteDataToBrowser, SITEDATATYPES } from './Libs';
 import { checkIfProtected, setGlobalIcon } from './BrowserActionService';
 import ContextMenuEvents from './ContextMenuEvents';
 import { ReduxConstants } from '../typings/ReduxConstants';
+import { supportsStorageType } from './BrowserCapabilities';
 
 export default class SettingService extends StoreUser {
   public static init(): void {
@@ -48,6 +49,16 @@ export default class SettingService extends StoreUser {
         (previous[sd] === undefined || !previous[sd].value) &&
         SettingService.current[sd].value
       ) {
+        if (!supportsStorageType(StoreUser.store.getState().cache, siteData)) {
+          cadLog(
+            {
+              msg: `${siteData} cleanup is not supported by this browser/runtime. Skipping initial cleanup.`,
+              type: 'info',
+            },
+            SettingService.getCurrent(SettingID.DEBUG_MODE) as boolean,
+          );
+          continue;
+        }
         // Migration Check to prevent LocalStorage from being cleaned again.
         // Only if migrating from 3.4.0 to 3.5.1+
         if (
