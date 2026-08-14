@@ -76,8 +76,7 @@ if (packageVersion !== versionTag) {
   );
 }
 
-// The browser manifests are generated from this shared MV3 base. Do not mutate
-// extension/manifest.json: it is a legacy source artifact and is no longer the
-// packaging source of truth.
+// Browser manifests are generated from this shared MV3 base plus the
+// browser-specific overlay. This is the packaging source of truth.
 changeVersion(path.join(ROOTDIR, 'manifest', 'base.json'), versionTag);
 console.log(`Manifest base updated to ${versionTag}.`);
