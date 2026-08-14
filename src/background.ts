@@ -61,9 +61,6 @@ const onStartUp = async () => {
   }
   store = createStore(stateFromStorage);
 
-  store.dispatch({
-    type: ReduxConstants.ON_STARTUP,
-  });
   // Store the FF version in cache
   if (browserDetect() === browserName.Firefox) {
     const browserInfo = await browser.runtime.getBrowserInfo();
@@ -236,6 +233,10 @@ const greyCleanup = () => {
 };
 
 const handleBrowserStartup = async (): Promise<void> => {
+  store.dispatch({
+    type: ReduxConstants.ON_STARTUP,
+  });
+
   if (getSetting(store.getState(), SettingID.ACTIVE_MODE) === true) {
     if (getSetting(store.getState(), SettingID.ENABLE_GREYLIST) === true) {
       let isFFSessionRestore = false;
