@@ -27,6 +27,7 @@ import {
   getSetting,
 } from './services/Libs';
 import StoreUser from './services/StoreUser';
+import StatePersistence from './services/StatePersistence';
 import TabEvents from './services/TabEvents';
 import { ReduxAction, ReduxConstants } from './typings/ReduxConstants';
 import ContextualIdentitiesEvents from './services/ContextualIdentitiesEvents';
@@ -35,19 +36,12 @@ import { actionApi } from './services/BrowserApi';
 
 let store: Store<State, ReduxAction>;
 
-// Delay saving to disk to queue up actions
-let delaySave = false;
-const saveToStorage = () => {
-  if (!delaySave) {
-    delaySave = true;
-    setTimeout(() => {
-      delaySave = false;
-      return browser.storage.local.set({
-        state: JSON.stringify(store.getState()),
-      });
-    }, 1000);
-  }
-};
+const statePersistence = new StatePersistence(
+  (values) => browser.storage.local.set(values),
+  (error) => {
+    console.error('Cookie AutoDelete state persistence failed.', error);
+  },
+);
 
 const onStartUp = async () => {
   const mf = browser.runtime.getManifest();
@@ -120,7 +114,7 @@ const onStartUp = async () => {
 
   SettingService.init();
   store.subscribe(SettingService.onSettingsChange);
-  store.subscribe(saveToStorage);
+  store.subscribe(() => statePersistence.save(store.getState()));
 
   store.dispatch<any>(validateSettings());
 
