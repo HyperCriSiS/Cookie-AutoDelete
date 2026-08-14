@@ -57,16 +57,14 @@ export default class SettingService extends StoreUser {
         ) {
           continue;
         }
-        if (
-          SettingService.getCurrent(SettingID.SITEDATA_EMPTY_ON_ENABLE) === false
-        ) {
+        if (SettingService.getCurrent(SettingID.SITEDATA_EMPTY_ON_ENABLE) === false) {
           cadLog(
             {
               msg: `${siteData} setting activated, but Empty Site Data on Enable is false. Existing site data kept.`,
               type: 'info',
             },
             SettingService.getCurrent(SettingID.DEBUG_MODE) as boolean,
-          );
+          )
           continue;
         }
         await browser.browsingData.remove(
@@ -92,7 +90,6 @@ export default class SettingService extends StoreUser {
         await browser.alarms.clear('activeModeAlarm');
       }
       await setGlobalIcon(active);
-
       // Context menus survive MV3 service-worker restarts while static class
       // fields do not. Update the existing menu item based on persisted settings
       // instead of relying on ContextMenuEvents.isInitialized in RAM.
