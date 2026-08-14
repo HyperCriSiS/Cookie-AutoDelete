@@ -84,5 +84,3 @@ declare namespace browser.tabs {
     url?: string;
   }
 }
-
-declare module 'redux-webext';
