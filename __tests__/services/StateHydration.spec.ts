@@ -40,13 +40,27 @@ describe('StateHydration', () => {
     );
   });
 
+  it('rejects an existing state that is missing a core slice', () => {
+    expect(() => parsePersistedState({ state: '{}' })).toThrow(
+      'missing expression lists',
+    );
+
+    expect(() =>
+      parsePersistedState({ state: JSON.stringify({ lists: {} }) }),
+    ).toThrow('missing settings');
+  });
+
   it('rejects invalid expression-list and settings structures', () => {
     expect(() =>
-      parsePersistedState({ state: JSON.stringify({ lists: [] }) }),
+      parsePersistedState({
+        state: JSON.stringify({ lists: [], settings: {} }),
+      }),
     ).toThrow('expression lists are invalid');
 
     expect(() =>
-      parsePersistedState({ state: JSON.stringify({ settings: [] }) }),
+      parsePersistedState({
+        state: JSON.stringify({ lists: {}, settings: [] }),
+      }),
     ).toThrow('settings are invalid');
   });
 });
