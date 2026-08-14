@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
 const { generateManifest } = require('./generateManifest');
+const { validateBuildStage } = require('./validateBuildStage');
 
 const BUILDS = 'builds';
 const EXT = 'extension';
@@ -93,6 +94,11 @@ const prepareStage = (target) => {
   if (target === 'firefox') {
     fs.rmSync(path.join(stageDir, 'background.js'), { force: true });
   }
+
+  validateBuildStage(target, stageDir, {
+    production: true,
+    sourceDir: EXTDIR,
+  });
 
   return stageDir;
 };
