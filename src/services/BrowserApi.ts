@@ -13,20 +13,9 @@ type BrowserWithAction = typeof browser & {
   action?: ActionApi;
   browserAction?: ActionApi;
 };
-type ChromeWithAction = {
-  action?: ActionApi;
-  browserAction?: ActionApi;
-};
 
 const browserWithAction = browser as BrowserWithAction;
-const chromeWithAction =
-  typeof chrome !== 'undefined'
-    ? (chrome as unknown as ChromeWithAction)
-    : undefined;
 
 export const actionApi = (
-  browserWithAction.action ||
-  chromeWithAction?.action ||
-  browserWithAction.browserAction ||
-  chromeWithAction?.browserAction
+  browserWithAction.action || browserWithAction.browserAction
 ) as ActionApi;

@@ -21,43 +21,26 @@ describe('StoreBridge', () => {
   });
 
   it('responds to a state request after store readiness', async () => {
-    const sendResponse = jest.fn();
-
-    expect(
-      handleStoreMessage(
-        { type: STORE_UPDATE_STATE },
-        undefined,
-        sendResponse,
-      ),
-    ).toBe(true);
-
-    await Promise.resolve();
-    expect(sendResponse).toHaveBeenCalledWith(state);
+    await expect(
+      handleStoreMessage({ type: STORE_UPDATE_STATE }),
+    ).resolves.toBe(state);
   });
 
   it('dispatches the legacy wire-format action through the background store', async () => {
-    const sendResponse = jest.fn();
-
-    expect(
-      handleStoreMessage(
-        {
-          type: STORE_DISPATCH,
-          action: {
-            type: ReduxConstants.UPDATE_SETTING,
-            payload: { name: SettingID.ACTIVE_MODE, value: true },
-          },
+    await expect(
+      handleStoreMessage({
+        type: STORE_DISPATCH,
+        action: {
+          type: ReduxConstants.UPDATE_SETTING,
+          payload: { name: SettingID.ACTIVE_MODE, value: true },
         },
-        undefined,
-        sendResponse,
-      ),
-    ).toBe(true);
+      }),
+    ).resolves.toEqual({ ok: true });
 
-    await Promise.resolve();
     expect(store.dispatch).toHaveBeenCalledWith({
       type: ReduxConstants.UPDATE_SETTING,
       payload: { name: SettingID.ACTIVE_MODE, value: true },
     });
-    expect(sendResponse).toHaveBeenCalledWith({ ok: true });
   });
 
   it('broadcasts state changes to a connected legacy UI port', async () => {
@@ -87,11 +70,8 @@ describe('StoreBridge', () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('ignores unrelated messages and ports', () => {
-    const sendResponse = jest.fn();
-    expect(handleStoreMessage({ type: 'other' }, undefined, sendResponse)).toBe(
-      false,
-    );
+  it('ignores unrelated messages and ports', async () => {
+    await expect(handleStoreMessage({ type: 'other' })).resolves.toBeUndefined();
 
     handleStoreConnection({
       name: 'other',

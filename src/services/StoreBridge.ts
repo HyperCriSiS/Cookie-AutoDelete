@@ -55,57 +55,36 @@ type BridgeMessage = {
   };
 };
 
-export const handleStoreMessage = (
+export const handleStoreMessage = async (
   message: BridgeMessage,
-  _sender: unknown,
-  sendResponse: (response?: unknown) => void,
-): boolean => {
+): Promise<unknown> => {
   if (message.type === STORE_UPDATE_STATE) {
-    void StoreUser.ready()
-      .then((store) => sendResponse(store.getState()))
-      .catch((error) => {
-        console.error('Could not provide background store state.', error);
-        sendResponse(undefined);
-      });
-    return true;
+    const store = await StoreUser.ready();
+    return store.getState();
   }
 
   if (message.type === STORE_DISPATCH && message.action) {
-    void StoreUser.ready()
-      .then((store) => {
-        const { type, ...actionData } = message.action as {
-          type: ReduxConstants;
-          payload?: unknown;
-          [key: string]: unknown;
-        };
-        const actionCreator = actions[type];
-        if (!actionCreator) {
-          console.error(
-            `Background store bridge does not contain action "${type}".`,
-          );
-          sendResponse(undefined);
-          return;
-        }
+    const store = await StoreUser.ready();
+    const { type, ...actionData } = message.action;
+    const actionCreator = actions[type];
+    if (!actionCreator) {
+      console.error(`Background store bridge does not contain action "${type}".`);
+      return undefined;
+    }
 
-        const payload = actionData.payload;
-        store.dispatch<any>(
-          actionCreator(Object.keys(actionData).length ? payload : undefined),
-        );
-        // The legacy UI bridge does not consume this response, but responding
-        // closes the async channel cleanly after the worker-owned dispatch.
-        sendResponse({ ok: true });
-      })
-      .catch((error) => {
-        console.error('Could not dispatch UI action to background store.', error);
-        sendResponse(undefined);
-      });
-    return true;
+    const payload = actionData.payload;
+    store.dispatch<any>(
+      actionCreator(Object.keys(actionData).length ? payload : undefined),
+    );
+    return { ok: true };
   }
 
-  return false;
+  return undefined;
 };
 
-export const handleStoreConnection = (connection: chrome.runtime.Port): void => {
+export const handleStoreConnection = (
+  connection: browser.runtime.Port,
+): void => {
   if (connection.name !== STORE_CONNECTION_NAME) return;
 
   let disconnected = false;
@@ -133,7 +112,7 @@ export const handleStoreConnection = (connection: chrome.runtime.Port): void => 
 };
 
 // Register synchronously as this module is loaded by the background entry
-// graph. The handlers themselves wait for StoreUser.ready() when hydration has
-// not finished yet.
-chrome.runtime.onConnect.addListener(handleStoreConnection);
-chrome.runtime.onMessage.addListener(handleStoreMessage);
+// graph. browser-polyfill translates Promise-returning onMessage listeners to
+// Chromium's callback protocol for the supported browser range.
+browser.runtime.onConnect.addListener(handleStoreConnection);
+browser.runtime.onMessage.addListener(handleStoreMessage);
