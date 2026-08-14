@@ -11,9 +11,7 @@
 
 import { supportsPartitionedCookies } from './BrowserCapabilities';
 
-type CookieQueryDetails = Partial<CookiePropertiesCleanup> & {
-  [key: string]: unknown;
-};
+type CookieQueryDetails = Partial<CookiePropertiesCleanup>;
 
 export const getAllCookiesIncludingPartitions = (
   state: State,
