@@ -41,6 +41,25 @@ export default class StoreUser {
     if (StoreUser.resolveReady) {
       StoreUser.resolveReady(StoreUser.store);
       StoreUser.resolveReady = undefined;
+      StoreUser.rejectReady = undefined;
+    }
+  }
+
+  /**
+   * Fail all pending and future readiness requests. This avoids UI requests and
+   * browser events hanging forever when state hydration or startup validation
+   * aborts intentionally (for example to protect a corrupt persisted state).
+   */
+  public static markFailed(error: unknown): void {
+    const failure =
+      error instanceof Error
+        ? error
+        : new Error('Cookie AutoDelete background initialization failed.');
+    StoreUser.initializationError = failure;
+    if (StoreUser.rejectReady) {
+      StoreUser.rejectReady(failure);
+      StoreUser.resolveReady = undefined;
+      StoreUser.rejectReady = undefined;
     }
   }
 
@@ -50,6 +69,9 @@ export default class StoreUser {
    * against a partially initialized state.
    */
   public static ready(): Promise<Store<State, ReduxAction>> {
+    if (StoreUser.initializationError) {
+      return Promise.reject(StoreUser.initializationError);
+    }
     if (StoreUser.store && StoreUser.isReady) {
       return Promise.resolve(StoreUser.store);
     }
@@ -71,15 +93,25 @@ export default class StoreUser {
 
   protected static store: Store<State, ReduxAction>;
 
+  private static initializationError: Error | undefined;
   private static isReady = false;
 
   private static resolveReady:
     | ((store: Store<State, ReduxAction>) => void)
     | undefined;
 
+  private static rejectReady: ((error: Error) => void) | undefined;
+
   private static readyPromise = new Promise<Store<State, ReduxAction>>(
-    (resolve) => {
+    (resolve, reject) => {
       StoreUser.resolveReady = resolve;
+      StoreUser.rejectReady = reject;
     },
+  );
+
+  // Avoid an unhandled-rejection warning if startup fails before anything has
+  // requested ready(); callers still observe the original rejection.
+  private static handledReadyPromise = StoreUser.readyPromise.catch(
+    () => undefined,
   );
 }
