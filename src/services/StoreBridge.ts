@@ -61,30 +61,36 @@ type BridgeMessage = {
   };
 };
 
-export const handleStoreMessage = async (
+export const handleStoreMessage = (
   message: BridgeMessage,
-): Promise<unknown> => {
+): Promise<unknown> | undefined => {
   if (message.type === STORE_UPDATE_STATE) {
-    const store = await StoreUser.ready();
-    return store.getState();
+    return StoreUser.ready().then((store) => store.getState());
   }
 
   if (message.type === STORE_DISPATCH && message.action) {
-    const store = await StoreUser.ready();
-    const { type, ...actionData } = message.action;
-    const actionCreator = actions[type];
-    if (!actionCreator) {
-      console.error(`Background store bridge does not contain action "${type}".`);
-      return undefined;
-    }
+    return StoreUser.ready().then((store) => {
+      const { type, ...actionData } = message.action as NonNullable<
+        BridgeMessage['action']
+      >;
+      const actionCreator = actions[type];
+      if (!actionCreator) {
+        console.error(
+          `Background store bridge does not contain action "${type}".`,
+        );
+        return undefined;
+      }
 
-    const payload = actionData.payload;
-    store.dispatch<any>(
-      actionCreator(Object.keys(actionData).length ? payload : undefined),
-    );
-    return { ok: true };
+      const payload = actionData.payload;
+      store.dispatch<any>(
+        actionCreator(Object.keys(actionData).length ? payload : undefined),
+      );
+      return { ok: true };
+    });
   }
 
+  // Important for runtime.onMessage: returning a Promise would claim unrelated
+  // messages and could prevent another listener from responding to them.
   return undefined;
 };
 
@@ -118,4 +124,6 @@ export const handleStoreConnection = (
 };
 
 browser.runtime.onConnect.addListener(handleStoreConnection);
-browser.runtime.onMessage.addListener(handleStoreMessage);
+// Older web-ext typings do not model Promise-returning onMessage listeners
+// consistently. browser-polyfill supports this runtime contract.
+browser.runtime.onMessage.addListener(handleStoreMessage as any);
