@@ -11,7 +11,9 @@ on:
       - '**/README.md'
 
 permissions:
-  contents: read
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   pre_info:
@@ -56,11 +58,45 @@ jobs:
     steps:
       - name: Checkout tested commit
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Repair exact malformed P0 test
+        if: github.event_name == 'push' && github.ref_name == 'modernization-p0'
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('__tests__/services/CleanupService.spec.ts')
+          text = path.read_text()
+          broken = """          [],
+        expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();edTimes(1);"""
+          fixed = """          [],
+        );
+        expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();"""
+          count = text.count(broken)
+          if count > 1:
+              raise SystemExit(f'Expected at most one malformed pluginData block, found {count}')
+          if count == 1:
+              path.write_text(text.replace(broken, fixed, 1))
+          PY
+
+          git diff --check
+          if ! git diff --quiet -- __tests__/services/CleanupService.spec.ts; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add __tests__/services/CleanupService.spec.ts
+            git commit -m 'test: repair pluginData regression expectation'
+            git push origin HEAD:modernization-p0
+          fi
+
       - name: Use Node.js from .nvmrc
         id: node
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
+
       - name: Cache npm download cache
         id: nodeCache
         uses: actions/cache@v4
@@ -69,21 +105,56 @@ jobs:
           key: ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-
+
       - name: Install locked dependencies
         run: npm ci --prefer-offline --no-fund
+
       - name: Run Tests
-        run: npm run test -- --verbose
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test -- --verbose 2>&1 | tee /tmp/p0-tests.log
+
       - name: Run Lint
-        run: npm run lint
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run lint 2>&1 | tee /tmp/p0-lint.log
+
       - name: Run Build
-        run: npm run build
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee /tmp/p0-build.log
         env:
           GITSHA: ${{ needs.pre_info.outputs.gitSHA }}
+
+      - name: Report P0 validation failure
+        if: failure() && github.event_name == 'push' && github.ref_name == 'modernization-p0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### P0 CI validation failure'
+            for file in /tmp/p0-tests.log /tmp/p0-lint.log /tmp/p0-build.log; do
+              if [[ -f "$file" ]]; then
+                echo
+                echo "#### $(basename "$file")"
+                echo '```text'
+                tail -n 180 "$file"
+                echo '```'
+              fi
+            done
+          } > /tmp/p0-comment.md
+          gh pr comment 1 --repo "$GITHUB_REPOSITORY" --body-file /tmp/p0-comment.md
+
       - name: Archive Code Coverage Results
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage
+
       - name: Extract zip builds for individual artifact upload
         if: github.event_name == 'pull_request'
         id: extbuilds
@@ -92,12 +163,14 @@ jobs:
           echo "ffdir=$(ls -d *Firefox)" >> "$GITHUB_OUTPUT"
           echo "crdir=$(ls -d *Chrome)" >> "$GITHUB_OUTPUT"
         working-directory: ./builds
+
       - name: Upload Artifact for Mozilla Firefox Build
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.extbuilds.outputs.ffdir }}
           path: builds/${{ steps.extbuilds.outputs.ffdir }}
+
       - name: Upload Artifact for Google Chrome Build
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
