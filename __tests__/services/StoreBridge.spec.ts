@@ -6,6 +6,7 @@ import {
   STORE_DISPATCH,
   STORE_UPDATE_STATE,
 } from '../../src/services/StoreBridge';
+import { ReduxConstants } from '../../src/typings/ReduxConstants';
 
 describe('StoreBridge', () => {
   const state = { cache: { browserDetect: browserName.Chrome } };
@@ -13,7 +14,7 @@ describe('StoreBridge', () => {
   const store = {
     dispatch: jest.fn(),
     getState: jest.fn(() => state),
-    subscribe: jest.fn(() => unsubscribe),
+    subscribe: jest.fn((_listener: () => void) => unsubscribe),
   };
 
   beforeEach(() => {
