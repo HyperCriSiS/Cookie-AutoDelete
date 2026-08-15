@@ -41,6 +41,14 @@ describe('CleanupService regressions', () => {
     await expect(cleanCookies(initialState, [cleanReason])).resolves.toEqual([]);
   });
 
+  it('treats an undefined Chromium cookies.remove result as not removed', async () => {
+    when(global.browser.cookies.remove)
+      .calledWith(expect.any(Object))
+      .mockResolvedValue(undefined as never);
+
+    await expect(cleanCookies(initialState, [cleanReason])).resolves.toEqual([]);
+  });
+
   it('does not count null cookie-removal results in cleanup totals', async () => {
     const chromeState: State = {
       ...initialState,
