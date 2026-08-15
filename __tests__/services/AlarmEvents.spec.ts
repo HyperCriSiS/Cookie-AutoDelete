@@ -30,6 +30,7 @@ class TestStore extends StoreUser {
 
 describe('AlarmEvents', () => {
   beforeEach(() => {
+    spyActions.cookieCleanup.mockImplementation(() => () => undefined);
     TestStore.changeSetting(SettingID.ACTIVE_MODE, true);
     TestStore.changeSetting(SettingID.CLEAN_DELAY, 60);
     when(global.browser.alarms.get)
