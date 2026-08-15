@@ -1,4 +1,5 @@
 import {
+  buildContainerImportPlan,
   createExpressionBackup,
   EXPRESSION_BACKUP_FORMAT,
   EXPRESSION_BACKUP_VERSION,
@@ -86,6 +87,59 @@ describe('ExpressionBackupService', () => {
       lists,
       containers: [],
     });
+  });
+
+  it('requires confirmation for name-only container matches', () => {
+    expect(
+      buildContainerImportPlan(
+        [{ storeId: 'firefox-container-24', name: 'Games' }],
+        [{ storeId: 'firefox-container-11', name: 'Games' }],
+      ),
+    ).toEqual([
+      {
+        source: { storeId: 'firefox-container-24', name: 'Games' },
+        status: 'needs-confirmation',
+        candidateStoreIds: ['firefox-container-11'],
+      },
+    ]);
+  });
+
+  it('keeps duplicate-name mapping candidates explicit', () => {
+    expect(
+      buildContainerImportPlan(
+        [{ storeId: 'firefox-container-24', name: 'Games' }],
+        [
+          { storeId: 'firefox-container-11', name: 'Games' },
+          { storeId: 'firefox-container-31', name: 'Games' },
+        ],
+      )[0],
+    ).toEqual({
+      source: { storeId: 'firefox-container-24', name: 'Games' },
+      status: 'needs-confirmation',
+      candidateStoreIds: ['firefox-container-11', 'firefox-container-31'],
+    });
+  });
+
+  it('accepts only an exact current store ID without confirmation', () => {
+    expect(
+      buildContainerImportPlan(
+        [{ storeId: 'firefox-container-24', name: 'Old Name' }],
+        [{ storeId: 'firefox-container-24', name: 'Renamed Container' }],
+      )[0],
+    ).toEqual({
+      source: { storeId: 'firefox-container-24', name: 'Old Name' },
+      status: 'exact-id',
+      candidateStoreIds: ['firefox-container-24'],
+    });
+  });
+
+  it('marks containers without candidates as missing', () => {
+    expect(
+      buildContainerImportPlan(
+        [{ storeId: 'firefox-container-24', name: 'Games' }],
+        [{ storeId: 'firefox-container-11', name: 'Work' }],
+      )[0].status,
+    ).toBe('missing');
   });
 
   it('rejects unsupported versions and invalid backup structures', () => {

@@ -28,6 +28,12 @@ export type ExpressionBackupV2 = Readonly<{
   containers: ExpressionContainerMetadata[];
 }>;
 
+export type ContainerImportMapping = Readonly<{
+  source: ExpressionContainerMetadata;
+  status: 'exact-id' | 'needs-confirmation' | 'missing';
+  candidateStoreIds: string[];
+}>;
+
 export type ParsedExpressionBackup = Readonly<{
   version: 1 | typeof EXPRESSION_BACKUP_VERSION;
   legacy: boolean;
@@ -112,3 +118,38 @@ export const parseExpressionBackup = (
     containers: [],
   };
 };
+
+export const buildContainerImportPlan = (
+  sourceContainers: ExpressionContainerMetadata[],
+  currentContainers: ExpressionContainerMetadata[],
+): ContainerImportMapping[] =>
+  sourceContainers.map((source) => {
+    const exact = currentContainers.find(
+      (candidate) => candidate.storeId === source.storeId,
+    );
+    if (exact) {
+      return {
+        source,
+        status: 'exact-id',
+        candidateStoreIds: [exact.storeId],
+      };
+    }
+
+    const sameName = currentContainers
+      .filter((candidate) => candidate.name === source.name)
+      .map((candidate) => candidate.storeId);
+
+    if (sameName.length > 0) {
+      return {
+        source,
+        status: 'needs-confirmation',
+        candidateStoreIds: sameName,
+      };
+    }
+
+    return {
+      source,
+      status: 'missing',
+      candidateStoreIds: [],
+    };
+  });
