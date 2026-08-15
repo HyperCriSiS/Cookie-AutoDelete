@@ -274,14 +274,14 @@ const handleInstalled = async (details: any): Promise<void> => {
       if (previousVersion < convertVersionToNumber('3.5.0')) {
         store.dispatch({
           payload: {
-            key: SettingID.OLD_WHITE_CLEAN_LOCALSTORAGE,
+            name: SettingID.OLD_WHITE_CLEAN_LOCALSTORAGE,
             value: false,
           },
           type: ReduxConstants.UPDATE_SETTING,
         });
         store.dispatch({
           payload: {
-            key: SettingID.OLD_GREY_CLEAN_LOCALSTORAGE,
+            name: SettingID.OLD_GREY_CLEAN_LOCALSTORAGE,
             value: false,
           },
           type: ReduxConstants.UPDATE_SETTING,
