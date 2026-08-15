@@ -11,9 +11,7 @@ on:
       - '**/README.md'
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+  contents: read
 
 jobs:
   pre_info:
@@ -56,73 +54,13 @@ jobs:
     needs: pre_info
     if: needs.pre_info.outputs.skipCI == 'false'
     steps:
-      - name: Checkout modernization branch
+      - name: Checkout tested commit
         uses: actions/checkout@v4
-        with:
-          ref: modernization-p0
-          fetch-depth: 0
-
-      - name: Apply exact P0 test repairs
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('__tests__/services/CleanupService.spec.ts')
-          text = path.read_text()
-
-          broken = """          [],
-        expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();edTimes(1);"""
-          fixed = """          [],
-        );
-        expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();"""
-          broken_count = text.count(broken)
-          if broken_count > 1:
-              raise SystemExit(f'Expected at most one malformed pluginData block, found {broken_count}')
-          if broken_count == 1:
-              text = text.replace(broken, fixed, 1)
-
-          marker = """  describe('cleanCookiesOperation()', () => {
-    const cleanupProperties: CleanupProperties = {
-      greyCleanup: false,
-      ignoreOpenTabs: false,
-    };
-    beforeEach(() => {
-      when(global.browser.tabs.query)"""
-          replacement = """  describe('cleanCookiesOperation()', () => {
-    const cleanupProperties: CleanupProperties = {
-      greyCleanup: false,
-      ignoreOpenTabs: false,
-    };
-    beforeEach(() => {
-      when(global.browser.cookies.remove)
-        .calledWith(expect.any(Object))
-        .mockResolvedValue({} as never);
-      when(global.browser.tabs.query)"""
-          marker_count = text.count(marker)
-          if marker_count > 1:
-              raise SystemExit(f'Expected at most one cleanup-operation setup marker, found {marker_count}')
-          if marker_count == 1:
-              text = text.replace(marker, replacement, 1)
-
-          path.write_text(text)
-          PY
-
-          git diff --check
-          if ! git diff --quiet -- __tests__/services/CleanupService.spec.ts; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add __tests__/services/CleanupService.spec.ts
-            git commit -m 'test: finalize cleanup P0 regressions'
-            git push --force origin HEAD:p0-repair-bot
-          fi
-
       - name: Use Node.js from .nvmrc
         id: node
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-
       - name: Cache npm download cache
         id: nodeCache
         uses: actions/cache@v4
@@ -131,56 +69,21 @@ jobs:
           key: ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-
-
       - name: Install locked dependencies
         run: npm ci --prefer-offline --no-fund
-
       - name: Run Tests
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run test -- --verbose 2>&1 | tee /tmp/p0-tests.log
-
+        run: npm run test -- --verbose
       - name: Run Lint
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run lint 2>&1 | tee /tmp/p0-lint.log
-
+        run: npm run lint
       - name: Run Build
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run build 2>&1 | tee /tmp/p0-build.log
+        run: npm run build
         env:
           GITSHA: ${{ needs.pre_info.outputs.gitSHA }}
-
-      - name: Report P0 validation failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          {
-            echo '### P0 CI validation failure'
-            for file in /tmp/p0-tests.log /tmp/p0-lint.log /tmp/p0-build.log; do
-              if [[ -f "$file" ]]; then
-                echo
-                echo "#### $(basename "$file")"
-                echo '```text'
-                tail -n 180 "$file"
-                echo '```'
-              fi
-            done
-          } > /tmp/p0-comment.md
-          gh pr comment 1 --repo "$GITHUB_REPOSITORY" --body-file /tmp/p0-comment.md
-
       - name: Archive Code Coverage Results
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage
-
       - name: Extract zip builds for individual artifact upload
         if: github.event_name == 'pull_request'
         id: extbuilds
@@ -189,14 +92,12 @@ jobs:
           echo "ffdir=$(ls -d *Firefox)" >> "$GITHUB_OUTPUT"
           echo "crdir=$(ls -d *Chrome)" >> "$GITHUB_OUTPUT"
         working-directory: ./builds
-
       - name: Upload Artifact for Mozilla Firefox Build
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.extbuilds.outputs.ffdir }}
           path: builds/${{ steps.extbuilds.outputs.ffdir }}
-
       - name: Upload Artifact for Google Chrome Build
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
