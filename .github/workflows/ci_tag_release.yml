@@ -46,7 +46,7 @@ jobs:
           path: coverage
       - name: GitHub Releases
         id: github_releases
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -58,7 +58,7 @@ jobs:
           prerelease: ${{ endsWith(github.ref, 'alpha') || endsWith(github.ref, 'beta') }}
           draft: true
       - name: Google Chrome WebStore Upload
-        uses: Passiverecords/chrome-extension-upload-action@1.4.1
+        uses: Passiverecords/chrome-extension-upload-action@d46910ee6515270bde08c1fe2bf0bceaaf5d7fb7 # 1.4.1
         if: startsWith(github.ref, 'refs/tags/') && !(endsWith(github.ref, 'alpha') || endsWith(github.ref, 'beta'))
         with:
           app-id: 'fhcgjolkccmbidfldomjliifgaodjagh'
@@ -68,7 +68,7 @@ jobs:
           refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
           publish: false
       - name: Mozilla Firefox AMO Upload
-        uses: trmcnvn/firefox-addon@v1
+        uses: trmcnvn/firefox-addon@0d05671269b82c69c3f22ed86d8e772e89d47cf4 # v1
         if: startsWith(github.ref, 'refs/tags/') && !(endsWith(github.ref, 'alpha') || endsWith(github.ref, 'beta'))
         with:
           api-key: ${{ secrets.FIREFOX_API_KEY }}
