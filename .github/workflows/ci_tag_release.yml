@@ -15,10 +15,10 @@ jobs:
     steps:
       - name: Checkout Commit
         uses: actions/checkout@v4
-      - name: Use Node.js LTS 22.x
+      - name: Use Node.js from .nvmrc
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version-file: '.nvmrc'
       - name: Install Dependencies (npm ci)
         run: npm ci --no-fund
       - name: Run Tests
