@@ -324,14 +324,14 @@ export const cleanCookies = async (
   const removed: CleanReasonObject[] = [];
 
   results.forEach((result) => {
-    if (result.result !== null) {
+    if (result.result != null) {
       removed.push(result.obj);
       return;
     }
 
     cadLog(
       {
-        msg: 'CleanupService.cleanCookies: browser.cookies.remove returned null; cookie was not removed.',
+        msg: 'CleanupService.cleanCookies: browser.cookies.remove did not confirm removal; cookie was not removed.',
         type: 'warn',
         x: {
           domain: result.obj.cookie.domain,
