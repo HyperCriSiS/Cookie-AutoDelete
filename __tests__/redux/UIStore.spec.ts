@@ -4,12 +4,15 @@ import {
   STORE_DISPATCH,
   STORE_UPDATE_STATE,
 } from '../../src/redux/StoreProtocol';
+import { ReduxConstants } from '../../src/typings/ReduxConstants';
 
 describe('UIStore', () => {
-  const initialState = { cache: { browserDetect: browserName.Chrome } } as State;
+  const initialState = {
+    cache: { browserDetect: browserName.Chrome },
+  } as unknown as State;
   const updatedState = {
     cache: { browserDetect: browserName.Firefox },
-  } as State;
+  } as unknown as State;
   let onMessage: ((message: unknown) => void) | undefined;
   let onDisconnect: (() => void) | undefined;
 
