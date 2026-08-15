@@ -24,18 +24,19 @@ class TestStore extends StoreUser {
   }
 }
 
-const makeTab = (url: string): browser.tabs.Tab => ({
-  active: true,
-  discarded: false,
-  hidden: false,
-  highlighted: false,
-  incognito: false,
-  index: 0,
-  pinned: false,
-  status: 'complete',
-  url,
-  windowId: 1,
-});
+const makeTab = (url: string): browser.tabs.Tab =>
+  ({
+    active: true,
+    discarded: false,
+    hidden: false,
+    highlighted: false,
+    incognito: false,
+    index: 0,
+    pinned: false,
+    status: 'complete',
+    url,
+    windowId: 1,
+  } as browser.tabs.Tab);
 
 describe('DomainChangeEvents', () => {
   const values: Record<string, unknown> = {};
