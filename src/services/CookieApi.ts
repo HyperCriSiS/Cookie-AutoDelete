@@ -13,6 +13,10 @@ import { supportsPartitionedCookies } from './BrowserCapabilities';
 
 type CookieQueryDetails = Partial<CookiePropertiesCleanup>;
 
+type PartitionAwareCookie = browser.cookies.Cookie & {
+  partitionKey?: browser.cookies.CookiePartitionKey;
+};
+
 export const getAllCookiesIncludingPartitions = (
   state: State,
   details: CookieQueryDetails,
@@ -28,5 +32,7 @@ export const getAllCookiesIncludingPartitions = (
 
 export const cookiePartitionDetails = (
   cookie: browser.cookies.Cookie,
-): { partitionKey: browser.cookies.CookiePartitionKey } | Record<string, never> =>
-  cookie.partitionKey ? { partitionKey: cookie.partitionKey } : {};
+): { partitionKey: browser.cookies.CookiePartitionKey } | Record<string, never> => {
+  const partitionKey = (cookie as PartitionAwareCookie).partitionKey;
+  return partitionKey ? { partitionKey } : {};
+};
