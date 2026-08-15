@@ -20,6 +20,13 @@ export type ExpressionContainerMetadata = Readonly<{
   icon?: string;
 }>;
 
+export type ContextualIdentityMetadataSource = Readonly<{
+  cookieStoreId: string;
+  name: string;
+  color?: string;
+  icon?: string;
+}>;
+
 export type ExpressionBackupV2 = Readonly<{
   format: typeof EXPRESSION_BACKUP_FORMAT;
   version: typeof EXPRESSION_BACKUP_VERSION;
@@ -63,6 +70,16 @@ const isContainerMetadata = (
   if (value.icon !== undefined && typeof value.icon !== 'string') return false;
   return true;
 };
+
+export const containerMetadataFromIdentities = (
+  identities: ContextualIdentityMetadataSource[],
+): ExpressionContainerMetadata[] =>
+  identities.map((identity) => ({
+    storeId: identity.cookieStoreId,
+    name: identity.name,
+    ...(identity.color === undefined ? {} : { color: identity.color }),
+    ...(identity.icon === undefined ? {} : { icon: identity.icon }),
+  }));
 
 export const createExpressionBackup = (
   lists: StoreIdToExpressionList,
@@ -127,7 +144,7 @@ export const buildContainerImportPlan = (
     const exact = currentContainers.find(
       (candidate) => candidate.storeId === source.storeId,
     );
-    if (exact) {
+    if (exact && exact.name === source.name) {
       return {
         source,
         status: 'exact-id',
@@ -138,12 +155,15 @@ export const buildContainerImportPlan = (
     const sameName = currentContainers
       .filter((candidate) => candidate.name === source.name)
       .map((candidate) => candidate.storeId);
+    const candidates = exact
+      ? [exact.storeId, ...sameName.filter((storeId) => storeId !== exact.storeId)]
+      : sameName;
 
-    if (sameName.length > 0) {
+    if (candidates.length > 0) {
       return {
         source,
         status: 'needs-confirmation',
-        candidateStoreIds: sameName,
+        candidateStoreIds: candidates,
       };
     }
 

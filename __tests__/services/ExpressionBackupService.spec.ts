@@ -1,5 +1,6 @@
 import {
   buildContainerImportPlan,
+  containerMetadataFromIdentities,
   createExpressionBackup,
   EXPRESSION_BACKUP_FORMAT,
   EXPRESSION_BACKUP_VERSION,
@@ -26,6 +27,26 @@ const lists: StoreIdToExpressionList = {
 };
 
 describe('ExpressionBackupService', () => {
+  it('extracts stable descriptive fields from Firefox contextual identities', () => {
+    expect(
+      containerMetadataFromIdentities([
+        {
+          cookieStoreId: 'firefox-container-24',
+          name: 'Games',
+          color: 'blue',
+          icon: 'briefcase',
+        },
+      ]),
+    ).toEqual([
+      {
+        storeId: 'firefox-container-24',
+        name: 'Games',
+        color: 'blue',
+        icon: 'briefcase',
+      },
+    ]);
+  });
+
   it('creates a versioned backup without rewriting list store IDs', () => {
     const backup = createExpressionBackup(
       lists,
@@ -120,15 +141,28 @@ describe('ExpressionBackupService', () => {
     });
   });
 
-  it('accepts only an exact current store ID without confirmation', () => {
+  it('accepts matching store ID and name as an exact candidate', () => {
     expect(
       buildContainerImportPlan(
-        [{ storeId: 'firefox-container-24', name: 'Old Name' }],
-        [{ storeId: 'firefox-container-24', name: 'Renamed Container' }],
+        [{ storeId: 'firefox-container-24', name: 'Games' }],
+        [{ storeId: 'firefox-container-24', name: 'Games' }],
       )[0],
     ).toEqual({
-      source: { storeId: 'firefox-container-24', name: 'Old Name' },
+      source: { storeId: 'firefox-container-24', name: 'Games' },
       status: 'exact-id',
+      candidateStoreIds: ['firefox-container-24'],
+    });
+  });
+
+  it('requires confirmation when an exact store ID now has a different name', () => {
+    expect(
+      buildContainerImportPlan(
+        [{ storeId: 'firefox-container-24', name: 'Games' }],
+        [{ storeId: 'firefox-container-24', name: 'Work' }],
+      )[0],
+    ).toEqual({
+      source: { storeId: 'firefox-container-24', name: 'Games' },
+      status: 'needs-confirmation',
       candidateStoreIds: ['firefox-container-24'],
     });
   });
