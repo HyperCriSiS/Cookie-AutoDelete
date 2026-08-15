@@ -1,8 +1,15 @@
+import { initialState } from '../../src/redux/State';
 import { parsePersistedState } from '../../src/services/StateHydration';
 
 describe('StateHydration', () => {
   it('accepts missing state for a fresh installation', () => {
     expect(parsePersistedState({})).toEqual({});
+  });
+
+  it('accepts the complete 3.x baseline state shape', () => {
+    expect(
+      parsePersistedState({ state: JSON.stringify(initialState) }),
+    ).toEqual(initialState);
   });
 
   it('parses a valid persisted state', () => {
