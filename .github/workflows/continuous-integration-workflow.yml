@@ -56,13 +56,13 @@ jobs:
     needs: pre_info
     if: needs.pre_info.outputs.skipCI == 'false'
     steps:
-      - name: Checkout tested commit
+      - name: Checkout modernization branch
         uses: actions/checkout@v4
         with:
           ref: modernization-p0
           fetch-depth: 0
 
-      - name: Repair exact malformed P0 test
+      - name: Apply exact P0 test repairs
         shell: bash
         run: |
           python - <<'PY'
@@ -70,16 +70,42 @@ jobs:
 
           path = Path('__tests__/services/CleanupService.spec.ts')
           text = path.read_text()
+
           broken = """          [],
         expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();edTimes(1);"""
           fixed = """          [],
         );
         expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();"""
-          count = text.count(broken)
-          if count > 1:
-              raise SystemExit(f'Expected at most one malformed pluginData block, found {count}')
-          if count == 1:
-              path.write_text(text.replace(broken, fixed, 1))
+          broken_count = text.count(broken)
+          if broken_count > 1:
+              raise SystemExit(f'Expected at most one malformed pluginData block, found {broken_count}')
+          if broken_count == 1:
+              text = text.replace(broken, fixed, 1)
+
+          marker = """  describe('cleanCookiesOperation()', () => {
+    const cleanupProperties: CleanupProperties = {
+      greyCleanup: false,
+      ignoreOpenTabs: false,
+    };
+    beforeEach(() => {
+      when(global.browser.tabs.query)"""
+          replacement = """  describe('cleanCookiesOperation()', () => {
+    const cleanupProperties: CleanupProperties = {
+      greyCleanup: false,
+      ignoreOpenTabs: false,
+    };
+    beforeEach(() => {
+      when(global.browser.cookies.remove)
+        .calledWith(expect.any(Object))
+        .mockResolvedValue({} as never);
+      when(global.browser.tabs.query)"""
+          marker_count = text.count(marker)
+          if marker_count > 1:
+              raise SystemExit(f'Expected at most one cleanup-operation setup marker, found {marker_count}')
+          if marker_count == 1:
+              text = text.replace(marker, replacement, 1)
+
+          path.write_text(text)
           PY
 
           git diff --check
@@ -87,8 +113,8 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add __tests__/services/CleanupService.spec.ts
-            git commit -m 'test: repair pluginData regression expectation'
-            git push origin HEAD:modernization-p0
+            git commit -m 'test: finalize cleanup P0 regressions'
+            git push --force origin HEAD:p0-repair-bot
           fi
 
       - name: Use Node.js from .nvmrc
