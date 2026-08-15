@@ -274,7 +274,7 @@ export default class ContextMenuEvents extends StoreUser {
         contexts: createProperties.contexts
           ? createProperties.contexts
           : ([
-              browser.runtime.getManifest().manifest_version === 3
+              Number(browser.runtime.getManifest().manifest_version) === 3
                 ? 'action'
                 : 'browser_action',
               'page',

@@ -41,6 +41,7 @@ const spyCleanupService: JestSpyObject = global.generateSpies(CleanupService);
 
 const sampleTab: browser.tabs.Tab = {
   active: true,
+  id: 1,
   cookieStoreId: 'firefox-default',
   hidden: false,
   highlighted: false,
@@ -1282,7 +1283,7 @@ describe('CleanupService', () => {
       const result = filterSiteData(cleanReasonObj, SiteDataType.LOCALSTORAGE);
       expect(result).toBe(false);
     });
-    it('should return true because of restart cleanup and is expired cookie on restart.  Edge case => usually notInAnyList takes precidence already.', () => {
+    it('should not misclassify an expired restart cookie without a matching expression as CAD site data', () => {
       const cleanReasonObj: CleanReasonObject = {
         cached: false,
         cleanCookie: true,
@@ -1293,7 +1294,7 @@ describe('CleanupService', () => {
         reason: ReasonClean.ExpiredCookieRestart,
       };
       const result = filterSiteData(cleanReasonObj, SiteDataType.LOCALSTORAGE);
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
     it('should return false because of whitelist expression and is expired cookie.', () => {
       const cleanReasonObj: CleanReasonObject = {
