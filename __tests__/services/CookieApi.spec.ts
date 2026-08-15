@@ -68,18 +68,12 @@ describe('CookieApi partition compatibility', () => {
     const unpartitioned = { domain: 'example.com' } as browser.cookies.Cookie;
     const partitioned = {
       domain: 'example.com',
-      partitionKey: {
-        topLevelSite: 'https://top.example',
-        hasCrossSiteAncestor: true,
-      },
+      partitionKey: { topLevelSite: 'https://top.example' },
     } as browser.cookies.Cookie;
 
     expect(cookiePartitionDetails(unpartitioned)).toEqual({});
     expect(cookiePartitionDetails(partitioned)).toEqual({
-      partitionKey: {
-        topLevelSite: 'https://top.example',
-        hasCrossSiteAncestor: true,
-      },
+      partitionKey: { topLevelSite: 'https://top.example' },
     });
   });
 });
