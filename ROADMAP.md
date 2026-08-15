@@ -29,7 +29,8 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 - [x] Keep Initial Checks green on the current PR head.
 - [x] Keep CodeQL / JavaScript-TypeScript / Actions analysis green where reported on the current PR head.
-- [ ] Diagnose the failing `Tests, Builds, Coverage` checks on PR #1 and fix the underlying test/build issues rather than masking them.
+- [ ] Repair the syntax corruption introduced in `96edf535` in `__tests__/services/CleanupService.spec.ts`: `expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();edTimes(1);` must become the intended negative expectation.
+- [ ] Re-run `Tests, Builds, Coverage` after repairing the test syntax and then address any remaining behavioral failures instead of masking them.
 - [ ] Investigate the failing `github-advanced-security` check and determine whether it is a repository/configuration limitation or an actionable code/workflow failure.
 - [ ] Re-run the full PR check matrix after fixes and require a clean functional validation state before P0 is merge-ready.
 
@@ -60,10 +61,10 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 ## Blockers / dependencies
 
-- PR #1 currently reports multiple failing `Tests, Builds, Coverage` jobs, so the branch is not merge-ready.
+- PR #1 currently has three failing `Tests, Builds, Coverage` jobs. The immediate concrete blocker is a malformed Jest assertion introduced by commit `96edf535`; functional results are not trustworthy until that syntax error is repaired.
 - The `github-advanced-security` check also reports failure and must be classified before completion.
 - Several open Dependabot PRs are major-version jumps and must not be treated as safe/automatic upgrades without compatibility validation.
 
 ## Completion status
 
-**Not fully completed.** The next priority is to diagnose and repair the failing test/build matrix on PR #1, then validate real upgrade/migration behavior.
+**Not fully completed.** The next action is the one-line Jest syntax repair, followed immediately by a fresh test/build matrix so any remaining behavioral failures can be isolated.
