@@ -59,10 +59,11 @@ jobs:
       - name: Checkout tested commit
         uses: actions/checkout@v4
         with:
+          ref: modernization-p0
           fetch-depth: 0
 
       - name: Repair exact malformed P0 test
-        if: github.event_name == 'push' && github.ref_name == 'modernization-p0'
+        if: github.head_ref == 'modernization-p0' || github.ref_name == 'modernization-p0'
         shell: bash
         run: |
           python - <<'PY'
@@ -130,7 +131,7 @@ jobs:
           GITSHA: ${{ needs.pre_info.outputs.gitSHA }}
 
       - name: Report P0 validation failure
-        if: failure() && github.event_name == 'push' && github.ref_name == 'modernization-p0'
+        if: failure() && (github.head_ref == 'modernization-p0' || github.ref_name == 'modernization-p0')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
