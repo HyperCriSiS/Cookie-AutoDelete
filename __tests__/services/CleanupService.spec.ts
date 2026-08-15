@@ -1988,7 +1988,7 @@ describe('CleanupService', () => {
         expect(spyCleanupService.cleanSiteData).toHaveBeenCalledTimes(1);
       });
 
-      it('should call cleanSiteData for: Chrome, pluginDataCleanup true', async () => {
+      it('should not call cleanSiteData for deprecated Chromium pluginData cleanup', async () => {
         await otherBrowsingDataCleanup(
           {
             ...pluginDataState,
@@ -1997,8 +1997,7 @@ describe('CleanupService', () => {
             },
           },
           [],
-        );
-        expect(spyCleanupService.cleanSiteData).toHaveBeenCalledTimes(1);
+        expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();edTimes(1);
       });
     });
 
