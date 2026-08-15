@@ -5,9 +5,8 @@
  * (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/blob/3.X.X-Branch/LICENSE)
  *
  * Local ID generation for expression IDs, notification IDs and temporary
- * internal-cookie paths. The default export intentionally exposes generate()
- * so existing shortid imports can be redirected here during the staged
- * dependency migration without changing persisted IDs.
+ * internal-cookie paths. Existing persisted IDs remain unchanged; this service
+ * is used only when a new runtime identifier is required.
  */
 
 type CryptoWithRandomUUID = Crypto & {
@@ -40,8 +39,4 @@ export const generateId = (): string => {
   // unusual test/tooling runtimes so ID generation never crashes build tools.
   const random = Math.random().toString(36).slice(2);
   return `${Date.now().toString(36)}-${random}`;
-};
-
-export default {
-  generate: generateId,
 };
