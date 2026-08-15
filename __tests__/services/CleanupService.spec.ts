@@ -1997,7 +1997,7 @@ describe('CleanupService', () => {
             },
           },
           [],
-        expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();edTimes(1);
+        expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();
       });
     });
 
