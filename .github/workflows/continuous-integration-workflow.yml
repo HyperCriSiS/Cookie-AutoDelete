@@ -56,11 +56,11 @@ jobs:
     steps:
       - name: Checkout tested commit
         uses: actions/checkout@v4
-      - name: Use Node.js LTS 22.x
+      - name: Use Node.js from .nvmrc
         id: node
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version-file: '.nvmrc'
       - name: Cache npm download cache
         id: nodeCache
         uses: actions/cache@v4
