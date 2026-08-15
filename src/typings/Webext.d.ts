@@ -37,10 +37,6 @@ declare namespace browser.cookies {
     hasCrossSiteAncestor?: boolean;
   }
 
-  interface Cookie {
-    partitionKey?: CookiePartitionKey;
-  }
-
   interface CookieProperties extends browser.cookies.Cookie {
     firstPartyDomain?: string;
   }
