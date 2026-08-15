@@ -31,6 +31,13 @@ declare namespace browser.browsingData {
   ): Promise<void>;
 }
 
+declare namespace browser.runtime {
+  type CompatibleManifest = Omit<Manifest, 'manifest_version'> & {
+    manifest_version: 2 | 3;
+  };
+  function getManifest(): CompatibleManifest;
+}
+
 declare namespace browser.cookies {
   interface CookiePartitionKey {
     topLevelSite?: string;
