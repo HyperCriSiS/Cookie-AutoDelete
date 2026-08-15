@@ -93,33 +93,28 @@ jobs:
               });""",
           )
 
-          replace_optional(
-              '__tests__/services/CleanupService.spec.ts',
-              """      it('should call cleanSiteData for: Chrome, pluginDataCleanup true', async () => {
-                await otherBrowsingDataCleanup(
-                  {
-                    ...pluginDataState,
-                    cache: {
-                      browserDetect: browserName.Chrome,
-                    },
-                  },
-                  [],
-                );
-                expect(spyCleanupService.cleanSiteData).toHaveBeenCalledTimes(1);
-              });""",
-              """      it('should not call cleanSiteData for deprecated Chromium pluginData cleanup', async () => {
-                await otherBrowsingDataCleanup(
-                  {
-                    ...pluginDataState,
-                    cache: {
-                      browserDetect: browserName.Chrome,
-                    },
-                  },
-                  [],
-                );
-                expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();
-              });""",
-          )
+          cleanup_path = Path('__tests__/services/CleanupService.spec.ts')
+          cleanup_text = cleanup_path.read_text()
+          marker = "it('should call cleanSiteData for: Chrome, pluginDataCleanup true'"
+          if marker in cleanup_text:
+              if cleanup_text.count(marker) != 1:
+                  raise SystemExit('CleanupService.spec.ts: Chromium pluginData marker is not unique')
+              start = cleanup_text.index(marker)
+              old_expect = 'expect(spyCleanupService.cleanSiteData).toHaveBeenCalledTimes(1);'
+              expect_at = cleanup_text.index(old_expect, start)
+              if expect_at - start > 900:
+                  raise SystemExit('CleanupService.spec.ts: Chromium pluginData expectation was too far from marker')
+              cleanup_text = cleanup_text.replace(
+                  marker,
+                  "it('should not call cleanSiteData for deprecated Chromium pluginData cleanup'",
+                  1,
+              )
+              cleanup_text = (
+                  cleanup_text[:expect_at]
+                  + 'expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();'
+                  + cleanup_text[expect_at + len(old_expect):]
+              )
+              cleanup_path.write_text(cleanup_text)
           PY
 
           git diff --check
@@ -127,7 +122,7 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add src/services/ContextMenuEvents.ts src/typings/Webext.d.ts __tests__/services/CleanupService.spec.ts
-            git commit -m 'test: align legacy suite with MV3 behavior'
+            git commit -m 'test: align remaining pluginData expectation'
             git push origin HEAD:modernization-p0
           fi
       - name: Use Node.js from .nvmrc
