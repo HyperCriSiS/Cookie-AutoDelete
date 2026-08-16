@@ -151,10 +151,13 @@ export default class SettingService extends StoreUser {
       SettingID.CLEANUP_LOCALSTORAGE,
     );
 
-    await checkIfProtected(StoreUser.store.getState());
-
-    // Validate Settings Again
+    // Normalize legacy persisted settings before consumers such as
+    // checkIfProtected() dereference keys that may not have existed when the
+    // profile was saved. Side effects above intentionally use the original
+    // pre-normalization snapshot so newly introduced defaults are not treated
+    // as user-enabled cleanup settings.
     StoreUser.store.dispatch<any>(validateSettings());
+    await checkIfProtected(StoreUser.store.getState());
   }
 
   private static getCurrent(s: SettingID): boolean | number | string {
