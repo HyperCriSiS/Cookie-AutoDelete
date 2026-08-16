@@ -1,0 +1,17 @@
+name: tmp inspect browsing data upgrade
+on:
+  push:
+    branches: [modernization-p0]
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect cleanup setting access
+        shell: bash
+        run: |
+          set -e
+          echo '=== direct setting accesses ==='
+          grep -R -n -C 8 'SettingService.current\[.*\]\.value' src __tests__ || true
+          echo '=== browsing data methods ==='
+          grep -R -n -C 10 -E 'BrowsingData|browsingData|siteData|otherBrowsingData' src/services __tests__/services | head -n 500 || true
