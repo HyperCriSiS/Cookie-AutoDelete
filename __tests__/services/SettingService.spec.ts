@@ -150,6 +150,25 @@ describe('SettingService', () => {
       await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();
     });
 
+    it('should tolerate an older profile while a site-data cleanup setting is still missing', async () => {
+      const { [SettingID.CLEANUP_CACHE]: _missingCleanupCache, ...legacySettings } =
+        initialState.settings;
+      const legacyStore: Store<State, ReduxAction> = createStore({
+        ...initialState,
+        settings: legacySettings,
+      });
+      StoreUser.init(legacyStore);
+      SettingService.init();
+
+      legacyStore.dispatch(updateSetting({ name: SettingID.ACTIVE_MODE, value: true }));
+
+      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();
+      expect(global.browser.browsingData.remove).not.toHaveBeenCalled();
+
+      StoreUser.init(store);
+      SettingService.init();
+    });
+
     it('should init if not yet initialized', async () => {
       TestSettingService.setIsInitialized(false);
       expect(TestSettingService.getIsInitialized()).toEqual(false);

@@ -45,9 +45,11 @@ export default class SettingService extends StoreUser {
     // BrowsingData Settings Check
     for (const siteData of SITEDATATYPES) {
       const sd = `${siteDataToBrowser(siteData)}Cleanup`;
+      const currentSiteDataSetting = SettingService.current[sd];
       if (
+        currentSiteDataSetting !== undefined &&
         (previous[sd] === undefined || !previous[sd].value) &&
-        SettingService.current[sd].value
+        currentSiteDataSetting.value
       ) {
         if (!supportsStorageType(StoreUser.store.getState().cache, siteData)) {
           cadLog(
