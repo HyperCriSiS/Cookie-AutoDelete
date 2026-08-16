@@ -1,0 +1,16 @@
+name: tmp-setting-migration-inspect
+on:
+  push:
+    branches: [modernization-p0]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect settings migration tests
+        run: |
+          sed -n '1,280p' __tests__/services/SettingService.spec.ts
+          echo '=== settings shape ==='
+          grep -R -n "enum SettingID\|const SettingID\|CONTEXTUAL_IDENTITIES\|ACTIVE_MODE" src/redux src/typings | head -n 120
