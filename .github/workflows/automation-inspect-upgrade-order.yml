@@ -1,19 +1,41 @@
-name: automation inspect upgrade ordering
+name: automation fix upgrade ordering
 on:
   push:
     branches: [modernization-p0]
     paths:
       - '.github/workflows/automation-inspect-upgrade-order.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
-  inspect:
+  fix:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect SettingService upgrade ordering
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Patch validation ordering
         run: |
-          echo '=== SettingService relevant methods ==='
-          grep -n -C 18 -E 'validateSettings|checkIfProtected|hasNewValue|onSettingsChange' src/services/SettingService.ts || true
-          echo '=== tests relevant context ==='
-          grep -n -C 14 -E 'legacy|CLEANUP_CACHE|checkIfProtected|missing|older' __tests__/services/SettingService.spec.ts || true
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/services/SettingService.ts')
+          s = p.read_text()
+          old = """    await checkIfProtected(StoreUser.store.getState());\n\n    // Validate Settings Again\n    StoreUser.store.dispatch<any>(validateSettings());\n"""
+          new = """    // Normalize legacy persisted settings before consumers such as\n    // checkIfProtected() dereference keys that may not have existed when the\n    // profile was saved. Side effects above intentionally use the original\n    // pre-normalization snapshot so newly introduced defaults are not treated\n    // as user-enabled cleanup settings.\n    StoreUser.store.dispatch<any>(validateSettings());\n    await checkIfProtected(StoreUser.store.getState());\n    SettingService.current = StoreUser.store.getState().settings;\n"""
+          if old not in s:
+              raise SystemExit('expected validation/checkIfProtected block not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Run focused SettingService tests
+        run: npm test -- --runInBand __tests__/services/SettingService.spec.ts
+      - name: Commit validated fix and remove temporary workflow
+        run: |
+          rm .github/workflows/automation-inspect-upgrade-order.yml
+          git config user.name 'HyperCriSiS'
+          git config user.email 'dev.github@w3b.world'
+          git add src/services/SettingService.ts .github/workflows/automation-inspect-upgrade-order.yml
+          git commit -m 'fix: normalize legacy settings before protection checks'
+          git push
