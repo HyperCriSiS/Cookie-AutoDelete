@@ -1,6 +1,8 @@
 name: automation validate Chromium legacy settings upgrade
 on:
-  workflow_dispatch:
+  push:
+    branches: [modernization-p0]
+    paths: ['.github/workflows/automation-validate-chromium-legacy.yml']
 permissions:
   contents: write
 jobs:
@@ -26,8 +28,7 @@ jobs:
           if 'should tolerate a Chromium legacy profile' not in s:
               if anchor not in s:
                   raise SystemExit('anchor missing')
-              s = s.replace(anchor, test + anchor, 1)
-              p.write_text(s)
+              p.write_text(s.replace(anchor, test + anchor, 1))
       - name: Run focused SettingService tests
         run: npx jest __tests__/services/SettingService.spec.ts --runInBand
       - name: Commit tested regression
