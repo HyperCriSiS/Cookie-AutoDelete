@@ -1,0 +1,17 @@
+name: automation inspect phase2
+on:
+  push:
+    branches: [modernization-p0]
+    paths:
+      - '.github/workflows/automation-inspect-phase2.yml'
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect upgrade and restoration coverage
+        run: |
+          echo '=== ROADMAP phase 2 ==='
+          sed -n '/Phase 2/,/Phase 3/p' ROADMAP.md || true
+          echo '=== allowlist/greylist tests ==='
+          grep -R -n -E "allowlist|greylist|white(list)?|grey(list)?|StateHydration|service worker|serviceWorker|onStartup|onInstalled" __tests__ src | head -n 320 || true
