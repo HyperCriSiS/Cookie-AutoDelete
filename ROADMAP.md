@@ -41,6 +41,8 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 - [x] Preserve non-destructive upgrades when older persisted profiles lack settings introduced by newer versions: `SettingService.hasNewValue()` now treats a missing previous key as changed, with a regression test covering the legacy-profile case (`1e1856ab`).
 - [x] Tolerate staged validation of older profiles while later-introduced site-data cleanup keys are still absent. `SettingService.onSettingsChange()` now guards the current site-data setting before reading `.value`; `SettingService.spec.ts` covers the intermediate legacy-profile state. Focused validation: 15/15 tests green in the successful repair run; production/test commit `903558d`.
+- [x] Validate Firefox legacy-profile activation when a later-introduced `CLEANUP_CACHE` setting is absent: activation remains non-destructive and does not trigger browsing-data cleanup (`65bac073`); focused `SettingService` validation and normal CI were green.
+- [x] Validate the equivalent Chromium legacy-profile activation path without destructive cleanup (`9a82906b`); focused `SettingService` validation and normal push/PR/PR-target CI were green.
 - [ ] Validate upgrades from existing Cookie AutoDelete user profiles/settings on Firefox and Chromium without destructive resets.
 - [ ] Verify allowlist/greylist behavior and domain matching after StoreBridge/UIStore migration.
 - [ ] Verify cleanup on tab close, domain change and browser restart according to configured behavior.
@@ -74,4 +76,4 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 ## Completion status
 
-**Not fully completed.** Phase 1 functional stabilization is complete. Phase 2 now covers two concrete legacy-profile missing-setting cases; the next priority remains broader non-destructive Firefox/Chromium profile-upgrade validation, then runtime behavior and state-restoration compatibility.
+**Not fully completed.** Phase 1 functional stabilization is complete. Phase 2 now covers missing-setting upgrade safety plus explicit non-destructive legacy-profile activation on both Firefox and Chromium. Broader profile/settings migration coverage remains open, followed by runtime behavior and state-restoration compatibility.
