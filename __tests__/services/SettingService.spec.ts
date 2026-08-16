@@ -71,6 +71,11 @@ class TestSettingService extends SettingService {
   public static setIsInitialized(value: boolean) {
     SettingService.isInitialized = value;
   }
+
+  public static setTestCurrent(value: MapToSettingObject) {
+    SettingService.current = value;
+    SettingService.isInitialized = true;
+  }
 }
 
 const defaultTab: browser.tabs.Tab = {
@@ -134,6 +139,17 @@ describe('SettingService', () => {
         defaultTab,
         { ...defaultTab, url: 'https://example.com' },
       ] as never);
+    it('should tolerate settings introduced after an older profile was persisted', async () => {
+      SettingService.init();
+      const previous = { ...TestSettingService.getTestCurrent() };
+      delete previous[SettingID.ACTIVE_MODE];
+      TestSettingService.setTestCurrent(previous);
+
+      TestStore.changeSetting(SettingID.ACTIVE_MODE, true);
+
+      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();
+    });
+
     it('should init if not yet initialized', async () => {
       TestSettingService.setIsInitialized(false);
       expect(TestSettingService.getIsInitialized()).toEqual(false);
