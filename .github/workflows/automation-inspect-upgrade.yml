@@ -1,20 +1,13 @@
 name: automation inspect phase 2 upgrade
-
 on:
   push:
     branches: [modernization-p0]
     paths: ['.github/workflows/automation-inspect-upgrade.yml']
-
 permissions:
   contents: read
-
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print test helpers
-        run: |
-          sed -n '1,260p' __tests__/services/SettingService.spec.ts
-          echo '=== TestStore definitions ==='
-          grep -RIn -B10 -A80 'class TestStore\|const TestStore\|namespace TestStore' __tests__ src | head -n 700 || true
+      - run: cat ROADMAP.md
