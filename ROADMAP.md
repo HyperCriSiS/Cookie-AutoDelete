@@ -40,7 +40,7 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 ## Phase 2 — migration and behavioral compatibility
 
 - [x] Preserve non-destructive upgrades when older persisted profiles lack settings introduced by newer versions: `SettingService.hasNewValue()` now treats a missing previous key as changed, with a regression test covering the legacy-profile case (`1e1856ab`).
-
+- [x] Tolerate staged validation of older profiles while later-introduced site-data cleanup keys are still absent. `SettingService.onSettingsChange()` now guards the current site-data setting before reading `.value`; `SettingService.spec.ts` covers the intermediate legacy-profile state. Focused validation: 15/15 tests green in the successful repair run; production/test commit `903558d`.
 - [ ] Validate upgrades from existing Cookie AutoDelete user profiles/settings on Firefox and Chromium without destructive resets.
 - [ ] Verify allowlist/greylist behavior and domain matching after StoreBridge/UIStore migration.
 - [ ] Verify cleanup on tab close, domain change and browser restart according to configured behavior.
@@ -66,10 +66,10 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 ## Blockers / dependencies
 
-- No functional CI blocker is currently known on `modernization-p0`; regular CI is green on clean head `8bad8409`.
+- No known functional blocker exists in the focused Phase-2 upgrade path after commit `903558d`; its `SettingService` regression suite is green. Full regular CI should remain the release gate for broader compatibility work.
 - The separate GitHub Advanced Security agent currently fails inside GitHub infrastructure with `400 The requested model is not supported` before repository analysis starts; this does not block functional P0 validation.
 - Several open Dependabot PRs are major-version jumps and must not be treated as safe/automatic upgrades without compatibility validation.
 
 ## Completion status
 
-**Not fully completed.** Phase 1 functional stabilization is complete. The next priority is Phase 2 upgrade/migration compatibility, starting with non-destructive upgrades from existing Firefox and Chromium user profiles/settings.
+**Not fully completed.** Phase 1 functional stabilization is complete. Phase 2 now covers two concrete legacy-profile missing-setting cases; the next priority remains broader non-destructive Firefox/Chromium profile-upgrade validation, then runtime behavior and state-restoration compatibility.
