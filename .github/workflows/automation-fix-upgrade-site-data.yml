@@ -1,0 +1,51 @@
+name: automation fix missing site-data upgrade
+
+on:
+  push:
+    branches: [modernization-p0]
+    paths: ['.github/workflows/automation-fix-upgrade-site-data.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: modernization-p0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Apply narrow regression fix and test
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          service = Path('src/services/SettingService.ts')
+          text = service.read_text()
+          old = """      if (\n        (previous[sd] === undefined || !previous[sd].value) &&\n        SettingService.current[sd].value\n      ) {"""
+          new = """      const currentSiteDataSetting = SettingService.current[sd];\n      if (\n        currentSiteDataSetting !== undefined &&\n        (previous[sd] === undefined || !previous[sd].value) &&\n        currentSiteDataSetting.value\n      ) {"""
+          if old not in text:
+              raise SystemExit('SettingService target block not found')
+          service.write_text(text.replace(old, new, 1))
+
+          spec = Path('__tests__/services/SettingService.spec.ts')
+          text = spec.read_text()
+          anchor = """    it('should clean that site data if it was recently enabled', async () => {\n      TestStore.changeSetting(SettingID.CLEANUP_CACHE, true);\n      await SettingService.onSettingsChange();\n      expect(global.browser.browsingData.remove).toHaveBeenCalledTimes(1);\n    });\n"""
+          addition = anchor + """\n    it('should tolerate an older profile while a site-data cleanup setting is still missing', async () => {\n      SettingService.init();\n      const previous = { ...TestSettingService.getTestCurrent() };\n      delete previous[SettingID.CLEANUP_CACHE];\n      TestSettingService.setTestCurrent(previous);\n\n      const current = { ...TestStore.getState().settings };\n      delete current[SettingID.CLEANUP_CACHE];\n      TestStore.replaceSettings(current);\n\n      TestStore.changeSetting(SettingID.ACTIVE_MODE, true);\n\n      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();\n      expect(global.browser.browsingData.remove).not.toHaveBeenCalled();\n    });\n"""
+          if anchor not in text:
+              raise SystemExit('SettingService.spec anchor not found')
+          spec.write_text(text.replace(anchor, addition, 1))
+          PY
+          npm ci
+          npm test -- --runInBand __tests__/services/SettingService.spec.ts
+      - name: Commit validated fix
+        run: |
+          git config user.name "HyperCriSiS"
+          git config user.email "dev.github@w3b.world"
+          git add src/services/SettingService.ts __tests__/services/SettingService.spec.ts
+          git commit -m "fix: tolerate missing site-data settings during upgrades"
+          git push origin HEAD:modernization-p0
