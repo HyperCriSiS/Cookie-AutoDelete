@@ -27,12 +27,15 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 ## Phase 1 — make the P0 branch consistently green
 
-- [x] Keep Initial Checks green on the current PR head.
-- [x] Keep CodeQL / JavaScript-TypeScript / Actions analysis green where reported on the current PR head.
-- [x] Repair the syntax corruption introduced in `96edf535` in `__tests__/services/CleanupService.spec.ts`; commit `c68555a` restored the intended negative expectation.
-- [ ] Diagnose the three remaining failing `Tests, Builds, Coverage` jobs on PR #1 now that the malformed Jest assertion is fixed; address the actual behavioral/build failures rather than masking them.
+- [x] Keep Initial Checks green on the previously validated PR head.
+- [x] Keep CodeQL / JavaScript-TypeScript / Actions analysis green where reported on the previously validated PR head.
+- [x] Repair the malformed Jest assertion introduced in `96edf535`; commit `c68555a` restored the intended negative expectation.
+- [x] Restore the missing `);` on the affected `otherBrowsingDataCleanup(...)` test call; commit `0f597563` repairs the incomplete call without changing production behavior.
+- [x] Capture and isolate the remaining Jest failure: after the syntax/call repairs, 29 of 30 suites and 548 of 549 tests passed; the sole failure was the legacy Firefox cleanup test expecting two confirmed removals while its path did not explicitly mock successful `browser.cookies.remove` results.
+- [x] Align that legacy success-path test with the production contract that only browser-confirmed removals count; commit `6f309b55` explicitly mocks successful removal results rather than weakening the production accounting logic.
+- [ ] Re-run the complete `Tests, Builds, Coverage` matrix after `6f309b55` and address any remaining functional/build failures.
 - [ ] Investigate the failing `github-advanced-security` check and determine whether it is a repository/configuration limitation or an actionable code/workflow failure.
-- [ ] Re-run the full PR check matrix after fixes and require a clean functional validation state before P0 is merge-ready.
+- [ ] Require a clean functional validation state before P0 is merge-ready.
 
 ## Phase 2 — migration and behavioral compatibility
 
@@ -61,10 +64,10 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 ## Blockers / dependencies
 
-- PR #1 still reports three failing `Tests, Builds, Coverage` jobs after the one-line Jest syntax repair. The available MCP check-run endpoint exposes status/conclusion but not the failing job logs, so the next code fix must be based on a concrete failure trace rather than guessing.
-- The `github-advanced-security` check also reports failure and must be classified before completion.
+- The fresh PR #1 validation matrix triggered by the latest cleanup-test repair is still running; its final functional/build result must be checked before Phase 1 can be considered green.
+- The `github-advanced-security` check has previously reported failure and still needs classification.
 - Several open Dependabot PRs are major-version jumps and must not be treated as safe/automatic upgrades without compatibility validation.
 
 ## Completion status
 
-**Not fully completed.** The immediate syntax blocker is resolved. The next priority is to isolate the remaining `Tests, Builds, Coverage` failures on PR #1 and repair them, then continue migration/runtime validation.
+**Not fully completed.** The previously opaque cleanup-test failure is now isolated and repaired without weakening production semantics. The next priority is the fresh full CI result, followed by any remaining build/test issue and Advanced Security classification.
