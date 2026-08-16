@@ -14,9 +14,10 @@ jobs:
         run: |
           echo '=== ROADMAP ==='
           cat ROADMAP.md
-          echo '=== getSetting ==='
-          grep -n -A14 -B4 'export const getSetting' src/services/Libs.ts || true
-          echo '=== SettingService site-data loop ==='
-          grep -n -A55 -B8 'BrowsingData Settings Check' src/services/SettingService.ts || true
-          echo '=== hydration/validation references ==='
-          grep -RIn -E 'StateHydration|validateSettings|initialState.settings|settings.*undefined' src __tests__ | head -n 180 || true
+          echo '=== SiteData upgrade block ==='
+          sed -n '150,280p' src/services/SettingService.ts
+          echo '=== getSetting/default objects ==='
+          grep -n -A18 -B8 'export const getSetting' src/services/Libs.ts || true
+          grep -n -A20 -B10 'siteData' src/services/Libs.ts | head -n 160 || true
+          echo '=== SettingService tests around upgrades ==='
+          grep -n -A35 -B20 -E 'previous|version|browsingData|missing|CleanupLocalStorage|CleanupIndexedDB|CleanupCaches' __tests__/services/SettingService.spec.ts | head -n 420 || true
