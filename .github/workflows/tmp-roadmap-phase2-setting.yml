@@ -1,0 +1,42 @@
+name: tmp record Phase 2 setting upgrade fix
+
+on:
+  push:
+    branches: [modernization-p0]
+    paths:
+      - '.github/workflows/tmp-roadmap-phase2-setting.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: modernization-p0
+      - name: Update ROADMAP
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('ROADMAP.md')
+          s = p.read_text()
+          marker = '## Phase 2 — migration and behavioral compatibility\n'
+          bullet = '- [x] Preserve non-destructive upgrades when older persisted profiles lack settings introduced by newer versions: `SettingService.hasNewValue()` now treats a missing previous key as changed, with a regression test covering the legacy-profile case (`1e1856ab`).\n'
+          if bullet in s:
+              raise SystemExit(0)
+          if marker not in s:
+              raise SystemExit('Phase 2 heading not found')
+          s = s.replace(marker, marker + '\n' + bullet, 1)
+          p.write_text(s)
+          PY
+      - name: Commit roadmap
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'docs: record missing-setting upgrade compatibility'
+          git push origin HEAD:modernization-p0
