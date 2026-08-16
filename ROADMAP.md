@@ -39,6 +39,8 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 ## Phase 2 — migration and behavioral compatibility
 
+- [x] Normalize legacy persisted settings before `checkIfProtected()` consumes later-added keys, while preserving the pre-normalization snapshot for side-effect comparisons; focused `SettingService` suite passes 18/18 (`300ddf07`).
+
 - [x] Preserve non-destructive upgrades when older persisted profiles lack settings introduced by newer versions: `SettingService.hasNewValue()` now treats a missing previous key as changed, with a regression test covering the legacy-profile case (`1e1856ab`).
 - [x] Tolerate staged validation of older profiles while later-introduced site-data cleanup keys are still absent. `SettingService.onSettingsChange()` now guards the current site-data setting before reading `.value`; `SettingService.spec.ts` covers the intermediate legacy-profile state. Focused validation: 15/15 tests green in the successful repair run; production/test commit `903558d`.
 - [x] Validate Firefox legacy-profile activation when a later-introduced `CLEANUP_CACHE` setting is absent: activation remains non-destructive and does not trigger browsing-data cleanup (`65bac073`); focused `SettingService` validation and normal CI were green.
