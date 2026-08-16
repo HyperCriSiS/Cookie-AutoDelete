@@ -1,23 +1,27 @@
-name: automation inspect upgrade semantics
+name: automation inspect phase 2 upgrade
+
 on:
   push:
     branches: [modernization-p0]
     paths: ['.github/workflows/automation-inspect-upgrade.yml']
+
 permissions:
   contents: read
+
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect initialization and upgrade tests
+      - name: Print upgrade context
         run: |
-          set +e
           echo '=== ROADMAP ==='
           cat ROADMAP.md
-          echo '=== SettingService init ==='
-          sed -n '1,220p' src/services/SettingService.ts
-          echo '=== validation/default helpers ==='
-          grep -RIn -B16 -A45 -E 'validateSettings|defaultSettings|export const getSetting|export const siteData' src | head -n 800
-          echo '=== upgrade tests ==='
-          grep -n -B35 -A65 -E 'introduced after|migrating old setting|recently enabled|hasNewValue|older profile|missing' __tests__/services/SettingService.spec.ts | head -n 1000
+          echo '=== SettingService ==='
+          sed -n '1,300p' src/services/SettingService.ts
+          echo '=== StateHydration ==='
+          sed -n '1,320p' src/services/StateHydration.ts
+          echo '=== Site data references ==='
+          grep -R "siteData\|otherBrowsingDataCleanup\|hasNewValue\|getSetting" -n src __tests__ | head -n 400 || true
+          echo '=== Relevant tests ==='
+          find __tests__ -type f \( -iname '*Setting*' -o -iname '*Hydration*' -o -iname '*Cleanup*' \) -print
