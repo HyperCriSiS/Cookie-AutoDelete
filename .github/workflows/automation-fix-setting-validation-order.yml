@@ -1,0 +1,54 @@
+name: automation fix setting validation order
+on: push
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: modernization-p0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Normalize missing settings before dependent consumers
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('src/services/SettingService.ts')
+          s = p.read_text()
+          old = """    await checkIfProtected(StoreUser.store.getState());
+
+    // Validate Settings Again
+    StoreUser.store.dispatch<any>(validateSettings());
+"""
+          new = """    // Normalize settings introduced by newer versions before consumers such as
+    // checkIfProtected dereference them. SettingService.current intentionally
+    // remains the pre-normalization snapshot so newly added cleanup settings do
+    // not look user-enabled and trigger destructive cleanup during an upgrade.
+    StoreUser.store.dispatch<any>(validateSettings());
+
+    await checkIfProtected(StoreUser.store.getState());
+"""
+          if old not in s:
+              old = """    await checkIfProtected(StoreUser.store.getState());
+
+    StoreUser.store.dispatch<any>(validateSettings());
+"""
+          if old not in s:
+              raise SystemExit('Expected validation/checkIfProtected block not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Run focused regression suite
+        run: npx jest __tests__/services/SettingService.spec.ts --runInBand
+      - name: Commit validated fix and remove helper
+        run: |
+          rm .github/workflows/automation-fix-setting-validation-order.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/services/SettingService.ts .github/workflows/automation-fix-setting-validation-order.yml
+          git commit -m 'fix: normalize legacy settings before protected-state checks'
+          git push origin HEAD:modernization-p0
