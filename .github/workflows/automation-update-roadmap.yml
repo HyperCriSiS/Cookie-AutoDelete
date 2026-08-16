@@ -1,0 +1,31 @@
+name: automation update Chromium legacy upgrade roadmap
+on:
+  push:
+    branches: [modernization-p0]
+    paths: ['.github/workflows/automation-update-roadmap.yml']
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: modernization-p0}
+      - name: Update roadmap
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('ROADMAP.md'); s=p.read_text()
+          needle='## Blockers / dependencies\n'
+          line='- [x] Cover Chromium legacy settings upgrades where a later-introduced site-data key is missing; focused `SettingService` regression passes and activation does not delete browsing data (`37b32202`).\n\n'
+          if line.strip() not in s:
+              if needle not in s: raise SystemExit('roadmap anchor missing')
+              s=s.replace(needle,line+needle,1)
+          p.write_text(s)
+      - name: Commit
+        run: |
+          git config user.name HyperCriSiS
+          git config user.email dev.github@w3b.world
+          git add ROADMAP.md
+          git commit -m 'docs: record Chromium legacy upgrade coverage'
+          git push origin HEAD:modernization-p0
