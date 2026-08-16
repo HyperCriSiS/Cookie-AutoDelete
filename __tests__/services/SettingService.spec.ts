@@ -196,6 +196,33 @@ describe('SettingService', () => {
       SettingService.init();
     });
 
+    it('should tolerate a Chromium legacy profile while a site-data cleanup setting is still missing', async () => {
+      const { [SettingID.CLEANUP_CACHE]: _missingCleanupCache, ...legacySettings } =
+        initialState.settings;
+      const legacyStore: Store<State, ReduxAction> = createStore({
+        ...initialState,
+        settings: legacySettings,
+      });
+      legacyStore.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserDetect', value: browserName.Chrome },
+      });
+      legacyStore.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserVersion', value: 140 },
+      });
+      StoreUser.init(legacyStore);
+      SettingService.init();
+
+      legacyStore.dispatch(updateSetting({ name: SettingID.ACTIVE_MODE, value: true }));
+
+      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();
+      expect(global.browser.browsingData.remove).not.toHaveBeenCalled();
+
+      StoreUser.init(store);
+      SettingService.init();
+    });
+
     it('should init if not yet initialized', async () => {
       TestSettingService.setIsInitialized(false);
       expect(TestSettingService.getIsInitialized()).toEqual(false);
