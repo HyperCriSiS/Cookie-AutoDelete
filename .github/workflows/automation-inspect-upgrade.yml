@@ -1,0 +1,22 @@
+name: automation inspect upgrade semantics
+on:
+  push:
+    branches: [modernization-p0]
+    paths: ['.github/workflows/automation-inspect-upgrade.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect current upgrade paths
+        run: |
+          echo '=== ROADMAP ==='
+          cat ROADMAP.md
+          echo '=== getSetting ==='
+          grep -n -A14 -B4 'export const getSetting' src/services/Libs.ts || true
+          echo '=== SettingService site-data loop ==='
+          grep -n -A55 -B8 'BrowsingData Settings Check' src/services/SettingService.ts || true
+          echo '=== hydration/validation references ==='
+          grep -RIn -E 'StateHydration|validateSettings|initialState.settings|settings.*undefined' src __tests__ | head -n 180 || true
