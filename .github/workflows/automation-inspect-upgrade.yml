@@ -13,15 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print upgrade context
+      - name: Print test helpers
         run: |
-          echo '=== ROADMAP ==='
-          cat ROADMAP.md
-          echo '=== SettingService ==='
-          sed -n '1,300p' src/services/SettingService.ts
-          echo '=== StateHydration ==='
-          sed -n '1,320p' src/services/StateHydration.ts
-          echo '=== Site data references ==='
-          grep -R "siteData\|otherBrowsingDataCleanup\|hasNewValue\|getSetting" -n src __tests__ | head -n 400 || true
-          echo '=== Relevant tests ==='
-          find __tests__ -type f \( -iname '*Setting*' -o -iname '*Hydration*' -o -iname '*Cleanup*' \) -print
+          sed -n '1,260p' __tests__/services/SettingService.spec.ts
+          echo '=== TestStore definitions ==='
+          grep -RIn -B10 -A80 'class TestStore\|const TestStore\|namespace TestStore' __tests__ src | head -n 700 || true
