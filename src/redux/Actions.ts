@@ -75,6 +75,7 @@ export const addExpression = (payload: Expression) => (
   dispatch: Dispatch<ReduxAction>,
   getState: GetState,
 ): void => {
+  // Sanitize the payload's storeId
   const storeId = getStoreId(getState(), payload.storeId);
   const defaultOptions = getContainerExpressionDefault(
     getState(),
@@ -116,6 +117,7 @@ export const removeExpression = (payload: Expression) => (
   dispatch({
     payload: {
       ...payload,
+      // Sanitize the payload's storeId
       storeId: getStoreId(getState(), payload.storeId),
     },
     type: ReduxConstants.REMOVE_EXPRESSION,
@@ -127,6 +129,7 @@ export const updateExpression = (payload: Expression) => (
   dispatch: Dispatch<ReduxAction>,
   getState: GetState,
 ): void => {
+  // Sanitize the payload's storeId
   const sanitizedStoreId = getStoreId(getState(), payload.storeId);
   dispatch({
     payload: {
@@ -135,6 +138,8 @@ export const updateExpression = (payload: Expression) => (
     },
     type: ReduxConstants.UPDATE_EXPRESSION,
   });
+  // Migration Downgrades between 3.5.0 and 3.4.0
+  // Uncheck 'Keep LocalStorage' on New ... Expressions
   if (
     payload.expression === `_Default:${payload.listType}` &&
     sanitizedStoreId === 'default' &&
@@ -147,6 +152,7 @@ export const updateExpression = (payload: Expression) => (
           `${payload.listType.toLowerCase()}CleanLocalstorage` as SettingID,
         )
       ) {
+        // Enable Deprecated Option
         dispatch({
           payload: {
             name: `${payload.listType.toLowerCase()}CleanLocalstorage`,
@@ -155,19 +161,22 @@ export const updateExpression = (payload: Expression) => (
           type: ReduxConstants.UPDATE_SETTING,
         });
       }
-    } else if (
-      getSetting(
-        getState(),
-        `${payload.listType.toLowerCase()}CleanLocalstorage` as SettingID,
-      )
-    ) {
-      dispatch({
-        payload: {
-          name: `${payload.listType.toLowerCase()}CleanLocalstorage`,
-          value: false,
-        },
-        type: ReduxConstants.UPDATE_SETTING,
-      });
+    } else {
+      if (
+        getSetting(
+          getState(),
+          `${payload.listType.toLowerCase()}CleanLocalstorage` as SettingID,
+        )
+      ) {
+        // Disable Deprecated Option
+        dispatch({
+          payload: {
+            name: `${payload.listType.toLowerCase()}CleanLocalstorage`,
+            value: false,
+          },
+          type: ReduxConstants.UPDATE_SETTING,
+        });
+      }
     }
   }
   checkIfProtected(getState());
@@ -222,6 +231,7 @@ export const resetAll = (): RESET_ALL => ({
   type: ReduxConstants.RESET_ALL,
 });
 
+// Validates the setting object and adds missing settings if it doesn't already exist in the initialState
 export const validateSettings: ActionCreator<ThunkAction<
   void,
   State,
@@ -234,6 +244,7 @@ export const validateSettings: ActionCreator<ThunkAction<
   const initialSettingKeys = Object.keys(initialSettings);
 
   settingKeys.forEach((k) => {
+    // Properties in a individual setting do not match up.  Repopulate from the default one and reuse existing value
     if (
       initialSettings[k] !== undefined &&
       Object.keys(settings[k]).length !== Object.keys(initialSettings[k]).length
@@ -248,6 +259,7 @@ export const validateSettings: ActionCreator<ThunkAction<
     }
   });
 
+  // Missing a setting
   if (settingKeys.length !== initialSettingKeys.length) {
     initialSettingKeys.forEach((k) => {
       if (settings[k] === undefined) {
@@ -271,11 +283,14 @@ export const validateSettings: ActionCreator<ThunkAction<
     }
   }
 
+  // Refresh after missing legacy settings were populated above.
   const validatedSettings = getState().settings;
 
+  // Disable unusable setting in Chrome
   if (isChrome(cache)) {
     disableSettingIfTrue(validatedSettings[SettingID.CONTEXTUAL_IDENTITIES]);
   }
+  // Disable unusable setting in Firefox Android
   if (isFirefoxAndroid(cache)) {
     disableSettingIfTrue(validatedSettings[SettingID.NUM_COOKIES_ICON]);
     disableSettingIfTrue(validatedSettings[SettingID.CLEANUP_LOCALSTORAGE_OLD]);
@@ -284,6 +299,7 @@ export const validateSettings: ActionCreator<ThunkAction<
     disableSettingIfTrue(validatedSettings[SettingID.CONTEXT_MENUS]);
   }
 
+  // Minimum 1 second autoclean delay.
   if (validatedSettings[SettingID.CLEAN_DELAY].value < 1) {
     dispatch({
       payload: {
@@ -293,6 +309,7 @@ export const validateSettings: ActionCreator<ThunkAction<
       type: ReduxConstants.UPDATE_SETTING,
     });
   }
+  // Maximum 2147483 seconds due to signed 32-bit Integer (ms x 1000)
   if (validatedSettings[SettingID.CLEAN_DELAY].value > 2147483) {
     dispatch({
       payload: {
@@ -303,6 +320,7 @@ export const validateSettings: ActionCreator<ThunkAction<
     });
   }
 
+  // If show cookie count in badge is disabled, force change icon color instead
   if (
     !validatedSettings[SettingID.NUM_COOKIES_ICON].value &&
     validatedSettings[SettingID.KEEP_DEFAULT_ICON].value
@@ -318,6 +336,7 @@ export const cookieCleanupUI = (
   type: ReduxConstants.COOKIE_CLEANUP,
 });
 
+// Cookie Cleanup operation that is to be called from the React UI
 export const cookieCleanup: ActionCreator<ThunkAction<
   void,
   State,
@@ -335,6 +354,7 @@ export const cookieCleanup: ActionCreator<ThunkAction<
     siteDataCleaned,
   } = cachedResults as ActivityLog;
 
+  // Increment the count
   if (recentlyCleaned !== 0 && getSetting(getState(), SettingID.STAT_LOGGING)) {
     dispatch(incrementCookieDeletedCounter(recentlyCleaned));
   }
@@ -346,12 +366,14 @@ export const cookieCleanup: ActionCreator<ThunkAction<
     dispatch(addActivity(cachedResults));
   }
 
+  // Show notifications after cleanup
   if (getSetting(getState(), SettingID.NOTIFY_AUTO)) {
     const domainsAll = new Set<string>();
     Object.values((cachedResults as ActivityLog).storeIds).forEach((v) => {
       v.forEach((d) => domainsAll.add(d.cookie.hostname));
     });
     const bDomains = new Set<string>();
+    // Count for Summary Notification
     if (browsingDataCleanup) {
       for (const domains of Object.values(browsingDataCleanup)) {
         if (!domains || domains.length === 0) continue;
@@ -361,6 +383,7 @@ export const cookieCleanup: ActionCreator<ThunkAction<
     }
 
     if (setOfDeletedDomainCookies.length > 0) {
+      // Cookie Notification
       const notifyMessage = browser.i18n.getMessage('notificationContent', [
         recentlyCleaned.toString(),
         domainsAll.size.toString(),
@@ -373,6 +396,7 @@ export const cookieCleanup: ActionCreator<ThunkAction<
       });
       await sleep(750);
     }
+    // Here we just show a generic 'Site Data' cleaned instead of the specifics, with all domains.
     if (siteDataCleaned && browsingDataCleanup && bDomains.size > 0) {
       await showNotification({
         duration: getSetting(getState(), SettingID.NOTIFY_DURATION) as number,
