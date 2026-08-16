@@ -34,6 +34,7 @@ export default class SettingService extends StoreUser {
     const previous = SettingService.current;
     SettingService.current = StoreUser.store.getState().settings;
 
+    // Container Mode Changes
     if (SettingService.hasNewValue(previous, SettingID.CONTEXTUAL_IDENTITIES)) {
       if (SettingService.getCurrent(SettingID.CONTEXTUAL_IDENTITIES)) {
         await ContextualIdentitiesEvents.init();
@@ -42,6 +43,7 @@ export default class SettingService extends StoreUser {
       }
     }
 
+    // BrowsingData Settings Check
     for (const siteData of SITEDATATYPES) {
       const sd = `${siteDataToBrowser(siteData)}Cleanup`;
       const currentSiteDataSetting = SettingService.current[sd];
@@ -60,6 +62,8 @@ export default class SettingService extends StoreUser {
           );
           continue;
         }
+        // Migration Check to prevent LocalStorage from being cleaned again.
+        // Only if migrating from 3.4.0 to 3.5.1+
         if (
           siteData === SiteDataType.LOCALSTORAGE &&
           previous[SettingID.CLEANUP_LOCALSTORAGE_OLD] !== undefined &&
@@ -91,6 +95,7 @@ export default class SettingService extends StoreUser {
       }
     }
 
+    // Active Mode (Automatic Cleanup) changes
     if (SettingService.hasNewValue(previous, SettingID.ACTIVE_MODE)) {
       const active = SettingService.getCurrent(
         SettingID.ACTIVE_MODE,
@@ -99,6 +104,9 @@ export default class SettingService extends StoreUser {
         await browser.alarms.clear('activeModeAlarm');
       }
       await setGlobalIcon(active);
+      // Context menus survive MV3 service-worker restarts while static class
+      // fields do not. Update the existing menu item based on persisted settings
+      // instead of relying on ContextMenuEvents.isInitialized in RAM.
       if (
         browser.contextMenus &&
         SettingService.getCurrent(SettingID.CONTEXT_MENUS)
@@ -121,6 +129,7 @@ export default class SettingService extends StoreUser {
       }
     }
 
+    // Context Menu Changes
     if (SettingService.hasNewValue(previous, SettingID.CONTEXT_MENUS)) {
       if (SettingService.getCurrent(SettingID.CONTEXT_MENUS)) {
         ContextMenuEvents.menuInit();
@@ -129,6 +138,8 @@ export default class SettingService extends StoreUser {
       }
     }
 
+    // Deprecated Setting Adjustments
+    // Only for localstorageCleanup <-> localStorageCleanup
     SettingService.updateDeprecatedSetting(
       previous,
       SettingID.CLEANUP_LOCALSTORAGE,
@@ -142,6 +153,7 @@ export default class SettingService extends StoreUser {
 
     await checkIfProtected(StoreUser.store.getState());
 
+    // Validate Settings Again
     StoreUser.store.dispatch<any>(validateSettings());
   }
 
