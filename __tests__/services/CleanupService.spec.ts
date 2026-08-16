@@ -411,9 +411,7 @@ describe('CleanupService', () => {
       });
 
       it('Regular clean, exclude open tabs.', async () => {
-        when(global.browser.cookies.remove)
-          .calledWith(expect.any(Object))
-          .mockResolvedValue({} as never);
+        (global.browser.cookies.remove as jest.Mock).mockResolvedValue({});
         const ffResult = await cleanCookiesOperation(
           firefoxState,
           cleanupProperties,
