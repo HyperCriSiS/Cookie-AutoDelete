@@ -1,0 +1,32 @@
+name: automation record legacy upgrade ordering
+on:
+  push:
+    branches: [modernization-p0]
+    paths: ['.github/workflows/automation-roadmap-upgrade-order.yml']
+permissions:
+  contents: write
+jobs:
+  roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update roadmap
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('ROADMAP.md'); s=p.read_text()
+          line='- [x] Normalize legacy persisted settings before `checkIfProtected()` consumes later-added keys, while preserving the pre-normalization snapshot for side-effect comparisons; focused `SettingService` suite passes 18/18 (`300ddf07`).\n'
+          if line not in s:
+            marker='## Phase 2'
+            i=s.find(marker)
+            if i<0: raise SystemExit('Phase 2 marker missing')
+            e=s.find('\n',i)+1
+            s=s[:e]+'\n'+line+s[e:]
+          p.write_text(s)
+          PY
+          rm .github/workflows/automation-roadmap-upgrade-order.yml
+          git config user.name HyperCriSiS
+          git config user.email dev.github@w3b.world
+          git add ROADMAP.md .github/workflows/automation-roadmap-upgrade-order.yml
+          git commit -m 'docs: record legacy settings ordering fix'
+          git push
