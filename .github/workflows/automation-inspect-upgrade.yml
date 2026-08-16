@@ -10,14 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect current upgrade paths
+      - name: Inspect initialization and upgrade tests
         run: |
+          set +e
           echo '=== ROADMAP ==='
           cat ROADMAP.md
-          echo '=== SiteData upgrade block ==='
-          sed -n '150,280p' src/services/SettingService.ts
-          echo '=== getSetting/default objects ==='
-          grep -n -A18 -B8 'export const getSetting' src/services/Libs.ts || true
-          grep -n -A20 -B10 'siteData' src/services/Libs.ts | head -n 160 || true
-          echo '=== SettingService tests around upgrades ==='
-          grep -n -A35 -B20 -E 'previous|version|browsingData|missing|CleanupLocalStorage|CleanupIndexedDB|CleanupCaches' __tests__/services/SettingService.spec.ts | head -n 420 || true
+          echo '=== SettingService init ==='
+          sed -n '1,220p' src/services/SettingService.ts
+          echo '=== validation/default helpers ==='
+          grep -RIn -B16 -A45 -E 'validateSettings|defaultSettings|export const getSetting|export const siteData' src | head -n 800
+          echo '=== upgrade tests ==='
+          grep -n -B35 -A65 -E 'introduced after|migrating old setting|recently enabled|hasNewValue|older profile|missing' __tests__/services/SettingService.spec.ts | head -n 1000
