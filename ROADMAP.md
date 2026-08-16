@@ -64,6 +64,8 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 - [ ] Merge the modernization branch only after checks and migration tests are green.
 - [ ] Consider an upstream proposal only after the fork branch is stable and the modernization scope is documented.
 
+- [x] Cover Chromium legacy settings upgrades where a later-introduced site-data key is missing; focused `SettingService` regression passes and activation does not delete browsing data (`37b32202`).
+
 ## Blockers / dependencies
 
 - No known functional blocker exists in the focused Phase-2 upgrade path after commit `903558d`; its `SettingService` regression suite is green. Full regular CI should remain the release gate for broader compatibility work.
