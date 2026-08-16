@@ -1,0 +1,30 @@
+name: automation correct Chromium roadmap commit reference
+on:
+  push:
+    branches: [modernization-p0]
+    paths: ['.github/workflows/automation-fix-roadmap-ref.yml']
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: modernization-p0}
+      - name: Correct reference
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('ROADMAP.md'); s=p.read_text()
+          if '37b32202' in s:
+              s=s.replace('37b32202','9a82906b')
+              p.write_text(s)
+      - name: Commit
+        run: |
+          git config user.name HyperCriSiS
+          git config user.email dev.github@w3b.world
+          git add ROADMAP.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'docs: correct Chromium legacy test reference'
+            git push origin HEAD:modernization-p0
+          fi
