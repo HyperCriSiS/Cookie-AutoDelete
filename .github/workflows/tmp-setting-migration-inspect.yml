@@ -9,8 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect settings migration tests
+      - name: Inspect settings migration code
         run: |
-          sed -n '1,280p' __tests__/services/SettingService.spec.ts
-          echo '=== settings shape ==='
-          grep -R -n "enum SettingID\|const SettingID\|CONTEXTUAL_IDENTITIES\|ACTIVE_MODE" src/redux src/typings | head -n 120
+          echo '=== SettingService.ts ==='
+          sed -n '1,320p' src/services/SettingService.ts
+          echo '=== SettingService.spec.ts ==='
+          sed -n '1,300p' __tests__/services/SettingService.spec.ts
