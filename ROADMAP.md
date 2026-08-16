@@ -39,6 +39,8 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 ## Phase 2 — migration and behavioral compatibility
 
+- [x] Preserve non-destructive upgrades when older persisted profiles lack settings introduced by newer versions: `SettingService.hasNewValue()` now treats a missing previous key as changed, with a regression test covering the legacy-profile case (`1e1856ab`).
+
 - [ ] Validate upgrades from existing Cookie AutoDelete user profiles/settings on Firefox and Chromium without destructive resets.
 - [ ] Verify allowlist/greylist behavior and domain matching after StoreBridge/UIStore migration.
 - [ ] Verify cleanup on tab close, domain change and browser restart according to configured behavior.
