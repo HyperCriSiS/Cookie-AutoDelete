@@ -161,7 +161,7 @@ export default class SettingService extends StoreUser {
   private static hasNewValue(p: MapToSettingObject, s: SettingID): boolean {
     const previous = p[s];
     const current = SettingService.current[s];
-    return previous !== undefined && current !== undefined && previous.value !== current.value;
+    return current !== undefined && (previous === undefined || previous.value !== current.value);
   }
 
   private static updateDeprecatedSetting(
