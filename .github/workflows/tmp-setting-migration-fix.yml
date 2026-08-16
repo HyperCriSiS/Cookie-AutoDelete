@@ -1,0 +1,61 @@
+name: tmp-setting-migration-fix
+on:
+  push:
+    branches: [modernization-p0]
+permissions:
+  contents: write
+jobs:
+  fix-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: modernization-p0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+      - name: Guard partial-profile setting comparisons
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/services/SettingService.ts')
+          text = source.read_text()
+          old = """  private static hasNewValue(p: MapToSettingObject, s: SettingID): boolean {\n    return p[s].value !== SettingService.current[s].value;\n  }\n"""
+          new = """  private static hasNewValue(p: MapToSettingObject, s: SettingID): boolean {\n    const previous = p[s];\n    const current = SettingService.current[s];\n    return previous !== undefined && current !== undefined && previous.value !== current.value;\n  }\n"""
+          if old in text:
+              source.write_text(text.replace(old, new, 1))
+          elif new not in text:
+              raise SystemExit('Expected hasNewValue implementation not found')
+
+          spec = Path('__tests__/services/SettingService.spec.ts')
+          text = spec.read_text()
+          helper_anchor = """  public static setIsInitialized(value: boolean) {\n    SettingService.isInitialized = value;\n  }\n"""
+          helper = """  public static setIsInitialized(value: boolean) {\n    SettingService.isInitialized = value;\n  }\n\n  public static setTestCurrent(value: MapToSettingObject) {\n    SettingService.current = value;\n    SettingService.isInitialized = true;\n  }\n"""
+          if helper_anchor in text and 'public static setTestCurrent' not in text:
+              text = text.replace(helper_anchor, helper, 1)
+
+          test_anchor = """    it('should init if not yet initialized', async () => {\n"""
+          regression = """    it('should tolerate settings introduced after an older profile was persisted', async () => {\n      SettingService.init();\n      const previous = { ...TestSettingService.getTestCurrent() };\n      delete previous[SettingID.ACTIVE_MODE];\n      TestSettingService.setTestCurrent(previous);\n\n      TestStore.changeSetting(SettingID.ACTIVE_MODE, true);\n\n      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();\n    });\n\n"""
+          if regression not in text:
+              if test_anchor not in text:
+                  raise SystemExit('Expected onSettingsChange test anchor not found')
+              text = text.replace(test_anchor, regression + test_anchor, 1)
+          spec.write_text(text)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Run SettingService regression tests
+        run: npx jest __tests__/services/SettingService.spec.ts --runInBand
+      - name: Commit verified fix
+        run: |
+          if git diff --quiet -- src/services/SettingService.ts __tests__/services/SettingService.spec.ts; then
+            echo 'No source changes required.'
+            exit 0
+          fi
+          git config user.name 'HyperCriSiS'
+          git config user.email 'dev.github@w3b.world'
+          git add src/services/SettingService.ts __tests__/services/SettingService.spec.ts
+          git commit -m 'fix: tolerate missing settings during profile upgrades'
+          git push origin HEAD:modernization-p0
