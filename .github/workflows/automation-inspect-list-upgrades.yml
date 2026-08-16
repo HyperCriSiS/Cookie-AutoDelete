@@ -1,0 +1,19 @@
+name: automation inspect persisted list upgrades
+on: push
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect persisted list hydration and restart coverage
+        run: |
+          echo '=== StateHydration.spec.ts ==='
+          sed -n '1,320p' __tests__/services/StateHydration.spec.ts
+          echo '=== StatePersistence.spec.ts ==='
+          sed -n '1,360p' __tests__/services/StatePersistence.spec.ts
+          echo '=== StoreUser.spec.ts ==='
+          sed -n '1,420p' __tests__/services/StoreUser.spec.ts
+          echo '=== list references ==='
+          grep -RInE 'allowlist|greylist|whitelist|graylist|greyList|whiteList|allowList' src __tests__ --include='*.ts' | head -n 400 || true
