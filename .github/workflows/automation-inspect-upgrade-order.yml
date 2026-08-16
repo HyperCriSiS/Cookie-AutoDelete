@@ -1,0 +1,19 @@
+name: automation inspect upgrade ordering
+on:
+  push:
+    branches: [modernization-p0]
+    paths:
+      - '.github/workflows/automation-inspect-upgrade-order.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect SettingService upgrade ordering
+        run: |
+          echo '=== SettingService relevant methods ==='
+          grep -n -C 18 -E 'validateSettings|checkIfProtected|hasNewValue|onSettingsChange' src/services/SettingService.ts || true
+          echo '=== tests relevant context ==='
+          grep -n -C 14 -E 'legacy|CLEANUP_CACHE|checkIfProtected|missing|older' __tests__/services/SettingService.spec.ts || true
