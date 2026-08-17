@@ -45,7 +45,7 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 - [ ] Validate broader upgrades from representative real Cookie AutoDelete Firefox and Chromium profile/settings exports without destructive resets or silent data loss.
 - [x] Verify allowlist/greylist matching semantics after StoreBridge/UIStore migration, including representative domain/subdomain and container-scoped cases.
 - [x] Verify cleanup behavior on tab close, domain change and browser restart for supported policy combinations. Existing regression coverage verifies tab-close cleanup scheduling/direct cleanup and per-tab state removal, session-backed domain-change detection (including worker restart), and restart/greylist/open-tab cleanup semantics; background listener wiring and startup dispatch paths were re-checked against the current branch.
-- [ ] Verify session/transient-state restoration across realistic MV3 service-worker suspension/restart scenarios beyond persisted-list/settings unit coverage.
+- [x] Verify session/transient-state restoration across realistic MV3 service-worker suspension/restart scenarios beyond persisted-list/settings unit coverage. `MV3WorkerRestart.regression.spec.ts` discards and reloads the Jest module graph while preserving `browser.storage.session`, proving per-tab domain state is restored and cleanup still fires after worker-memory loss.
 - [ ] Verify popup/options interactions and state synchronization in both Firefox and Chromium builds.
 - [ ] Verify container/contextual-identity behavior where the browser exposes the required APIs.
 - [ ] Add regression tests for every migration/runtime defect found during this compatibility pass.
@@ -81,4 +81,4 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 
 ## Completion status
 
-**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization, synthetic legacy-profile compatibility coverage, StoreBridge/UIStore allowlist/greylist matching and cleanup-trigger compatibility are validated. The next priority is session/transient-state restoration across realistic MV3 service-worker suspension/restart scenarios. Real legacy-profile export validation remains blocked until representative exports are available, and release-candidate testing remains open.
+**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization, synthetic legacy-profile compatibility coverage, StoreBridge/UIStore list matching, cleanup-trigger compatibility and module-reset MV3 worker restart coverage are validated. The next priority is popup/options interaction and state synchronization in Firefox and Chromium. Real legacy-profile export validation remains blocked until representative exports are available, and release-candidate testing remains open.
