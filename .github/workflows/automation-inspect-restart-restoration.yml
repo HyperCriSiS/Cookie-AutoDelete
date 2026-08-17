@@ -1,7 +1,5 @@
 name: automation inspect restart restoration
 on:
-  push:
-    branches: [modernization-p0]
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,11 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect restart/persistence coverage
+      - name: Inspect actual background hydration/startup path
         run: |
-          echo '=== StateRestart.spec.ts ==='
-          cat __tests__/services/StateRestart.spec.ts
-          echo '=== StatePersistence candidates ==='
-          find src -type f | grep -E 'State(Persistence|Hydration)|StoreBridge|background|index' | sort
-          echo '=== restoration hooks ==='
-          grep -R -n -E 'hydrate|restore|storage\.local|onStartup|onInstalled|service.?worker' src | head -n 260 || true
+          echo '=== background initialization ==='
+          sed -n '1,125p' src/background.ts
+          echo '=== background startup ==='
+          sed -n '285,355p' src/background.ts
+          echo '=== test browser bootstrap patterns ==='
+          grep -R -n -E 'background|onStartup|onInstalled|runtime\.onStartup|StateHydration' __tests__ | head -n 260 || true
+          echo '=== jest setup ==='
+          find . -maxdepth 3 -type f | grep -E '(setup|jest).*\.(ts|js)$' | sort | head -n 40
