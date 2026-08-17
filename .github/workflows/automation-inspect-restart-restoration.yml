@@ -1,0 +1,20 @@
+name: automation inspect restart restoration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect restart/persistence coverage
+        run: |
+          echo '=== StateRestart.spec.ts ==='
+          cat __tests__/services/StateRestart.spec.ts
+          echo '=== StatePersistence exports ==='
+          sed -n '1,240p' src/services/StatePersistence.ts 2>/dev/null || true
+          echo '=== StateHydration exports ==='
+          sed -n '1,260p' src/services/StateHydration.ts 2>/dev/null || true
+          echo '=== service worker / background restart hooks ==='
+          grep -R -n -E 'hydrate|restore|storage\.local|onStartup|onInstalled|service.?worker' src | head -n 220 || true
