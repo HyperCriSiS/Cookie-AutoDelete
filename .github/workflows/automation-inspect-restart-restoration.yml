@@ -1,5 +1,7 @@
 name: automation inspect restart restoration
 on:
+  push:
+    branches: [modernization-p0]
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,9 +14,7 @@ jobs:
         run: |
           echo '=== StateRestart.spec.ts ==='
           cat __tests__/services/StateRestart.spec.ts
-          echo '=== StatePersistence exports ==='
-          sed -n '1,240p' src/services/StatePersistence.ts 2>/dev/null || true
-          echo '=== StateHydration exports ==='
-          sed -n '1,260p' src/services/StateHydration.ts 2>/dev/null || true
-          echo '=== service worker / background restart hooks ==='
-          grep -R -n -E 'hydrate|restore|storage\.local|onStartup|onInstalled|service.?worker' src | head -n 220 || true
+          echo '=== StatePersistence candidates ==='
+          find src -type f | grep -E 'State(Persistence|Hydration)|StoreBridge|background|index' | sort
+          echo '=== restoration hooks ==='
+          grep -R -n -E 'hydrate|restore|storage\.local|onStartup|onInstalled|service.?worker' src | head -n 260 || true
