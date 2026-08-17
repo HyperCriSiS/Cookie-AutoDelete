@@ -1,20 +1,55 @@
-name: automation inspect restart restoration
+name: automation validate restart restoration
 on:
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
-  inspect:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect actual background hydration/startup path
+        with:
+          ref: modernization-p0
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Extend restart test through production store bootstrap primitives
         run: |
-          echo '=== background initialization ==='
-          sed -n '1,125p' src/background.ts
-          echo '=== background startup ==='
-          sed -n '285,355p' src/background.ts
-          echo '=== test browser bootstrap patterns ==='
-          grep -R -n -E 'background|onStartup|onInstalled|runtime\.onStartup|StateHydration' __tests__ | head -n 260 || true
-          echo '=== jest setup ==='
-          find . -maxdepth 3 -type f | grep -E '(setup|jest).*\.(ts|js)$' | sort | head -n 40
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('__tests__/services/StateRestart.spec.ts')
+          s = p.read_text()
+          if "../../src/redux/Store" not in s:
+              s = s.replace("import SettingUtil from '../../src/util/SettingUtil';\n", "import SettingUtil from '../../src/util/SettingUtil';\nimport createStore from '../../src/redux/Store';\n", 1)
+          old = '''    const restored = parsePersistedState(\n      StatePersistence.getPersistentData(),\n    );\n\n    expect(restored.lists.whitelist).toEqual(expected.lists.whitelist);\n    expect(restored.lists.greylist).toEqual(expected.lists.greylist);\n'''
+          new = '''    const restored = parsePersistedState(\n      StatePersistence.getPersistentData(),\n    );\n    const restartedStore = createStore(restored);\n    const restartedState = restartedStore.getState();\n\n    expect(restartedState.lists.whitelist).toEqual(expected.lists.whitelist);\n    expect(restartedState.lists.greylist).toEqual(expected.lists.greylist);\n'''
+          if old not in s:
+              raise SystemExit('StateRestart assertion anchor not found')
+          p.write_text(s.replace(old, new, 1))
+          r = Path('ROADMAP.md')
+          rt = r.read_text()
+          entry = '- [x] Exercise persisted allowlist/greylist restoration through the same `parsePersistedState()` + `createStore()` bootstrap primitives used by `background.ts`, not only a parser round-trip.\n'
+          if entry not in rt:
+              anchor = 'StateRestart'
+              pos = rt.find(anchor)
+              if pos >= 0:
+                  pos = rt.find('\n', pos) + 1
+                  rt = rt[:pos] + entry + rt[pos:]
+              else:
+                  rt += '\n' + entry
+          r.write_text(rt)
+          PY
+          npm ci
+          npx jest __tests__/services/StateRestart.spec.ts --runInBand
+          git diff --check
+      - name: Commit validated restart coverage and remove helper
+        run: |
+          rm .github/workflows/automation-inspect-restart-restoration.yml
+          git config user.name 'HyperCriSiS'
+          git config user.email 'dev.github@w3b.world'
+          git add __tests__/services/StateRestart.spec.ts ROADMAP.md .github/workflows/automation-inspect-restart-restoration.yml
+          git diff --cached --check
+          git commit -m 'test: cover persisted state through store restart'
+          git push origin HEAD:modernization-p0
