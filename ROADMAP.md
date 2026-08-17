@@ -76,6 +76,8 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 - The separate GitHub Advanced Security agent currently fails inside GitHub infrastructure with `400 The requested model is not supported` before repository analysis starts; this does not block functional P0 validation.
 - Several open Dependabot PRs are major-version jumps and must not be treated as safe/automatic upgrades without compatibility validation.
 
+- [x] Verify persisted cleanup-policy settings (`ACTIVE_MODE`, `ENABLE_GREYLIST`, `CLEAN_OPEN_TABS_STARTUP`) survive `StatePersistence` → `parsePersistedState()` → `createStore()` restart; push, PR and PR-target CI are green on `6c91011d`.
+
 ## Completion status
 
 **Not fully completed.** Phase 1 functional stabilization is complete. Phase 2 now covers missing-setting upgrade safety plus explicit non-destructive legacy-profile activation on both Firefox and Chromium. Broader profile/settings migration coverage remains open, followed by runtime behavior and state-restoration compatibility.
