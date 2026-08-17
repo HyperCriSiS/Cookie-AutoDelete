@@ -6,6 +6,7 @@ on:
       - 'deps/typescript-7-modernization'
     paths:
       - 'package.json'
+      - '.github/workflows/temp-lockfile-refresh.yml'
 
 permissions:
   contents: write
@@ -20,8 +21,10 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
-      - name: Regenerate package lock
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Regenerate package lock from current dependency graph
+        run: |
+          rm -f package-lock.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Commit package lock
         run: |
           if git diff --quiet -- package-lock.json; then
