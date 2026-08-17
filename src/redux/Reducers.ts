@@ -16,15 +16,19 @@ import { generateId } from '../services/IdService';
 import { ReduxAction, ReduxConstants } from '../typings/ReduxConstants';
 import { initialState } from './State';
 
+// Tests if the expression already exists in the list
+const hasExpression = (
+  list: ReadonlyArray<Expression>,
+  action: { payload: Expression },
+) => list.some((expObj) => expObj.expression === action.payload.expression);
+
+// Creates a new Expression object to be stored in the list
 const newExpressionObject = (
-  action: ReduxAction,
-  state: Expression[],
-): Expression => ({
+  state: Expression | Record<string, unknown>,
+  action: { payload: Expression },
+) => ({
   ...action.payload,
-  cleanAllCookies:
-    action.payload.cleanAllCookies === undefined
-      ? true
-      : action.payload.cleanAllCookies,
+  cookieNames: !action.payload.cookieNames ? [] : action.payload.cookieNames,
   cleanSiteData: !action.payload.cleanSiteData
     ? []
     : action.payload.cleanSiteData,
@@ -34,23 +38,62 @@ const newExpressionObject = (
   listType: !action.payload.listType ? ListType.WHITE : action.payload.listType,
 });
 
-export const expressions = (
-  state: Expression[] = [],
+// Sorting algorithm for the expression list.
+// Order is WHITE -> GREY -> Alphanumeric
+const sortExpressionAlgorithm = (a: Expression, b: Expression) => {
+  if (a.listType === ListType.WHITE && b.listType === ListType.GREY) {
+    return -1;
+  }
+  if (b.listType === ListType.WHITE && a.listType === ListType.GREY) {
+    return 1;
+  }
+  return a.expression.localeCompare(b.expression);
+};
+
+export const expression = (
+  state: Expression = {
+    cookieNames: [],
+    expression: '',
+    id: '1',
+    listType: ListType.WHITE,
+    storeId: 'default',
+  },
   action: ReduxAction,
-): Expression[] => {
+): Expression => {
   switch (action.type) {
-    case ReduxConstants.ADD_EXPRESSION:
-      return [...state, newExpressionObject(action, state)];
+    case ReduxConstants.UPDATE_EXPRESSION: {
+      if (state.id === action.payload.id) {
+        return newExpressionObject(state, action);
+      }
+      return state;
+    }
+    default:
+      return state;
+  }
+};
+
+export const expressions = (
+  state: ReadonlyArray<Expression> = [],
+  action: ReduxAction,
+): ReadonlyArray<Expression> => {
+  switch (action.type) {
+    case ReduxConstants.ADD_EXPRESSION: {
+      if (hasExpression(state, action)) {
+        return state;
+      }
+      return [...state, newExpressionObject({}, action)].sort(
+        sortExpressionAlgorithm,
+      );
+    }
 
     case ReduxConstants.UPDATE_EXPRESSION:
-      return state.map((e) =>
-        e.id === action.payload.id ? newExpressionObject(action, state) : e,
-      );
+      return state
+        .map((e) => expression(e, action))
+        .sort(sortExpressionAlgorithm);
 
     case ReduxConstants.REMOVE_EXPRESSION:
-      return state.filter((e) => e.id !== action.payload.id);
+      return state.filter((expObj) => expObj.id !== action.payload.id);
 
-    case ReduxConstants.CLEAR_EXPRESSIONS:
     case ReduxConstants.RESET_ALL:
       return [];
 
@@ -60,36 +103,32 @@ export const expressions = (
 };
 
 export const lists = (
-  state: StoreIdToExpressionList = initialState.lists,
+  state: StoreIdToExpressionList = {},
   action: ReduxAction,
 ): StoreIdToExpressionList => {
   switch (action.type) {
     case ReduxConstants.ADD_EXPRESSION:
+    case ReduxConstants.REMOVE_EXPRESSION:
     case ReduxConstants.UPDATE_EXPRESSION: {
-      const storeId = action.payload.storeId || 'default';
-      return {
-        ...state,
-        [storeId]: expressions(state[storeId], action),
-      };
+      const newListObject = { ...state };
+      newListObject[action.payload.storeId] = expressions(
+        state[action.payload.storeId],
+        action,
+      );
+      if (newListObject[action.payload.storeId].length === 0) {
+        delete newListObject[action.payload.storeId];
+      }
+      return newListObject;
     }
-
-    case ReduxConstants.REMOVE_EXPRESSION: {
-      const storeId = action.payload.storeId || 'default';
-      return {
-        ...state,
-        [storeId]: expressions(state[storeId], action),
-      };
-    }
-
     case ReduxConstants.REMOVE_LIST: {
-      const newState = { ...state };
-      delete newState[action.payload];
-      return newState;
+      const newListObject = { ...state };
+      delete newListObject[action.payload.toString()];
+      return newListObject;
     }
 
     case ReduxConstants.CLEAR_EXPRESSIONS:
     case ReduxConstants.RESET_ALL:
-      return initialState.lists;
+      return {};
 
     default:
       return state;
@@ -97,21 +136,22 @@ export const lists = (
 };
 
 export const settings = (
-  state: MapToSettingObject = initialState.settings,
+  state = initialState.settings,
   action: ReduxAction,
 ): MapToSettingObject => {
   switch (action.type) {
-    case ReduxConstants.UPDATE_SETTING:
-      return {
+    case ReduxConstants.UPDATE_SETTING: {
+      const newObject = {
         ...state,
-        [action.payload.name]: {
-          ...state[action.payload.name],
-          value: action.payload.value,
-        },
       };
+      newObject[action.payload.name] = {
+        ...action.payload,
+      };
+      return newObject;
+    }
 
-    case ReduxConstants.RESET_SETTINGS:
     case ReduxConstants.RESET_ALL:
+    case ReduxConstants.RESET_SETTINGS:
       return initialState.settings;
 
     default:
@@ -120,49 +160,56 @@ export const settings = (
 };
 
 export const cookieDeletedCounterTotal = (
-  state: number = initialState.cookieDeletedCounterTotal,
+  state = 0,
   action: ReduxAction,
 ): number => {
   switch (action.type) {
-    case ReduxConstants.ADD_COOKIE_DELETED_COUNTER:
-      return state + action.payload;
-
-    case ReduxConstants.RESET_COOKIE_DELETED_COUNTER:
+    case ReduxConstants.INCREMENT_COOKIE_DELETED_COUNTER:
+      return state + (action.payload === undefined ? 1 : action.payload);
     case ReduxConstants.RESET_ALL:
+    case ReduxConstants.RESET_COOKIE_DELETED_COUNTER:
       return 0;
-
     default:
       return state;
   }
 };
 
 export const cookieDeletedCounterSession = (
-  state: number = initialState.cookieDeletedCounterSession,
+  state = 0,
   action: ReduxAction,
 ): number => {
   switch (action.type) {
-    case ReduxConstants.ADD_COOKIE_DELETED_COUNTER:
-      return state + action.payload;
+    case ReduxConstants.INCREMENT_COOKIE_DELETED_COUNTER: {
+      const incrementBy = action.payload === undefined ? 1 : action.payload;
+      return state + incrementBy;
+    }
 
-    case ReduxConstants.ON_STARTUP:
     case ReduxConstants.RESET_ALL:
+    case ReduxConstants.ON_STARTUP:
+    case ReduxConstants.RESET_COOKIE_DELETED_COUNTER:
       return 0;
-
     default:
       return state;
   }
 };
 
 export const activityLog = (
-  state: ActivityLog[] = [],
+  state: ReadonlyArray<ActivityLog> = [],
   action: ReduxAction,
-): ActivityLog[] => {
+): ReadonlyArray<ActivityLog> => {
   switch (action.type) {
-    case ReduxConstants.ADD_ACTIVITY_LOG:
-      return [...state, action.payload];
-
-    case ReduxConstants.REMOVE_ACTIVITY_LOG:
+    case ReduxConstants.ADD_ACTIVITY_LOG: {
+      if (
+        Object.keys(action.payload.storeIds).length > 0 ||
+        action.payload.siteDataCleaned
+      ) {
+        return [action.payload, ...state].slice(0, 10);
+      }
+      return state;
+    }
+    case ReduxConstants.REMOVE_ACTIVITY_LOG: {
       return state.filter((log) => log.dateTime !== action.payload.dateTime);
+    }
 
     case ReduxConstants.RESET_ALL:
     case ReduxConstants.CLEAR_ACTIVITY_LOG:
@@ -193,8 +240,6 @@ export const cache = (
   }
 };
 
-// Redux 5 infers the combined state and action types from the reducer map;
-// combineReducers no longer accepts the legacy <State, ReduxAction> pair.
 export default combineReducers({
   activityLog,
   cache,
