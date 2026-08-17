@@ -14,13 +14,12 @@
  */
 const fs = require('fs');
 const path = require('path');
-const archiver = require('archiver');
+const { generateManifest } = require('./generateManifest');
+const { validateBuildStage } = require('./validateBuildStage');
 
 const BUILDS = 'builds';
 const EXT = 'extension';
 const EXTNAME = 'Cookie-AutoDelete_';
-const MANIFEST = 'manifest.json';
-
 const ROOTDIR = process.cwd();
 const BUILDDIR = path.join(ROOTDIR, BUILDS);
 const EXTDIR = path.join(ROOTDIR, EXT);
@@ -32,7 +31,6 @@ console.log(
   process.arch,
 );
 console.log('Current Root Directory is:  %s', ROOTDIR);
-
 console.log('GITHUB_REF:  %s', process.env.GITHUB_REF);
 console.log('TRAVIS_TAG:  %s', process.env.TRAVIS_TAG);
 console.log('GITSHA    :  %s', process.env.GITSHA);
@@ -50,13 +48,12 @@ if (versionTag && !RegExp(/^v?\d+\.\d+\.\d+$/).test(versionTag)) {
 
 if (!versionTag) {
   console.log(
-    'Neither GITHUB_REF nor TRAVIS_TAG contained a valid semver version.  Presuming non-publishing version.\nAdding Dev_ and using Date Format YYYYMMDD_HHMMSS as tag.',
+    'Neither GITHUB_REF nor TRAVIS_TAG contained a valid semver version. Presuming non-publishing version.\nAdding Dev_ and using Date Format YYYYMMDD_HHMMSS as tag.',
   );
 }
 
 const sha = process.env.GITSHA ? `_${process.env.GITSHA.slice(0, 7)}` : '';
-
-const TAG =
+const tag =
   (versionTag ||
     'Dev_' +
       new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
@@ -66,215 +63,101 @@ const TAG =
   sha +
   '_';
 
-console.log('TAG to append:  %s\n', TAG);
+console.log('TAG to append:  %s\n', tag);
 
-const CHROMEFILENAME = EXTNAME + TAG + 'Chrome';
-const FIREFOXFILENAME = EXTNAME + TAG + 'Firefox';
+const chromeFilename = `${EXTNAME}${tag}Chrome`;
+const firefoxFilename = `${EXTNAME}${tag}Firefox`;
 
-function archiverZip(cb, filename) {
-  if (typeof cb !== 'function') {
-    console.error('callback is not a function!');
-    return null;
-  }
-  const fileStream = fs.createWriteStream(
-    path.join(BUILDDIR, filename + '.zip'),
+const shouldCopyToPackage = (source) => {
+  const basename = path.basename(source);
+  return (
+    !basename.endsWith('.map') &&
+    basename !== '.DS_Store' &&
+    basename !== 'redux-webext.js'
   );
+};
 
-  const archive = archiver('zip', {
-    zlib: { level: 9 }, // Sets the Compression Level.
-  });
-
-  // Listen for all archive data to be written
-  // 'close' eent is fired only when a file descriptor is involved
-  function fileOnClose() {
-    console.log(archive.pointer() + ' total bytes');
-    console.log(
-      'archiver has been finalized and the output file descriptor has closed.',
-    );
-    cb(0);
-  }
-
-  // This event is fired when data source is drained no matter what was the data source.
-  // Not part of archiver but from NodeJS Stream API.
-  function fileOnEnd() {
-    console.log('Data has been drained');
-  }
-
-  console.log('Creating an archive in: %s', fileStream.path);
-
-  fileStream.on('close', fileOnClose);
-  fileStream.on('end', fileOnEnd);
-
-  // Good Practice to catch warnings (ie stat failures and other non-blocking errors)
-  archive.on('warning', function (err) {
-    if (err.code === 'ENOENT') {
-      console.warn(
-        'ARCHIVER WARNING %s: %s (%s)',
-        err.code,
-        err.message,
-        err.data,
-      );
-    } else {
-      throw err;
-    }
-  });
-
-  // Good Practice to catch his error explicitly
-  archive.on('error', function (err) {
-    throw err;
-  });
-
-  // Pipe archive data to the file
-  archive.pipe(fileStream);
-
-  // Append files from Extension Folder.
-  archive.directory(EXTDIR, false);
-
-  archive.finalize();
-}
-
-function firefoxBuild(cb) {
-  if (typeof cb !== 'function') {
-    console.error('callback is not a function!');
-    return null;
-  }
-  console.log('\nBuilding unsigned extension for Mozilla Firefox...');
-
-  archiverZip(function (r) {
-    if (r === 0) {
-      // Copy ZIP to XPI
-      console.log('Copying .ZIP to .XPI...');
-      fs.copyFileSync(
-        path.join(BUILDDIR, FIREFOXFILENAME + '.zip'),
-        path.join(BUILDDIR, FIREFOXFILENAME + '.xpi'),
-      );
-      console.log('>> Copy Success!');
-      // End of Mozilla Firefox build.
-      console.log('Mozilla Firefox Build Complete!');
-    } else {
-      console.warn(
-        'Archiver was not successful as it returned [%s]. Stopping the rest of the process.',
-        r,
-      );
-    }
-    cb(r);
-  }, FIREFOXFILENAME);
-}
-
-function chromeBuild(cb) {
-  if (typeof cb !== 'function') {
-    console.error('callback is not a function!');
-    return null;
-  }
-  // Copy manifest into memory to preserve it.
-  console.log('\nGetting a copy of %s to memory...', MANIFEST);
-  const mforig = fs.readFileSync(path.join(EXTDIR, MANIFEST));
-  console.log('>> Done!');
-  console.log('Prepping %s for Google Chrome...', MANIFEST);
-
-  function delMFPerm(mf, perm) {
-    let i = mf.permissions.indexOf(perm);
-    console.log(
-      '> Removing Perm: %s ... %s',
-      perm,
-      i === -1
-        ? 'Not Found!'
-        : mf.permissions.splice(i, 1).length === 1
-        ? 'Done!'
-        : 'An Easter Egg Error!',
-    );
-  }
-
-  const mf = require(path.join(EXTDIR, MANIFEST));
-  delMFPerm(mf, 'contextualIdentities');
-  console.log(
-    '> Removing [applications] section ... %s',
-    delete mf.applications ? 'Done!' : 'Failed',
-  );
-
-  console.log('Overwriting %s for Google Chrome ...', MANIFEST);
-  fs.writeFileSync(path.join(EXTDIR, MANIFEST), JSON.stringify(mf, null, 2));
-  console.log('>> Done!');
-
-  console.log('\nBuilding unsigned extension for Google Chrome...');
-
-  archiverZip(function (r) {
-    if (r === 0) {
-      // continue
-      // Revert modifications
-      fs.writeFileSync(path.join(EXTDIR, MANIFEST), mforig);
-      console.log('%s has been reverted back to original contents!', MANIFEST);
-
-      // End of Google Chrome build.
-      console.log('Google Chrome Build Complete!');
-    } else {
-      console.warn(
-        'Archiver was not successful as it returned [%s]. Stopping the rest of the process.',
-        r,
-      );
-    }
-    cb(r);
-  }, CHROMEFILENAME);
-}
-
-function mainBuild() {
-  firefoxBuild((r) => {
-    if (r === 0) {
-      // Do Chrome Build
-      chromeBuild((r) => {
-        if (r === 0) {
-          // EdgeChromium Build, for future.
-          console.log('\n\n> All Done! <\n');
-        } else {
-          console.error(
-            'Google Chrome Build did not complete successfully.  Stopping the rest of the Build.',
-          );
-          process.exitCode = 4;
-        }
-      });
-    } else {
-      console.error(
-        'Firefox Build did not complete successfully.  Stopping the rest of the progress',
-      );
-      process.exitCode = 3;
-    }
-  });
-}
-
-function preCheck(cb) {
-  if (typeof cb !== 'function') {
-    console.error('callback is not a function!');
-    return null;
-  }
-  console.log('Creating %s if it does not exists...', BUILDDIR);
+const prepareStage = (target) => {
+  const stageDir = path.join(BUILDDIR, `.stage-${target}`);
+  fs.rmSync(stageDir, { force: true, recursive: true });
   fs.mkdirSync(BUILDDIR, { recursive: true });
+  fs.cpSync(EXTDIR, stageDir, {
+    recursive: true,
+    filter: shouldCopyToPackage,
+  });
 
-  console.log('Checking if %s folder exists...', EXTDIR);
-  const extRes = fs.statSync(EXTDIR);
-  if (!extRes) {
-    console.error(
-      '%s does NOT exist - Cannot build WebExtension.  Terminating.',
-      EXTDIR,
-    );
-    cb(1);
-  } else if (!extRes.isDirectory()) {
-    console.error(
-      '%s is found but is NOT a directory.  Cannot build WebExtension.  Terminating.',
-      EXTDIR,
-    );
-    cb(2);
-  } else {
-    console.log('Yup.  Directory %s Exists!', EXTDIR);
-    cb(0);
-  }
-}
+  generateManifest(target, path.join(stageDir, 'manifest.json'));
 
-// Start Point!
-preCheck((r) => {
-  if (r === 0) {
-    mainBuild();
-  } else {
-    console.warn('PreCheck Failed! Terminating!');
-    process.exitCode = r;
+  // The service-worker loader is Chromium-only. Firefox uses background.scripts
+  // from its generated manifest and does not need to package the unused loader.
+  if (target === 'firefox') {
+    fs.rmSync(path.join(stageDir, 'background.js'), { force: true });
   }
+
+  validateBuildStage(target, stageDir, {
+    production: true,
+    sourceDir: EXTDIR,
+  });
+
+  return stageDir;
+};
+
+const archiveDirectory = async (sourceDir, filename) => {
+  // Archiver 8 is ESM-only and exposes format-specific archive classes instead
+  // of the legacy callable CommonJS export. Dynamic import keeps this existing
+  // CommonJS build tool compatible without converting the entire tools folder.
+  const { ZipArchive } = await import('archiver');
+
+  return new Promise((resolve, reject) => {
+    const outputPath = path.join(BUILDDIR, `${filename}.zip`);
+    const output = fs.createWriteStream(outputPath);
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+
+    output.on('close', () => {
+      console.log(`${archive.pointer()} total bytes`);
+      console.log(`Created ${outputPath}`);
+      resolve(outputPath);
+    });
+    output.on('error', reject);
+
+    archive.on('warning', (error) => {
+      if (error.code === 'ENOENT') {
+        console.warn('ARCHIVER WARNING %s: %s', error.code, error.message);
+        return;
+      }
+      reject(error);
+    });
+    archive.on('error', reject);
+
+    archive.pipe(output);
+    archive.directory(sourceDir, false);
+    void archive.finalize().catch(reject);
+  });
+};
+
+const buildTarget = async (target, filename) => {
+  console.log(`\nBuilding unsigned extension for ${target}...`);
+  const stageDir = prepareStage(target);
+
+  try {
+    const zipPath = await archiveDirectory(stageDir, filename);
+    if (target === 'firefox') {
+      const xpiPath = path.join(BUILDDIR, `${filename}.xpi`);
+      fs.copyFileSync(zipPath, xpiPath);
+      console.log(`Created ${xpiPath}`);
+    }
+  } finally {
+    fs.rmSync(stageDir, { force: true, recursive: true });
+  }
+};
+
+const mainBuild = async () => {
+  await buildTarget('firefox', firefoxFilename);
+  await buildTarget('chromium', chromeFilename);
+  console.log('\n\n> All Done! <\n');
+};
+
+mainBuild().catch((error) => {
+  console.error('Build packaging failed.', error);
+  process.exitCode = 1;
 });
