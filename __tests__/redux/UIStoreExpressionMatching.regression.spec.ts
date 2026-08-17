@@ -41,7 +41,7 @@ describe('UIStore expression matching compatibility', () => {
       default: [defaultWhite, defaultGrey],
       'firefox-container-1': [containerWhite],
     },
-  } as State;
+  } as unknown as State;
 
   beforeEach(() => {
     onMessage = undefined;
