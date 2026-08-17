@@ -16,7 +16,7 @@ jobs:
       - name: Checkout Commit
         uses: actions/checkout@v4
       - name: Use Node.js from .nvmrc
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
       - name: Install Dependencies (npm ci)
@@ -35,12 +35,12 @@ jobs:
           echo "ffxpi=$(ls builds/*Firefox.xpi)" >> "$GITHUB_OUTPUT"
       - name: Archive Production Build Artifacts
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: builds
           path: builds
       - name: Archive Code Coverage Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage
