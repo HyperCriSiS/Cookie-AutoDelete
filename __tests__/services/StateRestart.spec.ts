@@ -1,5 +1,6 @@
 import StatePersistence from '../../src/services/StatePersistence';
 import { parsePersistedState } from '../../src/services/StateHydration';
+import createStore from '../../src/redux/Store';
 
 describe('persisted state restart restoration', () => {
   it('round-trips persisted allowlist and greylist entries across a service-worker restart', async () => {
@@ -32,6 +33,8 @@ describe('persisted state restart restoration', () => {
     await persistence.whenIdle();
 
     expect(writer).toHaveBeenCalledTimes(1);
-    expect(parsePersistedState(stored)).toEqual(state);
+    const restored = parsePersistedState(stored);
+    const restartedStore = createStore(restored);
+    expect(restartedStore.getState().lists).toEqual(state.lists);
   });
 });

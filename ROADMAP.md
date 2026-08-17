@@ -79,3 +79,5 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 ## Completion status
 
 **Not fully completed.** Phase 1 functional stabilization is complete. Phase 2 now covers missing-setting upgrade safety plus explicit non-destructive legacy-profile activation on both Firefox and Chromium. Broader profile/settings migration coverage remains open, followed by runtime behavior and state-restoration compatibility.
+
+- [x] Exercise persisted allowlist/greylist restoration through the same `parsePersistedState()` + `createStore()` bootstrap primitives used by `background.ts`, not only a parser round-trip.
