@@ -1,0 +1,38 @@
+name: Sync restart policy roadmap
+on:
+  push:
+    branches: [modernization-p0]
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: modernization-p0
+      - name: Record validated restart-policy restoration
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('ROADMAP.md')
+          s = p.read_text(encoding='utf-8')
+          line = '- [x] Verify persisted cleanup-policy settings (`ACTIVE_MODE`, `ENABLE_GREYLIST`, `CLEAN_OPEN_TABS_STARTUP`) survive `StatePersistence` → `parsePersistedState()` → `createStore()` restart; push, PR and PR-target CI are green on `6c91011d`.'
+          if line not in s:
+              marker = '## Completion status'
+              if marker not in s:
+                  raise SystemExit('completion marker missing')
+              s = s.replace(marker, line + '\n\n' + marker, 1)
+              p.write_text(s, encoding='utf-8')
+          PY
+          git diff --check
+      - name: Commit roadmap and remove helper
+        shell: bash
+        run: |
+          rm -f .github/workflows/automation-sync-restart-policy-roadmap.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'docs: record restart policy restoration coverage'
+          git push origin HEAD:modernization-p0
