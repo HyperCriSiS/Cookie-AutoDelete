@@ -20,7 +20,7 @@ import * as BrowserActionService from '../../src/services/BrowserActionService';
 import ContextualIdentitiesEvents from '../../src/services/ContextualIdentitiesEvents';
 import SettingService from '../../src/services/SettingService';
 import StoreUser from '../../src/services/StoreUser';
-import { ReduxAction } from '../../src/typings/ReduxConstants';
+import { ReduxAction, ReduxConstants } from '../../src/typings/ReduxConstants';
 import { resetSettings, updateSetting } from '../../src/redux/Actions';
 import ContextMenuEvents from '../../src/services/ContextMenuEvents';
 
@@ -71,6 +71,11 @@ class TestSettingService extends SettingService {
   public static setIsInitialized(value: boolean) {
     SettingService.isInitialized = value;
   }
+
+  public static setTestCurrent(value: MapToSettingObject) {
+    SettingService.current = value;
+    SettingService.isInitialized = true;
+  }
 }
 
 const defaultTab: browser.tabs.Tab = {
@@ -92,6 +97,14 @@ const defaultTab: browser.tabs.Tab = {
 
 describe('SettingService', () => {
   beforeEach(() => {
+    store.dispatch({
+      type: ReduxConstants.ADD_CACHE,
+      payload: { key: 'browserDetect', value: browserName.Chrome },
+    });
+    store.dispatch({
+      type: ReduxConstants.ADD_CACHE,
+      payload: { key: 'platformOs', value: 'linux' },
+    });
     when(global.browser.runtime.getManifest)
       .calledWith()
       .mockReturnValue({ version: '0.12.34' });
@@ -126,6 +139,128 @@ describe('SettingService', () => {
         defaultTab,
         { ...defaultTab, url: 'https://example.com' },
       ] as never);
+    it('should tolerate settings introduced after an older profile was persisted', async () => {
+      SettingService.init();
+      const previous = { ...TestSettingService.getTestCurrent() };
+      delete previous[SettingID.ACTIVE_MODE];
+      TestSettingService.setTestCurrent(previous);
+
+      TestStore.changeSetting(SettingID.ACTIVE_MODE, true);
+
+      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();
+    });
+
+    it('should tolerate an older profile while a site-data cleanup setting is still missing', async () => {
+      const { [SettingID.CLEANUP_CACHE]: _missingCleanupCache, ...legacySettings } =
+        initialState.settings;
+      const legacyStore: Store<State, ReduxAction> = createStore({
+        ...initialState,
+        settings: legacySettings,
+      });
+      StoreUser.init(legacyStore);
+      SettingService.init();
+
+      legacyStore.dispatch(updateSetting({ name: SettingID.ACTIVE_MODE, value: true }));
+
+      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();
+      expect(global.browser.browsingData.remove).not.toHaveBeenCalled();
+
+      StoreUser.init(store);
+      SettingService.init();
+    });
+
+    it('should tolerate a Firefox legacy profile while a site-data cleanup setting is still missing', async () => {
+      const { [SettingID.CLEANUP_CACHE]: _missingCleanupCache, ...legacySettings } =
+        initialState.settings;
+      const legacyStore: Store<State, ReduxAction> = createStore({
+        ...initialState,
+        settings: legacySettings,
+      });
+      legacyStore.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserDetect', value: browserName.Firefox },
+      });
+      legacyStore.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserVersion', value: 140 },
+      });
+      StoreUser.init(legacyStore);
+      SettingService.init();
+
+      legacyStore.dispatch(updateSetting({ name: SettingID.ACTIVE_MODE, value: true }));
+
+      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();
+      expect(global.browser.browsingData.remove).not.toHaveBeenCalled();
+
+      StoreUser.init(store);
+      SettingService.init();
+    });
+
+    it('should tolerate a Chromium legacy profile while a site-data cleanup setting is still missing', async () => {
+      const { [SettingID.CLEANUP_CACHE]: _missingCleanupCache, ...legacySettings } =
+        initialState.settings;
+      const legacyStore: Store<State, ReduxAction> = createStore({
+        ...initialState,
+        settings: legacySettings,
+      });
+      legacyStore.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserDetect', value: browserName.Chrome },
+      });
+      legacyStore.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserVersion', value: 140 },
+      });
+      StoreUser.init(legacyStore);
+      SettingService.init();
+
+      legacyStore.dispatch(updateSetting({ name: SettingID.ACTIVE_MODE, value: true }));
+
+      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();
+      expect(global.browser.browsingData.remove).not.toHaveBeenCalled();
+
+      StoreUser.init(store);
+      SettingService.init();
+    });
+
+    it('should restore multiple missing legacy settings before validation dereferences them', async () => {
+      const legacySettings = { ...initialState.settings };
+      delete legacySettings[SettingID.CLEAN_DELAY];
+      delete legacySettings[SettingID.NUM_COOKIES_ICON];
+      delete legacySettings[SettingID.KEEP_DEFAULT_ICON];
+      delete legacySettings[SettingID.CONTEXTUAL_IDENTITIES];
+      delete legacySettings[SettingID.CONTEXT_MENUS];
+
+      const legacyStore: Store<State, ReduxAction> = createStore({
+        ...initialState,
+        settings: legacySettings,
+      });
+      StoreUser.init(legacyStore);
+      SettingService.init();
+
+      legacyStore.dispatch(updateSetting({ name: SettingID.ACTIVE_MODE, value: true }));
+
+      await expect(SettingService.onSettingsChange()).resolves.toBeUndefined();
+      expect(legacyStore.getState().settings[SettingID.CLEAN_DELAY]).toEqual(
+        initialState.settings[SettingID.CLEAN_DELAY],
+      );
+      expect(legacyStore.getState().settings[SettingID.NUM_COOKIES_ICON]).toEqual(
+        initialState.settings[SettingID.NUM_COOKIES_ICON],
+      );
+      expect(legacyStore.getState().settings[SettingID.KEEP_DEFAULT_ICON]).toEqual(
+        initialState.settings[SettingID.KEEP_DEFAULT_ICON],
+      );
+      expect(legacyStore.getState().settings[SettingID.CONTEXTUAL_IDENTITIES]).toEqual(
+        initialState.settings[SettingID.CONTEXTUAL_IDENTITIES],
+      );
+      expect(legacyStore.getState().settings[SettingID.CONTEXT_MENUS]).toEqual(
+        initialState.settings[SettingID.CONTEXT_MENUS],
+      );
+
+      StoreUser.init(store);
+      SettingService.init();
+    });
+
     it('should init if not yet initialized', async () => {
       TestSettingService.setIsInitialized(false);
       expect(TestSettingService.getIsInitialized()).toEqual(false);
@@ -156,6 +291,25 @@ describe('SettingService', () => {
       await SettingService.onSettingsChange();
       expect(global.browser.browsingData.remove).toHaveBeenCalledTimes(1);
     });
+    it('should not invoke browsingData for unsupported site data', async () => {
+      store.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserDetect', value: browserName.Firefox },
+      });
+      store.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'browserVersion', value: 84 },
+      });
+      store.dispatch({
+        type: ReduxConstants.ADD_CACHE,
+        payload: { key: 'platformOs', value: 'android' },
+      });
+
+      TestStore.changeSetting(SettingID.CLEANUP_CACHE, true);
+      await SettingService.onSettingsChange();
+
+      expect(global.browser.browsingData.remove).not.toHaveBeenCalled();
+    });
     it('should NOT clean that site data if it was recently enabled and clean site data on enable is false', async () => {
       TestStore.changeSetting(SettingID.SITEDATA_EMPTY_ON_ENABLE, false);
       await SettingService.onSettingsChange();
@@ -163,16 +317,34 @@ describe('SettingService', () => {
       await SettingService.onSettingsChange();
       expect(global.browser.browsingData.remove).not.toHaveBeenCalled();
     });
-    it('should enable global icon if active mode was recently enabled', async () => {
+    it('should enable global icon and update an existing context-menu checkbox if active mode was recently enabled', async () => {
       TestStore.changeSetting(SettingID.ACTIVE_MODE, true);
       await SettingService.onSettingsChange();
       expect(spyBrowserActions.setGlobalIcon).toHaveBeenCalledWith(true);
+      expect(global.browser.contextMenus.update).toHaveBeenCalledWith(
+        ContextMenuEvents.MenuID.ACTIVE_MODE,
+        { checked: true },
+      );
     });
-    it('should make global icon greyscale and clear alarms if active mode was recently disabled', async () => {
+    it('should make global icon greyscale, clear alarms and update an existing context-menu checkbox if active mode was recently disabled', async () => {
       TestStore.changeSetting(SettingID.ACTIVE_MODE, false);
       await SettingService.onSettingsChange();
       expect(global.browser.alarms.clear).toHaveBeenCalledTimes(1);
       expect(spyBrowserActions.setGlobalIcon).toHaveBeenCalledWith(false);
+      expect(global.browser.contextMenus.update).toHaveBeenCalledWith(
+        ContextMenuEvents.MenuID.ACTIVE_MODE,
+        { checked: false },
+      );
+    });
+    it('should not update a context-menu checkbox while context menus are disabled', async () => {
+      TestStore.changeSetting(SettingID.CONTEXT_MENUS, false);
+      await SettingService.onSettingsChange();
+      jest.clearAllMocks();
+
+      TestStore.changeSetting(SettingID.ACTIVE_MODE, true);
+      await SettingService.onSettingsChange();
+
+      expect(global.browser.contextMenus.update).not.toHaveBeenCalled();
     });
     it('should clear contextMenus if recently disabled', async () => {
       TestStore.changeSetting(SettingID.CONTEXT_MENUS, false);

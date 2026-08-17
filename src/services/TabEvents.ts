@@ -11,7 +11,10 @@
  * SOFTWARE.
  */
 
-import shortid from 'shortid';
+import { generateId } from './IdService';
+import {
+  getAllCookiesForDomainIncludingPartitions,
+} from './CookieDomainService';
 import AlarmEvents from './AlarmEvents';
 import {
   checkIfProtected,
@@ -22,7 +25,6 @@ import {
   cadLog,
   createPartialTabInfo,
   extractMainDomain,
-  getAllCookiesForDomain,
   getHostname,
   getSetting,
   isAWebpage,
@@ -263,7 +265,7 @@ export default class TabEvents extends StoreUser {
       SettingID.DEBUG_MODE,
     ) as boolean;
     const partialTabInfo = createPartialTabInfo(tab);
-    const cookies = await getAllCookiesForDomain(
+    const cookies = await getAllCookiesForDomainIncludingPartitions(
       StoreUser.store.getState(),
       tab,
     );
@@ -271,7 +273,7 @@ export default class TabEvents extends StoreUser {
     if (!cookies) {
       cadLog(
         {
-          msg: 'TabEvents.getAllCookieActions: Libs.getAllCookiesForDomain returned undefined.  Skipping Cookie Actions.',
+          msg: 'TabEvents.getAllCookieActions: CookieDomainService.getAllCookiesForDomainIncludingPartitions returned undefined.  Skipping Cookie Actions.',
           x: { partialTabInfo },
         },
         debug,
@@ -307,7 +309,7 @@ export default class TabEvents extends StoreUser {
             ? extractMainDomain(getHostname(tab.url))
             : '',
           name: CADCOOKIENAME,
-          path: `/${shortid.generate()}`,
+          path: `/${generateId()}`,
           storeId: tab.cookieStoreId,
           url: tab.url,
           value: CADCOOKIENAME,

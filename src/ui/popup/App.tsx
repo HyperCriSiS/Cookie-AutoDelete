@@ -21,7 +21,6 @@ import {
 import {
   CADCOOKIENAME,
   extractMainDomain,
-  getAllCookiesForDomain,
   getHostname,
   getSetting,
   isAnIP,
@@ -30,6 +29,9 @@ import {
   localFileToRegex,
   parseCookieStoreId,
 } from '../../services/Libs';
+import {
+  getAllCookiesForDomainIncludingPartitions,
+} from '../../services/CookieDomainService';
 import { FilterOptions } from '../../typings/Enums';
 import { ReduxAction } from '../../typings/ReduxConstants';
 import ActivityTable from '../common_components/ActivityTable';
@@ -100,7 +102,7 @@ class App extends Component<PopupAppComponentProps, InitialState> {
     const { state } = this.props;
     const { tab } = this.state;
     if (!tab || !tab.url) return;
-    const cookies = await getAllCookiesForDomain(state, tab);
+    const cookies = await getAllCookiesForDomainIncludingPartitions(state, tab);
 
     this.setState({
       cookieCount: cookies

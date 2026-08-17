@@ -12,14 +12,20 @@
  */
 
 import {
+  getStorageTypeSupport,
+  usesBrowsingDataOrigins,
+} from './BrowserCapabilities';
+import {
+  cookiePartitionDetails,
+  getAllCookiesIncludingPartitions,
+} from './CookieApi';
+import {
   CADCOOKIENAME,
   cadLog,
   extractMainDomain,
   getHostname,
   getSetting,
   isAWebpage,
-  isChrome,
-  isFirefoxNotAndroid,
   prepareCleanupDomains,
   prepareCookieDomain,
   returnMatchedExpressionObject,
@@ -106,7 +112,6 @@ export const isSafeToClean = (
     debug,
   );
 
-  // Tests if the main domain is open on that specific storeId/container
   if (openTabDomains[storeId] && openTabDomains[storeId].includes(mainDomain)) {
     cadLog(
       {
@@ -124,14 +129,12 @@ export const isSafeToClean = (
     };
   }
 
-  // Checks the list for the first available match
   const matchedExpression = returnMatchedExpressionObject(
     state,
     storeId,
     hostname,
   );
 
-  // Internal CAD Cookie Checks
   if (
     matchedExpression &&
     cookieProperties.name === CADCOOKIENAME &&
@@ -163,7 +166,6 @@ export const isSafeToClean = (
     };
   }
 
-  // Check if cookie is expired.
   if (getSetting(state, SettingID.CLEAN_EXPIRED) as boolean) {
     const now = Math.ceil(Date.now() / 1000);
     if (expirationDate && expirationDate < now) {
@@ -190,7 +192,6 @@ export const isSafeToClean = (
     }
   }
 
-  // Startup cleanup checks
   if (greyCleanup && !matchedExpression) {
     cadLog(
       {
@@ -212,7 +213,6 @@ export const isSafeToClean = (
     greyCleanup &&
     matchedExpression &&
     matchedExpression.listType === ListType.GREY &&
-    // Tests the cleanAllCookies flag and if it doesn't include that name or if there is no cookieNames
     (undefinedIsTrue(matchedExpression.cleanAllCookies) ||
       (matchedExpression.cookieNames &&
         !matchedExpression.cookieNames.includes(cookieProperties.name)))
@@ -234,7 +234,6 @@ export const isSafeToClean = (
     };
   }
 
-  // Normal cleanup checks
   if (!matchedExpression) {
     cadLog(
       {
@@ -290,13 +289,12 @@ export const isSafeToClean = (
   };
 };
 
-/** Clean cookies */
+/** Clean cookies and return only entries the browser confirms were removed. */
 export const cleanCookies = async (
   state: State,
   markedForDeletion: CleanReasonObject[],
-): Promise<void> => {
-  const promiseArr: Promise<browser.cookies.Cookie | null>[] = [];
-  markedForDeletion.forEach((obj) => {
+): Promise<CleanReasonObject[]> => {
+  const operations = markedForDeletion.map(async (obj) => {
     const cookieProperties = obj.cookie;
     const cookieAPIProperties = returnOptionalCookieAPIAttributes(state, {
       firstPartyDomain: cookieProperties.firstPartyDomain,
@@ -304,10 +302,10 @@ export const cleanCookies = async (
     });
     const cookieRemove = {
       ...cookieAPIProperties,
+      ...cookiePartitionDetails(cookieProperties),
       name: cookieProperties.name,
       url: cookieProperties.preparedCookieDomain,
     };
-    // url: "http://domain.com" + cookies[i].path
     cadLog(
       {
         msg: 'CleanupService.cleanCookies: Cookie being removed through browser.cookies.remove via Promises:',
@@ -315,27 +313,52 @@ export const cleanCookies = async (
       },
       getSetting(state, SettingID.DEBUG_MODE) as boolean,
     );
-    const promise = browser.cookies.remove(cookieRemove);
-    promiseArr.push(promise);
+
+    return {
+      obj,
+      result: await browser.cookies.remove(cookieRemove),
+    };
   });
-  await Promise.all(promiseArr).catch((e) => {
-    throw e;
+
+  const results = await Promise.all(operations);
+  const removed: CleanReasonObject[] = [];
+
+  results.forEach((result) => {
+    if (result.result != null) {
+      removed.push(result.obj);
+      return;
+    }
+
+    cadLog(
+      {
+        msg: 'CleanupService.cleanCookies: browser.cookies.remove did not confirm removal; cookie was not removed.',
+        type: 'warn',
+        x: {
+          domain: result.obj.cookie.domain,
+          name: result.obj.cookie.name,
+          path: result.obj.cookie.path,
+          storeId: result.obj.cookie.storeId,
+        },
+      },
+      getSetting(state, SettingID.DEBUG_MODE) as boolean,
+    );
   });
+
+  return removed;
 };
 
-// Cleanup of all cookies for domain.
 export const clearCookiesForThisDomain = async (
   state: State,
   tab: browser.tabs.Tab,
 ): Promise<boolean> => {
   const hostname = getHostname(tab.url);
-  const getCookies = await browser.cookies.getAll(
+  const getCookies = await getAllCookiesIncludingPartitions(
+    state,
     returnOptionalCookieAPIAttributes(state, {
       domain: hostname,
       storeId: tab.cookieStoreId,
     }),
   );
-  // Filter out our own CAD cookie that cleans up other Browsing Data
   const cookies = getCookies.filter((c) => c.name !== CADCOOKIENAME);
 
   if (cookies.length > 0) {
@@ -344,16 +367,11 @@ export const clearCookiesForThisDomain = async (
       const r = await browser.cookies.remove(
         returnOptionalCookieAPIAttributes(state, {
           firstPartyDomain: cookie.firstPartyDomain,
+          ...cookiePartitionDetails(cookie),
           name: cookie.name,
           storeId: cookie.storeId,
           url: prepareCookieDomain(cookie),
         }) as {
-          // This explicit type is required as cookies.remove requires these two
-          // parameters, but url is not defined in cookies.Cookie as it is made
-          // up of cookie.domain + cookie.path, and neither required parameters
-          // can take 'undefined'.  returnOptionalCookieAPIAttributes has the
-          // parameters set to Partial<CookiePropertiesCleanup>, which appends
-          // '| undefined' to all parameters.
           name: string;
           url: string;
         },
@@ -391,20 +409,51 @@ export const clearCookiesForThisDomain = async (
   return cookies.length > 0;
 };
 
+type StorageClearResult = {
+  local: number;
+  session: number;
+};
+
+type ScriptingApi = {
+  executeScript: (details: {
+    target: { tabId: number };
+    func: () => StorageClearResult;
+  }) => Promise<Array<{ result?: StorageClearResult }>>;
+};
+
+const clearWebStorageInPage = (): StorageClearResult => {
+  const result = {
+    local: window.localStorage.length,
+    session: window.sessionStorage.length,
+  };
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+  return result;
+};
+
 export const clearLocalStorageForThisDomain = async (
   state: State,
   tab: browser.tabs.Tab,
 ): Promise<boolean> => {
-  // Using this method to ensure cross browser compatibility
   try {
+    if (tab.id === undefined) return false;
+
+    const scripting = (browser as unknown as { scripting?: ScriptingApi })
+      .scripting;
+    if (!scripting) {
+      throw new Error('browser.scripting.executeScript is unavailable.');
+    }
+
     let local = 0;
     let session = 0;
-    const result = await browser.tabs.executeScript(undefined, {
-      code: `var cad_r = {local: window.localStorage.length, session: window.sessionStorage.length};window.localStorage.clear();window.sessionStorage.clear();cad_r;`,
+    const result = await scripting.executeScript({
+      target: { tabId: tab.id },
+      func: clearWebStorageInPage,
     });
-    result.forEach((frame: { [key: string]: any }) => {
-      local += frame.local;
-      session += frame.session;
+    result.forEach((frame) => {
+      if (!frame.result) return;
+      local += frame.result.local;
+      session += frame.result.session;
     });
     showNotification(
       {
@@ -458,18 +507,20 @@ export const clearSiteDataForThisDomain = async (
   const domains = prepareCleanupDomains(hostname, state.cache.browserDetect);
   if (siteData === 'All') {
     const siteDataAll: string[] = [];
+    const results: boolean[] = [];
     for (const sd of SITEDATATYPES) {
-      await removeSiteData(
-        state,
-        sd,
-        state.cache.browserDetect,
-        domains,
-        debug,
-        false,
+      results.push(
+        await removeSiteData(
+          state,
+          sd,
+          state.cache.browserDetect,
+          domains,
+          debug,
+          false,
+        ),
       );
       siteDataAll.push(browser.i18n.getMessage(`${siteDataToBrowser(sd)}Text`));
     }
-    // To consolidate the notification shown, we do it out here.
     showNotification(
       {
         duration: getSetting(state, SettingID.NOTIFY_DURATION) as number,
@@ -481,17 +532,17 @@ export const clearSiteDataForThisDomain = async (
       },
       getSetting(state, SettingID.NOTIFY_MANUAL) as boolean,
     );
-  } else {
-    await removeSiteData(
-      state,
-      siteData,
-      state.cache.browserDetect,
-      domains,
-      debug,
-      true,
-    );
+    return results.every(Boolean);
   }
-  return true;
+
+  return removeSiteData(
+    state,
+    siteData,
+    state.cache.browserDetect,
+    domains,
+    debug,
+    true,
+  );
 };
 
 export const removeSiteData = async (
@@ -502,16 +553,7 @@ export const removeSiteData = async (
   debug: boolean,
   manual = false,
 ): Promise<boolean> => {
-  const listName = ((b: browserName) => {
-    switch (b) {
-      case browserName.Chrome:
-      case browserName.Opera:
-        return 'origins';
-      case browserName.Firefox:
-      default:
-        return 'hostnames';
-    }
-  })(bName);
+  const listName = usesBrowsingDataOrigins(bName) ? 'origins' : 'hostnames';
   const sd = siteDataToBrowser(siteData);
   cadLog(
     {
@@ -561,18 +603,16 @@ export const removeSiteData = async (
   }
 };
 
-/** This will use the browsingData's hostname/origin attribute to delete any extra browsing data */
 export const otherBrowsingDataCleanup = async (
   state: State,
   isSafeToCleanObjects: CleanReasonObject[],
 ): Promise<ActivityLog['browsingDataCleanup']> => {
-  const chrome = isChrome(state.cache);
   const debug = getSetting(state, SettingID.DEBUG_MODE) as boolean;
   const browsingDataResult: ActivityLog['browsingDataCleanup'] = {};
-  const ffVersion = Number.parseInt(state.cache.browserVersion);
+  const storageSupport = getStorageTypeSupport(state.cache);
   if (
     getSetting(state, SettingID.CLEANUP_CACHE) &&
-    ((isFirefoxNotAndroid(state.cache) && ffVersion >= 78) || chrome)
+    storageSupport.cache
   ) {
     browsingDataResult[SiteDataType.CACHE] = await cleanSiteData(
       state,
@@ -584,7 +624,7 @@ export const otherBrowsingDataCleanup = async (
   }
   if (
     getSetting(state, SettingID.CLEANUP_INDEXEDDB) &&
-    ((isFirefoxNotAndroid(state.cache) && ffVersion >= 77) || chrome)
+    storageSupport.indexedDb
   ) {
     browsingDataResult[SiteDataType.INDEXEDDB] = await cleanSiteData(
       state,
@@ -596,7 +636,7 @@ export const otherBrowsingDataCleanup = async (
   }
   if (
     getSetting(state, SettingID.CLEANUP_LOCALSTORAGE) &&
-    ((isFirefoxNotAndroid(state.cache) && ffVersion >= 58) || chrome)
+    storageSupport.localStorage
   ) {
     browsingDataResult[SiteDataType.LOCALSTORAGE] = await cleanSiteData(
       state,
@@ -608,7 +648,7 @@ export const otherBrowsingDataCleanup = async (
   }
   if (
     getSetting(state, SettingID.CLEANUP_PLUGINDATA) &&
-    ((isFirefoxNotAndroid(state.cache) && ffVersion >= 78) || chrome)
+    storageSupport.pluginData
   ) {
     browsingDataResult[SiteDataType.PLUGINDATA] = await cleanSiteData(
       state,
@@ -620,7 +660,7 @@ export const otherBrowsingDataCleanup = async (
   }
   if (
     getSetting(state, SettingID.CLEANUP_SERVICEWORKERS) &&
-    ((isFirefoxNotAndroid(state.cache) && ffVersion >= 77) || chrome)
+    storageSupport.serviceWorkers
   ) {
     browsingDataResult[SiteDataType.SERVICEWORKERS] = await cleanSiteData(
       state,
@@ -634,14 +674,6 @@ export const otherBrowsingDataCleanup = async (
   return browsingDataResult;
 };
 
-/**
- * Filters incoming objects with the site data to clean. (From Autoclean trigger)
- * @param state The State.
- * @param siteData The site data type
- * @param cleanReasonObjects Objects returned from isSafeToClean()
- * @param bName - Browser Name per browserDetect() function
- * @param debug True if debug mode.
- */
 export const cleanSiteData = async (
   state: State,
   siteData: SiteDataType,
@@ -675,12 +707,10 @@ export const cleanSiteData = async (
   return [];
 };
 
-/** Setup SiteData cleaning.  Undefined will not be cleaned. */
 export const parseCleanSiteData = (bool?: boolean): boolean => {
   return bool === undefined ? false : bool;
 };
 
-/** Filter the deleted cookies from site data type */
 export const filterSiteData = (
   obj: CleanReasonObject,
   siteData: SiteDataType,
@@ -694,7 +724,7 @@ export const filterSiteData = (
   const isExpiredRestart = obj.reason === ReasonClean.ExpiredCookieRestart;
   const isCADCookieNoExpression =
     (obj.reason === ReasonClean.CADSiteDataCookie ||
-      ReasonClean.CADSiteDataCookieRestart) &&
+      obj.reason === ReasonClean.CADSiteDataCookieRestart) &&
     obj.expression === undefined;
   const nonBlankCookieHostName = obj.cookie.hostname.trim() !== '';
   const cleanSiteDataInExpression = parseCleanSiteData(
@@ -746,11 +776,6 @@ export const filterSiteData = (
   return r;
 };
 
-/**
- * Store all tabs' host domains to prevent cookie deletion from those domains
- * returns empty object if we ignore all open Tabs
- * Tabs now grouped by container e.g. 'default', 'firefox-container-1', '0'
- */
 export const returnContainersOfOpenTabDomains = async (
   ignoreOpenTabs: boolean,
   cleanDiscardedTabs: boolean,
@@ -764,7 +789,6 @@ export const returnContainersOfOpenTabDomains = async (
   const openTabs: { [k: string]: Set<string> } = {};
   for (const tab of tabs) {
     if (isAWebpage(tab.url) && (!cleanDiscardedTabs || !tab.discarded)) {
-      // Chrome doesn't have tab.cookieStoreId, so rely on tab.incognito
       const cookieStoreId = tab.cookieStoreId || (tab.incognito ? '1' : '0');
       if (!openTabs[cookieStoreId]) {
         openTabs[cookieStoreId] = new Set<string>();
@@ -779,7 +803,6 @@ export const returnContainersOfOpenTabDomains = async (
   return openTabsArray;
 };
 
-/** Main function for cookie cleanup. Returns a list of domains that cookies and other site data were deleted from */
 export const cleanCookiesOperation = async (
   state: State,
   cleanupProperties: CleanupProperties = {
@@ -797,7 +820,6 @@ export const cleanCookiesOperation = async (
     browsingDataCleanup: {},
     siteDataCleaned: false,
   };
-  // Scrub private cookieStores
   const storesIdsToScrub = ['firefox-private', 'private', '1'];
   const openTabDomains = await returnContainersOfOpenTabDomains(
     cleanupProperties.ignoreOpenTabs,
@@ -810,7 +832,6 @@ export const cleanCookiesOperation = async (
 
   const cookieStoreIds = new Set<string>();
 
-  // Manually add default containers.
   switch (state.cache.browserDetect || (browserDetect() as browserName)) {
     case browserName.Firefox:
       cookieStoreIds.add('default');
@@ -831,7 +852,6 @@ export const cleanCookiesOperation = async (
       break;
   }
 
-  // Store cookieStoreIds from the contextualIdentities API
   if (getSetting(state, SettingID.CONTEXTUAL_IDENTITIES)) {
     const contextualIdentitiesObjects =
       await browser.contextualIdentities.query({});
@@ -841,7 +861,6 @@ export const cleanCookiesOperation = async (
     }
   }
 
-  // Store cookieStoreIds from the cookies API
   const cookieStores = (await browser.cookies.getAllCookieStores()) || [];
   for (const store of cookieStores) {
     if (
@@ -852,11 +871,11 @@ export const cleanCookiesOperation = async (
     }
   }
 
-  // Clean for each cookieStore jar
   for (const id of cookieStoreIds) {
     let cookies: browser.cookies.Cookie[] = [];
     try {
-      cookies = await browser.cookies.getAll(
+      cookies = await getAllCookiesIncludingPartitions(
+        state,
         returnOptionalCookieAPIAttributes(state, {
           storeId: id,
         }),
@@ -874,7 +893,6 @@ export const cleanCookiesOperation = async (
       }
     }
 
-    // No cookies from specified container.  Skip rest of cleanup.
     if (!cookies || cookies.length === 0) continue;
 
     const isSafeToCleanObjects = cookies.map((cookie) => {
@@ -886,7 +904,6 @@ export const cleanCookiesOperation = async (
     });
 
     if (debug) {
-      // We need deep copying object to as to not change actual cookies
       const sanitized: CleanReasonObject[] = isSafeToCleanObjects.map((obj) => {
         return {
           ...obj,
@@ -917,7 +934,6 @@ export const cleanCookiesOperation = async (
     });
 
     if (debug) {
-      // We need deep copying object to as to not change actual cookies
       const sanitized: CleanReasonObject[] = markedForDeletion.map((obj) => {
         return {
           ...obj,
@@ -936,8 +952,9 @@ export const cleanCookiesOperation = async (
       );
     }
 
+    let successfullyRemoved: CleanReasonObject[] = [];
     try {
-      await cleanCookies(state, markedForDeletion);
+      successfullyRemoved = await cleanCookies(state, markedForDeletion);
     } catch (e: unknown) {
       cadLog(
         {
@@ -954,8 +971,7 @@ export const cleanCookiesOperation = async (
       }
     }
 
-    // Extract away the CAD Internal Cookie from Clean Entries.
-    const removedCookies = markedForDeletion.filter((c) => {
+    const removedCookies = successfullyRemoved.filter((c) => {
       return c.cookie.name !== CADCOOKIENAME;
     });
 
@@ -971,12 +987,10 @@ export const cleanCookiesOperation = async (
       );
     });
 
-    // Handle all other browsingData cleanups.
     const storeResults = await otherBrowsingDataCleanup(
       state,
       isSafeToCleanObjects,
     );
-    // Don't store domains for private browsing data
     if (storesIdsToScrub.includes(id) || !storeResults) continue;
     for (const sd of SITEDATATYPES) {
       if ((storeResults[sd] || []).length > 0) {

@@ -16,10 +16,12 @@ import * as React from 'react';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
 import { updateExpressionUI } from '../../redux/Actions';
+import { getStorageTypeSupport } from '../../services/BrowserCapabilities';
+import { getAllCookiesIncludingPartitions } from '../../services/CookieApi';
 import {
+  ipv6Prep,
   isChrome,
   isFirefox,
-  isFirefoxNotAndroid,
   returnOptionalCookieAPIAttributes,
 } from '../../services/Libs';
 import { ReduxAction } from '../../typings/ReduxConstants';
@@ -86,7 +88,8 @@ class ExpressionOptions extends React.Component<ExpressionOptionsProps> {
     let cookies: browser.cookies.CookieProperties[] = [];
     if (exp.startsWith('/') && exp.endsWith('/')) {
       // Treat expression as regular expression.  Get all cookies then regex domain.
-      const allCookies = await browser.cookies.getAll(
+      const allCookies = await getAllCookiesIncludingPartitions(
+        this.props.state,
         returnOptionalCookieAPIAttributes(this.props.state, {
           storeId: this.toPublicStoreId(expression.storeId),
         }),
@@ -102,7 +105,8 @@ class ExpressionOptions extends React.Component<ExpressionOptionsProps> {
         cookies = allCookies.filter((cookie) => regExp.test(cookie.domain));
       }
     } else if (exp.startsWith('file:')) {
-      const allCookies = await browser.cookies.getAll(
+      const allCookies = await getAllCookiesIncludingPartitions(
+        this.props.state,
         returnOptionalCookieAPIAttributes(this.props.state, {
           storeId: this.toPublicStoreId(expression.storeId),
         }),
@@ -116,15 +120,17 @@ class ExpressionOptions extends React.Component<ExpressionOptionsProps> {
       let allCookies;
       try {
         // Check if expression was a CIDR Notation
-        cidrEXP = ipaddr.parseCIDR(exp);
-        allCookies = await browser.cookies.getAll(
+        cidrEXP = ipaddr.parseCIDR(ipv6Prep(exp) || exp);
+        allCookies = await getAllCookiesIncludingPartitions(
+          this.props.state,
           returnOptionalCookieAPIAttributes(this.props.state, {
             storeId: this.toPublicStoreId(expression.storeId),
           }),
         );
       } catch {
         // Not valid CIDR.  Proceed with default fetch.  Also applies to IP Addresses with no CIDR.
-        cookies = await browser.cookies.getAll(
+        cookies = await getAllCookiesIncludingPartitions(
+          this.props.state,
           returnOptionalCookieAPIAttributes(this.props.state, {
             domain: `${trimDotAndStar(exp)}${exp.endsWith('.') ? '.' : ''}`,
             storeId: this.toPublicStoreId(expression.storeId),
@@ -136,7 +142,9 @@ class ExpressionOptions extends React.Component<ExpressionOptionsProps> {
           try {
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore Union types of IPv4 and IPv6 not compatible.
-            return ipaddr.parse(cookie.domain).match(cidrEXP);
+            return ipaddr
+              .parse(ipv6Prep(cookie.domain) || cookie.domain)
+              .match(cidrEXP);
           } catch {
             // Cookie domain is not an IP Address
             return false;
@@ -273,35 +281,25 @@ class ExpressionOptions extends React.Component<ExpressionOptionsProps> {
     const { cookies } = this.state;
     const { expression, state } = this.props;
     const keyCleanAllCookies = `${expression.id}-cleanAllCookies`;
-    const ffVersion = Number.parseInt(state.cache.browserVersion);
+    const supportedDataStorage = getStorageTypeSupport(state.cache);
 
     const dropList = coerceBoolean(expression.cleanAllCookies);
     return (
       <div>
         {!expression.expression.startsWith('file:') &&
-          ((isFirefoxNotAndroid(state.cache) &&
-            ffVersion >= 78) ||
-            isChrome(state.cache)) &&
+          supportedDataStorage.cache &&
           this.createSiteDataCheckbox(SiteDataType.CACHE)}
         {!expression.expression.startsWith('file:') &&
-          ((isFirefoxNotAndroid(state.cache) &&
-            ffVersion >= 77) ||
-            isChrome(state.cache)) &&
+          supportedDataStorage.indexedDb &&
           this.createSiteDataCheckbox(SiteDataType.INDEXEDDB)}
         {!expression.expression.startsWith('file:') &&
-          ((isFirefoxNotAndroid(state.cache) &&
-            ffVersion >= 58) ||
-            isChrome(state.cache)) &&
+          supportedDataStorage.localStorage &&
           this.createSiteDataCheckbox(SiteDataType.LOCALSTORAGE)}
         {!expression.expression.startsWith('file:') &&
-          ((isFirefoxNotAndroid(state.cache) &&
-            ffVersion >= 78) ||
-            isChrome(state.cache)) &&
+          supportedDataStorage.pluginData &&
           this.createSiteDataCheckbox(SiteDataType.PLUGINDATA)}
         {!expression.expression.startsWith('file:') &&
-          ((isFirefoxNotAndroid(state.cache) &&
-            ffVersion >= 77) ||
-            isChrome(state.cache)) &&
+          supportedDataStorage.serviceWorkers &&
           this.createSiteDataCheckbox(SiteDataType.SERVICEWORKERS)}
         <div className={'checkbox'}>
           <span

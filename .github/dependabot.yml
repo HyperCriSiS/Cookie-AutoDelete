@@ -1,14 +1,38 @@
 version: 2
 updates:
-  # Maintain Dependencies for GitHub Actions
+  # Keep GitHub Actions current without opening one PR per minor/patch update.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
-  # Maintain Dependencies for NodeJS / npm
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Keep npm updates reviewable. Major updates stay separate so toolchain and
+  # runtime migrations can be tested deliberately instead of being bulk-merged.
   - package-ecosystem: "npm"
-    # Look for `package.json` and `lock` files in the `root` directory
     directory: "/"
-    # Check npm registry for updates every day (weekdays)
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
+      time: "06:15"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 10
+    groups:
+      npm-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

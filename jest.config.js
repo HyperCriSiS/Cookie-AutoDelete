@@ -70,7 +70,6 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js'],
 
   // A map from regular expressions to module names that allow to stub out resources with a single module
-  // moduleNameMapper: {},
 
   // An array of regexp pattern strings, matched against all module paths before considered 'visible' to the module loader
   // modulePathIgnorePatterns: [],
@@ -114,7 +113,11 @@ module.exports = {
   // runner: "jest-runner",
 
   // The paths to modules that run some code to configure or set up the testing environment before each test
-  setupFilesAfterEnv: ['jest-date-mock', '<rootDir>/__tests__/setup.js'],
+  setupFilesAfterEnv: [
+    'jest-date-mock',
+    '<rootDir>/__tests__/setup.js',
+    '<rootDir>/__tests__/setup-mv3.js',
+  ],
 
   // The path to a module that runs some code to configure or set up the testing framework before each test
   // setupTestFrameworkScriptFile: null,

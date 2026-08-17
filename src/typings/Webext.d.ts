@@ -32,6 +32,11 @@ declare namespace browser.browsingData {
 }
 
 declare namespace browser.cookies {
+  interface CookiePartitionKey {
+    topLevelSite?: string;
+    hasCrossSiteAncestor?: boolean;
+  }
+
   interface CookieProperties extends browser.cookies.Cookie {
     firstPartyDomain?: string;
   }
@@ -84,5 +89,3 @@ declare namespace browser.tabs {
     url?: string;
   }
 }
-
-declare module 'redux-webext';
