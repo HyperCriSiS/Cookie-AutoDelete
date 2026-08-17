@@ -10,7 +10,7 @@ Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension wh
 
 Active modernization work is on `modernization-p0`, tracked by draft PR #1 into `3.X.X-Branch`. The branch is the integration and validation branch for the modernization effort and is not yet release-ready.
 
-Regular functional CI on the modernization PR has been green on validated heads. The separate `github-advanced-security` agent has failed before repository analysis because its hosted model request is unsupported; this is treated as an external GitHub service/configuration issue rather than a functional repository defect.
+Regular functional CI on the modernization PR is green on the latest validated head: `Initial Checks`, `Tests, Builds, Coverage`, CodeQL and the JavaScript/TypeScript/Actions analyses succeed. The separate `github-advanced-security` agent still fails before repository analysis because its hosted model request is unsupported; this is treated as an external GitHub service/configuration issue rather than a functional repository defect.
 
 There are currently no repository issues and no fork releases. Remaining Dependabot updates require compatibility review rather than automatic merging.
 
@@ -43,7 +43,7 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 - [x] Verify persisted cleanup-policy settings (`ACTIVE_MODE`, `ENABLE_GREYLIST`, `CLEAN_OPEN_TABS_STARTUP`) survive the same restart path.
 - [x] Add representative Firefox/Chromium legacy-profile regression coverage proving multiple later settings are restored while existing customized values and older setting shapes are preserved.
 - [ ] Validate broader upgrades from representative real Cookie AutoDelete Firefox and Chromium profile/settings exports without destructive resets or silent data loss.
-- [ ] Verify allowlist/greylist matching semantics after StoreBridge/UIStore migration, including representative domain/subdomain cases.
+- [ ] Verify allowlist/greylist matching semantics after StoreBridge/UIStore migration, including representative domain/subdomain and container-scoped cases. Regression coverage is staged on the current head and must pass full CI before this item is marked complete.
 - [ ] Verify cleanup behavior on tab close, domain change and browser restart for supported policy combinations.
 - [ ] Verify session/transient-state restoration across realistic MV3 service-worker suspension/restart scenarios beyond persisted-list/settings unit coverage.
 - [ ] Verify popup/options interactions and state synchronization in both Firefox and Chromium builds.
@@ -73,11 +73,12 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 
 ## Blockers / dependencies
 
-- No known functional CI blocker exists on the validated `modernization-p0` heads.
+- No known functional CI blocker exists on the latest validated `modernization-p0` head.
+- Real exported legacy profiles are not present in the repository, so the real-profile upgrade item cannot be completed from repository evidence alone; synthetic legacy-shape regression coverage is already green.
 - The separate GitHub Advanced Security agent can fail before repository analysis because its requested hosted model is unsupported; this is external to the codebase.
 - Major dependency upgrades must remain isolated and validated.
-- Real exported legacy profiles and manual packaged-browser validation are still required before release readiness can be claimed.
+- Manual packaged-browser validation is still required before release readiness can be claimed.
 
 ## Completion status
 
-**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization and synthetic legacy-profile compatibility coverage are in place. The next priority is validating representative real Firefox/Chromium profile exports without data loss, followed by runtime cleanup/state/UI validation and release-candidate testing.
+**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization and synthetic legacy-profile compatibility coverage are in place. The current work verifies StoreBridge/UIStore allowlist/greylist matching semantics; after CI validation, the next priority is cleanup trigger behavior. Real legacy-profile export validation remains blocked until representative exports are available, and release-candidate testing remains open.
