@@ -1,0 +1,28 @@
+name: automation inspect startup restoration
+on:
+  push:
+    paths:
+      - '.github/workflows/automation-inspect-startup-restoration.yml'
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: modernization-p0
+      - name: Inspect startup and restoration code
+        run: |
+          echo '=== background startup ==='
+          sed -n '1,320p' src/background.ts 2>/dev/null || true
+          echo '=== matching startup/lifecycle code ==='
+          grep -R -n -C 8 -E 'ACTIVE_MODE|ENABLE_GREYLIST|CLEAN_OPEN_TABS_STARTUP|parsePersistedState|createStore|onStartup|runtime.onStartup' src __tests__ | head -n 520 || true
+      - name: Remove helper
+        run: |
+          rm -f .github/workflows/automation-inspect-startup-restoration.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'chore: remove temporary startup-restoration probe' || exit 0
+          git push origin HEAD:modernization-p0
