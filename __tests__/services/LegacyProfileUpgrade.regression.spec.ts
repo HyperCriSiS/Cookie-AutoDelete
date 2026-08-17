@@ -47,7 +47,7 @@ describe.each([
       payload: { key: 'platformOs', value: 'linux' },
     });
 
-    store.dispatch<any>(validateSettings());
+    store.dispatch(validateSettings());
 
     const upgraded = store.getState().settings;
     expect(upgraded[SettingID.CLEAN_DELAY].value).toBe(73);
@@ -97,7 +97,7 @@ describe.each([
       payload: { key: 'platformOs', value: 'linux' },
     });
 
-    store.dispatch<any>(validateSettings());
+    store.dispatch(validateSettings());
 
     expect(store.getState().settings[SettingID.CLEAN_DELAY]).toEqual({
       ...initialState.settings[SettingID.CLEAN_DELAY],
