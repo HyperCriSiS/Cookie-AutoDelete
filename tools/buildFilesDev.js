@@ -14,7 +14,6 @@
  */
 const fs = require('fs');
 const path = require('path');
-const archiver = require('archiver');
 const { generateManifest } = require('./generateManifest');
 const { validateBuildStage } = require('./validateBuildStage');
 
@@ -103,11 +102,16 @@ const prepareStage = (target) => {
   return stageDir;
 };
 
-const archiveDirectory = (sourceDir, filename) =>
-  new Promise((resolve, reject) => {
+const archiveDirectory = async (sourceDir, filename) => {
+  // Archiver 8 is ESM-only and exposes format-specific archive classes instead
+  // of the legacy callable CommonJS export. Dynamic import keeps this existing
+  // CommonJS build tool compatible without converting the entire tools folder.
+  const { ZipArchive } = await import('archiver');
+
+  return new Promise((resolve, reject) => {
     const outputPath = path.join(BUILDDIR, `${filename}.zip`);
     const output = fs.createWriteStream(outputPath);
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = new ZipArchive({ zlib: { level: 9 } });
 
     output.on('close', () => {
       console.log(`${archive.pointer()} total bytes`);
@@ -127,8 +131,9 @@ const archiveDirectory = (sourceDir, filename) =>
 
     archive.pipe(output);
     archive.directory(sourceDir, false);
-    archive.finalize();
+    void archive.finalize().catch(reject);
   });
+};
 
 const buildTarget = async (target, filename) => {
   console.log(`\nBuilding unsigned extension for ${target}...`);
