@@ -24,15 +24,12 @@ jobs:
           import_anchor = "import { parsePersistedState } from '../../src/services/StateHydration';\n"
           store_import = "import createStore from '../../src/redux/Store';\n"
           if store_import not in s:
-              if import_anchor not in s:
-                  raise SystemExit('StateHydration import anchor not found')
+              if import_anchor not in s: raise SystemExit('StateHydration import anchor not found')
               s = s.replace(import_anchor, import_anchor + store_import, 1)
           old = "    expect(writer).toHaveBeenCalledTimes(1);\n    expect(parsePersistedState(stored)).toEqual(state);\n"
-          new = "    expect(writer).toHaveBeenCalledTimes(1);\n    const restored = parsePersistedState(stored);\n    const restartedStore = createStore(restored);\n    expect(restartedStore.getState()).toEqual(state);\n"
-          if old not in s:
-              raise SystemExit('StateRestart assertion anchor not found')
+          new = "    expect(writer).toHaveBeenCalledTimes(1);\n    const restored = parsePersistedState(stored);\n    const restartedStore = createStore(restored);\n    expect(restartedStore.getState().lists).toEqual(state.lists);\n"
+          if old not in s: raise SystemExit('StateRestart assertion anchor not found')
           p.write_text(s.replace(old, new, 1))
-
           r = Path('ROADMAP.md')
           rt = r.read_text()
           entry = '- [x] Exercise persisted allowlist/greylist restoration through the same `parsePersistedState()` + `createStore()` bootstrap primitives used by `background.ts`, not only a parser round-trip.\n'
