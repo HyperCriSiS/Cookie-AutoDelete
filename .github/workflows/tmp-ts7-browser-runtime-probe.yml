@@ -1,0 +1,42 @@
+name: Temporary TS7 browser runtime typing probe
+
+on:
+  push:
+    branches: [modernization-p0]
+    paths: ['.github/workflows/tmp-ts7-browser-runtime-probe.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - name: Install isolated TS7 runtime typing candidates
+        run: npm install --no-save --legacy-peer-deps typescript@7.0.2 @types/webextension-polyfill
+      - name: Probe typed browser runtime bridges
+        shell: bash
+        run: |
+          set -uo pipefail
+          cp src/typings/Webext.d.ts /tmp/Webext.d.ts
+          run_probe() {
+            label="$1"
+            declaration="$2"
+            printf '%s\n' "$declaration" > src/typings/BrowserRuntime.d.ts
+            echo "===== $label ====="
+            npx tsc --noEmit --module esnext --moduleResolution bundler --skipLibCheck true 2>&1 | tee "/tmp/${label}.log"
+            status=${PIPESTATUS[0]}
+            echo "status=$status"
+            grep -E 'TS2708|BrowserRuntime|src/|__tests__/' "/tmp/${label}.log" | head -120 || true
+            rm -f src/typings/BrowserRuntime.d.ts
+            return 0
+          }
+          run_probe "typeof-import" $'type CadBrowserRuntime = typeof import("webextension-polyfill");\ndeclare const browser: CadBrowserRuntime;'
+          run_probe "default-import" $'import browserPolyfill from "webextension-polyfill";\ndeclare global { const browser: typeof browserPolyfill; }\nexport {};'
+          run_probe "import-equals" $'import browserPolyfill = require("webextension-polyfill");\ndeclare global { const browser: typeof browserPolyfill; }\nexport {};'
