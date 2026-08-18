@@ -1,4 +1,4 @@
-name: Temporary TS7 typing inspection
+name: Temporary roadmap update
 
 on:
   push:
@@ -8,70 +8,43 @@ on:
       - .github/workflows/ts7-typing-inspect.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  validate:
+  update-roadmap:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Validate compatibility layer in workspace
+          ref: modernization-p0
+          fetch-depth: 0
+      - name: Record validated WebExtension typing findings
         shell: bash
         run: |
-          npm uninstall --save-dev web-ext-types
-          npm install --save-dev @types/firefox-webext-browser
-          sed -i '/node_modules\/web-ext-types/d' tsconfig.json
-          cat > src/typings/Webext.d.ts <<'EOF'
-          /* eslint-disable @typescript-eslint/no-unused-vars */
-          /**
-           * Cross-browser compatibility additions on top of
-           * @types/firefox-webext-browser.
-           */
-
-          interface EvListener<T extends (...args: any[]) => any> {
-            addListener(callback: T): void;
-            removeListener(callback: T): void;
-            hasListener(callback: T): boolean;
-          }
-
-          declare namespace browser.cookies {
-            type CookiePartitionKey = PartitionKey;
-
-            interface CookieProperties extends Omit<Cookie, 'firstPartyDomain'> {
-              firstPartyDomain?: string;
-            }
-
-            type OptionalCookieProperties = Partial<CookieProperties>;
-          }
-
-          declare namespace browser.contextualIdentities {
-            type contextualIdentitiesChangeInfo = {
-              contextualIdentity: ContextualIdentity;
-            };
-          }
-
-          declare namespace browser.tabs {
-            interface Tab {
-              selected?: boolean;
-            }
-
-            interface TabChangeInfo extends _OnUpdatedChangeInfo {
-              cookieChanged?: {
-                removed: boolean;
-                cookie: browser.cookies.Cookie;
-                cause: browser.cookies.OnChangedCause;
-              };
-            }
-          }
-          EOF
-          echo '=== TypeScript errors with compatibility layer ==='
-          npx tsc --noEmit 2>&1 | tee /tmp/ts-errors.txt || true
-          echo '=== error count ==='
-          grep -c 'error TS' /tmp/ts-errors.txt || true
-          echo '=== browser compatibility errors ==='
-          grep -E 'CookieProperties|CookiePartitionKey|TabChangeInfo|contextualIdentitiesChangeInfo|selected|firstPartyDomain|EvListener' /tmp/ts-errors.txt || true
-          echo '=== webpack build ==='
-          npm run build
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('ROADMAP.md')
+          text = path.read_text()
+          anchor = "- [ ] Replace/adapt `web-ext-types@3.2.1` using `@types/firefox-webext-browser` as maintained base plus the smallest explicit local compatibility augmentation"
+          idx = text.find(anchor)
+          if idx < 0:
+              raise SystemExit('Roadmap anchor not found')
+          line_end = text.find('\n', idx)
+          insert_at = line_end + 1
+          addition = (
+              "  - [x] Validate the minimal compatibility-layer shape against the maintained Firefox typings: `CookiePartitionKey` can alias `PartitionKey`, `TabChangeInfo` can extend `_OnUpdatedChangeInfo`, legacy `Tab.selected` and contextual-identity change-info need only small local augmentations, and the generic event helper can be expressed structurally without retaining `web-ext-types`.\n"
+              "  - [ ] Retype CAD-internal cookie paths and representative fixtures to the project cross-browser cookie shape so Chromium cookies may omit `firstPartyDomain`; then rerun webpack/tests before committing the dependency swap.\n"
+          )
+          if "Validate the minimal compatibility-layer shape" not in text:
+              text = text[:insert_at] + addition + text[insert_at:]
+              path.write_text(text)
+          PY
+          git config user.name "HyperCriSiS"
+          git config user.email "dev.github@w3b.world"
+          git add ROADMAP.md
+          if git diff --cached --quiet; then
+            echo 'No roadmap change needed.'
+            exit 0
+          fi
+          git commit -m "docs: record WebExtension typing compatibility gate"
+          git push origin HEAD:modernization-p0
