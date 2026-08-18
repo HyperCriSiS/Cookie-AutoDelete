@@ -22,14 +22,16 @@ jobs:
           echo '=== ambient const enum declarations ==='
           grep -RIn --include='*.d.ts' 'declare const enum' src/typings || true
           echo
-          echo '=== relevant typing files ==='
-          for file in src/typings/Global.d.ts src/typings/Cleanup.d.ts src/typings/Settings.d.ts src/typings/Enums.ts __tests__/tsconfig.json tsconfig.json package.json; do
-            echo "--- $file ---"
-            sed -n '1,320p' "$file"
+          echo '=== relevant files ==='
+          for file in src/typings/Global.d.ts src/typings/Cleanup.d.ts src/typings/Enums.ts __tests__/tsconfig.json tsconfig.json package.json; do
+            if [ -f "$file" ]; then
+              echo "--- $file ---"
+              sed -n '1,360p' "$file"
+            fi
           done
           echo
-          echo '=== usage files (src + tests) ==='
+          echo '=== usage files and matching lines (src + tests) ==='
           for symbol in browserName SiteDataType SettingID ListType ReasonClean OpenTabStatus; do
             echo "--- $symbol ---"
-            grep -RIl --include='*.ts' --include='*.tsx' "$symbol" src __tests__ | sort || true
+            grep -RIn --include='*.ts' --include='*.tsx' --exclude='*.d.ts' -E "\\b${symbol}\\b" src __tests__ 2>/dev/null || true
           done
