@@ -6,15 +6,10 @@ on:
     paths: ['.github/workflows/tmp-ts7-browser-runtime-probe.yml']
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
-    strategy:
-      fail-fast: false
-      matrix:
-        candidate: [typeof-import, default-import, import-equals]
-    name: probe-${{ matrix.candidate }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,30 +19,26 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm install --no-save --legacy-peer-deps typescript@7.0.2 @types/webextension-polyfill
-      - name: Write candidate declaration
+      - name: Capture candidate diagnostics
         shell: bash
         run: |
-          case "${{ matrix.candidate }}" in
-            typeof-import)
-              cat > src/typings/BrowserRuntime.d.ts <<'EOF'
-          type CadBrowserRuntime = typeof import("webextension-polyfill");
-          declare const browser: CadBrowserRuntime;
-          EOF
-              ;;
-            default-import)
-              cat > src/typings/BrowserRuntime.d.ts <<'EOF'
-          import browserPolyfill from "webextension-polyfill";
-          declare global { const browser: typeof browserPolyfill; }
-          export {};
-          EOF
-              ;;
-            import-equals)
-              cat > src/typings/BrowserRuntime.d.ts <<'EOF'
-          import browserPolyfill = require("webextension-polyfill");
-          declare global { const browser: typeof browserPolyfill; }
-          export {};
-          EOF
-              ;;
-          esac
-      - name: TypeScript 7 compile
-        run: npx tsc --noEmit --module esnext --moduleResolution bundler --skipLibCheck true
+          set -uo pipefail
+          mkdir -p .tmp-ts7-probe
+          probe() {
+            label="$1"
+            declaration="$2"
+            printf '%s\n' "$declaration" > src/typings/BrowserRuntime.d.ts
+            npx tsc --noEmit --module esnext --moduleResolution bundler --skipLibCheck true > ".tmp-ts7-probe/${label}.log" 2>&1 || true
+            rm -f src/typings/BrowserRuntime.d.ts
+          }
+          probe "typeof-import" $'type CadBrowserRuntime = typeof import("webextension-polyfill");\ndeclare const browser: CadBrowserRuntime;'
+          probe "default-import" $'import browserPolyfill from "webextension-polyfill";\ndeclare global { const browser: typeof browserPolyfill; }\nexport {};'
+          probe "import-equals" $'import browserPolyfill = require("webextension-polyfill");\ndeclare global { const browser: typeof browserPolyfill; }\nexport {};'
+          for f in .tmp-ts7-probe/*.log; do
+            sed -n '1,120p' "$f" > "$f.trim" && mv "$f.trim" "$f"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp-ts7-probe
+          git commit -m "chore: capture TS7 browser bridge probe diagnostics"
+          git push origin HEAD:modernization-p0
