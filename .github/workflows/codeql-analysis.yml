@@ -13,28 +13,30 @@ name: "CodeQL"
 
 on:
   push:
-    branches:
-      - "3.X.X-Branch"
-      - "modernization-p0"
+    branches: [ 3.X.X-Branch ]
   pull_request:
-    branches:
-      - "3.X.X-Branch"
+    # The branches below must be a subset of the branches above
+    branches: [ 3.X.X-Branch ]
   schedule:
-    - cron: "21 15 * * 5"
+    - cron: '0 20 * * 6'
 
 jobs:
-  analyze:
-    name: Analyze (${{ matrix.language }})
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
-    permissions:
-      security-events: write
-
-      packages: read
+  CodeQL-Build:
+    # CodeQL runs on ubuntu-latest, windows-latest, and macos-latest
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        language: ["javascript-typescript"]
+        language: ['javascript']
+
+    permissions:
+      # required for all workflows
+      security-events: write
+
+      # only required for workflows in private repositories
+      actions: read
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -55,12 +57,13 @@ jobs:
       # ℹ️ Command-line programs to run using the OS shell.
       # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
 
-      # ✏️ If the analysis fails during automatic building, uncomment the command below and modify it to build your code if your project
-      # uses a compiled language
+      # ✏️ If the Autobuild fails above, remove it and uncomment the following
+      #    three lines and modify them (or add more) to build your code if your
+      #    project uses a compiled language
 
       #- run: |
-      #   make bootstrap
-      #   make release
+      #     make bootstrap
+      #     make release
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
