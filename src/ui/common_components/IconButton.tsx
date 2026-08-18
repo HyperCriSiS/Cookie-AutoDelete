@@ -49,10 +49,9 @@ export default class IconButton extends React.Component<IconButtonProps> {
     } = this.props;
 
     // Has to be PascalCase, else JSX will think it's a tag named 'tagName'.
-    const TagName = tag === 'input' ? 'label' : tag || 'button';
+    const TagName: React.ElementType =
+      tag === 'input' ? 'label' : tag || 'button';
     return (
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
       <TagName
         {...nativeProps}
         className={`btn ${className || ''}`}
