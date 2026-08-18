@@ -84,6 +84,8 @@ const defaultContextualIdentity: browser.contextualIdentities.ContextualIdentity
     cookieStoreId: 'firefox-container-0',
     color: 'blue',
     icon: 'fingerprint',
+    iconUrl: 'resource://usercontext-content/fingerprint.svg',
+    colorCode: '#37adff',
     name: 'Testing Container',
   };
 

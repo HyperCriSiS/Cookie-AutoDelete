@@ -35,6 +35,7 @@
     // "noUnusedParameters": true,            /* Report errors on unused parameters. */
     "noImplicitReturns": true /* Report error when not all code paths in function return a value. */,
     "noFallthroughCasesInSwitch": true /* Report errors for fallthrough cases in switch statement. */,
+    "skipLibCheck": true /* Third-party declaration compatibility is migrated separately; application use-sites remain checked. */,
     /* Module Resolution Options */
     "moduleResolution": "node" /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */,
     // "baseUrl": "./",                       /* Base directory to resolve non-absolute module names. */
@@ -42,7 +43,6 @@
     // "rootDirs": [],                        /* List of root folders whose combined content represents the structure of the project at runtime. */
     "typeRoots": [
       "node_modules/@types",
-      "node_modules/web-ext-types",
       "src/typings"
     ] /* List of folders to include type definitions from. */,
     // "types": [],                           /* Type declaration files to be included in compilation. */

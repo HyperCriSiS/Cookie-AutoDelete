@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// This file is only a stub to make typescript happy.
-// Tests uses global.browser.*, actual usage is browser.*
 /**
  * Copyright (c) 2017-2022 Kenny Do and CAD Team (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/graphs/contributors)
  * Licensed under MIT (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/blob/3.X.X-Branch/LICENSE)
@@ -14,28 +12,15 @@
  * SOFTWARE.
  */
 
-declare namespace browser.browsingData {
-  function remove(
-    removalOptions: {
-      hostnames?: string[];
-      origins?: string[]; // Added in Chrome 74+
-      since?: number;
-    },
-    dataTypeSet: {
-      cache?: boolean;
-      indexedDB?: boolean;
-      localStorage?: boolean;
-      pluginData?: boolean;
-      serviceWorkers?: boolean;
-    },
-  ): Promise<void>;
+/** Cross-browser compatibility additions on top of @types/firefox-webext-browser. */
+interface EvListener<T extends (...args: any[]) => any> {
+  addListener(callback: T): void;
+  removeListener(callback: T): void;
+  hasListener(callback: T): boolean;
 }
 
 declare namespace browser.cookies {
-  interface CookiePartitionKey {
-    topLevelSite?: string;
-    hasCrossSiteAncestor?: boolean;
-  }
+  type CookiePartitionKey = PartitionKey;
 }
 
 /**
@@ -50,49 +35,22 @@ type CadCookie = Omit<
   partitionKey?: browser.cookies.CookiePartitionKey;
 };
 
-// Until web-ext-types land this, per https://github.com/kelseasy/web-ext-types/issues/81#issuecomment-527758881
-declare namespace browser.contextMenus {
-  type ContextType = browser.menus.ContextType;
-  type ItemType = browser.menus.ItemType;
-  type OnClickData = browser.menus.OnClickData;
-  const create: typeof browser.menus.create;
-  const getTargetElement: typeof browser.menus.getTargetElement;
-  const refresh: typeof browser.menus.refresh;
-  const remove: typeof browser.menus.remove;
-  const removeAll: typeof browser.menus.removeAll;
-  const update: typeof browser.menus.update;
-  const onClicked: typeof browser.menus.onClicked;
-  const onHidden: typeof browser.menus.onHidden;
-  const onShown: typeof browser.menus.onShown;
-}
-
-// Until web-ext-types land events into it.
 declare namespace browser.contextualIdentities {
   type contextualIdentitiesChangeInfo = {
     contextualIdentity: ContextualIdentity;
   };
-  const onCreated: Listener<contextualIdentitiesChangeInfo>;
-  const onRemoved: Listener<contextualIdentitiesChangeInfo>;
-  const onUpdated: Listener<contextualIdentitiesChangeInfo>;
 }
 
 declare namespace browser.tabs {
-  interface TabChangeInfo {
-    attention?: boolean;
-    audible?: boolean;
+  interface Tab {
+    selected?: boolean;
+  }
+
+  interface TabChangeInfo extends _OnUpdatedChangeInfo {
     cookieChanged?: {
       removed: boolean;
       cookie: CadCookie;
       cause: browser.cookies.OnChangedCause;
     };
-    discarded?: boolean;
-    favIconUrl?: string;
-    hidden?: boolean;
-    isArticle?: boolean;
-    mutedInfo?: browser.tabs.MutedInfo;
-    pinned?: boolean;
-    status?: string;
-    title?: string;
-    url?: string;
   }
 }
