@@ -1,0 +1,98 @@
+name: Temporary coordinated TypeScript 7 migration
+
+on:
+  push:
+    branches: [modernization-p0]
+    paths: ['.github/workflows/tmp-ts7-coordinated-migration.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - name: Apply coordinated migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          delete pkg.devDependencies['ts-jest'];
+          pkg.devDependencies['@swc/core'] = '1.16.0';
+          pkg.devDependencies['@swc/jest'] = '0.2.39';
+          pkg.devDependencies['typescript'] = '7.0.2';
+          const ordered = Object.fromEntries(Object.entries(pkg.devDependencies).sort(([a],[b]) => a.localeCompare(b)));
+          pkg.devDependencies = ordered;
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+
+          let tsconfig = fs.readFileSync('tsconfig.json', 'utf8');
+          tsconfig = tsconfig.replace('"module": "commonjs"', '"module": "esnext"');
+          tsconfig = tsconfig.replace('"moduleResolution": "node"', '"moduleResolution": "bundler"');
+          fs.writeFileSync('tsconfig.json', tsconfig);
+
+          let jest = fs.readFileSync('jest.config.js', 'utf8');
+          jest = jest.replace(/  \/\/ A set of global variables[\s\S]*?  },\n\n  \/\/ An array of directory names/, '  // An array of directory names');
+          jest = jest.replace(/  \/\/ A preset that is used as a base for Jest's configuration\n  preset: 'ts-jest',\n\n/, '');
+          jest = jest.replace("    '^.+\\\\.tsx?$': 'ts-jest',", "    '^.+\\\\.tsx?$': [\n      '@swc/jest',\n      {\n        jsc: {\n          parser: { syntax: 'typescript', tsx: true },\n          transform: { react: { runtime: 'automatic' } },\n          target: 'es2017',\n        },\n        module: { type: 'commonjs' },\n        sourceMaps: 'inline',\n      },\n    ],");
+          if (jest.includes('ts-jest')) throw new Error('ts-jest configuration remained in jest.config.js');
+          fs.writeFileSync('jest.config.js', jest);
+          NODE
+
+          cat > src/typings/BrowserRuntime.d.ts <<'EOF'
+          /**
+           * TypeScript 7 with bundler module resolution keeps the Firefox WebExtension
+           * declaration namespace but does not expose its CommonJS `export = browser`
+           * declaration as the global runtime value used by WebExtensions.
+           *
+           * Reintroduce only the runtime surface CAD actually uses, deriving every member
+           * from the maintained Firefox namespace so no API falls back to `any`.
+           */
+          type CadBrowserRuntime = {
+            tabs: typeof browser.tabs;
+            runtime: typeof browser.runtime;
+            cookies: typeof browser.cookies;
+            storage: typeof browser.storage;
+            browsingData: typeof browser.browsingData;
+            contextualIdentities: typeof browser.contextualIdentities;
+            notifications: typeof browser.notifications;
+            alarms: typeof browser.alarms;
+            commands: typeof browser.commands;
+            management: typeof browser.management;
+            permissions: typeof browser.permissions;
+            windows: typeof browser.windows;
+          };
+
+          declare const browser: CadBrowserRuntime;
+          EOF
+
+          npm install --package-lock-only --ignore-scripts
+          npm ci
+      - name: TypeScript 7 typecheck
+        run: npx tsc --noEmit
+      - name: Jest suite
+        run: npm test -- --runInBand
+      - name: ESLint
+        run: npm run lint
+      - name: Prettier changed files
+        run: npx prettier --check package.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts
+      - name: Firefox build
+        run: npm run dev:firefox
+      - name: Chromium build
+        run: npm run dev:chromium
+      - name: Commit validated migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts
+          git commit -m "chore: migrate toolchain to TypeScript 7"
+          git push origin HEAD:modernization-p0
