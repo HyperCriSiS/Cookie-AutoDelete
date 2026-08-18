@@ -34,8 +34,8 @@ jobs:
         run: npm run lint
       - name: Build webpack bundle
         run: npm run compile
-      - name: Typecheck with TypeScript 7
-        run: npx --yes --package=typescript@7.0.2 tsc --noEmit
+      - name: Typecheck enum migration with TypeScript 7
+        run: npx --yes --package=typescript@7.0.2 tsc --noEmit --module node16 --moduleResolution node16
       - name: Verify clean patch
         run: git diff --check
       - name: Commit validated migration
