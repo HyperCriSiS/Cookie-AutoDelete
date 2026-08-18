@@ -29,6 +29,12 @@ describe('UIStore reconnect regression', () => {
     postMessage: jest.fn(),
   };
 
+  const flushMicrotasks = async () => {
+    for (let index = 0; index < 10; index += 1) {
+      await Promise.resolve();
+    }
+  };
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
@@ -55,8 +61,7 @@ describe('UIStore reconnect regression', () => {
     disconnectListener?.();
 
     jest.advanceTimersByTime(250);
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(global.browser.runtime.connect).toHaveBeenCalledTimes(2);
     expect(global.browser.runtime.sendMessage).toHaveBeenLastCalledWith({
