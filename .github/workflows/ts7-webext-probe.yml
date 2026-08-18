@@ -19,25 +19,25 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Remove incompatible test compiler dependencies from probe only
+      - name: Prepare isolated TS7 typing probe
         run: |
-          npm pkg delete devDependencies.ts-jest
-          npm pkg delete devDependencies.typescript
-          rm -rf node_modules/ts-jest node_modules/typescript
-      - name: Install isolated TS7 typing probe dependencies
-        run: npm install --no-save --no-package-lock typescript@7.0.2 @types/firefox-webext-browser@latest
-      - name: Compile with Firefox WebExtension typings
+          mv src/typings/Webext.d.ts /tmp/Webext.d.ts
+          mkdir .ts7-probe
+          cd .ts7-probe
+          npm init -y
+          npm install --save-dev typescript@7.0.2 @types/firefox-webext-browser@latest @types/node@latest
+      - name: Compile without legacy WebExtension declarations
         shell: bash
         run: |
           cat > tsconfig.ts7-probe.json <<'EOF'
           {
             "extends": "./tsconfig.json",
             "compilerOptions": {
-              "module": "Node16",
-              "moduleResolution": "Node16",
-              "types": ["firefox-webext-browser"],
-              "typeRoots": ["./node_modules/@types", "./src/typings"]
+              "module": "ESNext",
+              "moduleResolution": "Bundler",
+              "types": ["firefox-webext-browser", "node"],
+              "typeRoots": ["./.ts7-probe/node_modules/@types", "./src/typings"]
             }
           }
           EOF
-          npx tsc -p tsconfig.ts7-probe.json --noEmit
+          ./.ts7-probe/node_modules/.bin/tsc -p tsconfig.ts7-probe.json --noEmit
