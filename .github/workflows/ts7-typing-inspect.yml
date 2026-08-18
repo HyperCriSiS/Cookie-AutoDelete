@@ -18,18 +18,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Probe maintained WebExtension typings
+      - name: Inspect relevant maintained type shapes
         shell: bash
         run: |
           npm uninstall --save-dev web-ext-types
           npm install --save-dev @types/firefox-webext-browser
-          sed -i '/node_modules\/web-ext-types/d' tsconfig.json
-          rm src/typings/Webext.d.ts
-          echo '=== installed firefox types ==='
-          npm ls @types/firefox-webext-browser
-          echo '=== TypeScript errors without compatibility layer ==='
-          npx tsc --noEmit 2>&1 | tee /tmp/ts-errors.txt || true
-          echo '=== error count ==='
-          grep -c 'error TS' /tmp/ts-errors.txt || true
-          echo '=== legacy compatibility symbol usage ==='
-          grep -R 'EvListener\|CookiePartitionKey\|TabChangeInfo\|CookieProperties\|firstPartyDomain\|\.selected' -n src --include='*.ts' --include='*.tsx' | head -300 || true
+          echo '=== Cleanup.d.ts ==='
+          cat src/typings/Cleanup.d.ts
+          echo '=== Cookie and detail declarations ==='
+          grep -n -A80 -B10 'interface Cookie' node_modules/@types/firefox-webext-browser/index.d.ts | head -260 || true
+          echo '=== tabs updated declarations ==='
+          grep -n -A60 -B10 'OnUpdated' node_modules/@types/firefox-webext-browser/index.d.ts | head -180 || true
+          echo '=== contextual identities declarations ==='
+          grep -n -A120 -B10 'namespace contextualIdentities' node_modules/@types/firefox-webext-browser/index.d.ts | head -180 || true
+          echo '=== Event helper declarations ==='
+          grep -n -A40 -B10 'type Event' node_modules/@types/firefox-webext-browser/index.d.ts | head -120 || true
+          grep -R 'EvListener' -n src/typings src/services | head -100 || true
