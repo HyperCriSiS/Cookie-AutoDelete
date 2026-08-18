@@ -73,6 +73,7 @@ There are currently no repository issues and no fork releases. Remaining Dependa
   - [ ] Remove obsolete `ts-jest`-specific Jest configuration when the replacement transform is selected, commit the coordinated TypeScript 7 dependency/configuration changes and regenerate the lockfile.
   - [ ] Run the complete tests, lint, typecheck, Firefox/Chromium build and package-validation matrix on the committed TypeScript 7 toolchain and fix all resulting compatibility defects before marking the migration complete.
 - [ ] Review remaining open Dependabot updates individually and integrate only those proven compatible.
+  - [x] Integrate `github/codeql-action` v4 from Dependabot PR #22 after confirming its isolated PR checks are green; apply the same change directly to `modernization-p0` rather than merging the stale-base Dependabot branch.
 - [ ] Re-check generated Firefox and Chromium package contents after all remaining dependency/toolchain migrations.
 
 ## Phase 4 — release readiness
