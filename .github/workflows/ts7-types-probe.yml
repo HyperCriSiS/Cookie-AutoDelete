@@ -1,4 +1,4 @@
-name: TypeScript 7 browser typing probe
+name: TypeScript 7 web extension typing probe
 
 on:
   push:
@@ -19,19 +19,20 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Inspect browser and UI typing dependencies
+      - name: Probe modern web-ext-types with TypeScript 7
+        shell: bash
         run: |
-          node <<'NODE'
-          const p = require('./package.json');
-          const deps = {...p.dependencies, ...p.devDependencies};
-          for (const [k,v] of Object.entries(deps).sort()) {
-            if (/type|browser|chrome|firefox|webext|react|redux/i.test(k)) console.log(`${k}: ${v}`);
-          }
-          NODE
+          set -euxo pipefail
+          echo "latest web-ext-types: $(npm view web-ext-types version)"
+          npm view web-ext-types@latest engines --json || true
           npm ci
-          echo '--- top-level relevant packages ---'
-          npm ls --depth=0 2>/dev/null | grep -Ei 'type|browser|chrome|firefox|webext|react|redux' || true
-          echo '--- browser namespace declaration sources ---'
-          grep -RIl --include='*.d.ts' 'declare namespace browser\|namespace browser' node_modules src/typings 2>/dev/null | head -80
-          echo '--- relevant TS config ---'
-          cat tsconfig.json
+          npm pkg delete devDependencies.ts-jest
+          npm install --no-save --package-lock=false typescript@7.0.2 web-ext-types@latest @types/react@17.0.93 @types/react-dom@17.0.26
+          node -e "console.log('web-ext-types probe:', require('./node_modules/web-ext-types/package.json').version)"
+          node -e "console.log('typescript probe:', require('./node_modules/typescript/package.json').version)"
+          npx tsc --noEmit --module commonjs --moduleResolution node16 --pretty false 2>&1 | tee /tmp/ts7.log
+          status=${PIPESTATUS[0]}
+          echo "TS7_ERROR_COUNT=$(grep -c 'error TS' /tmp/ts7.log || true)"
+          echo '--- top error files ---'
+          grep 'error TS' /tmp/ts7.log | sed -E 's/\([0-9]+,[0-9]+\): error TS.*//' | sort | uniq -c | sort -nr | head -40 || true
+          exit "$status"
