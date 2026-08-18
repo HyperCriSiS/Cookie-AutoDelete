@@ -1,0 +1,139 @@
+name: Temporary CAD cookie typing migration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout modernization branch
+        uses: actions/checkout@v4
+        with:
+          ref: modernization-p0
+          fetch-depth: 0
+
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Apply cross-browser cookie typing migration
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str, count: int | None = None) -> None:
+              p = Path(path)
+              text = p.read_text()
+              found = text.count(old)
+              if found == 0:
+                  raise SystemExit(f'{path}: expected text not found: {old!r}')
+              if count is not None and found != count:
+                  raise SystemExit(f'{path}: expected {count} occurrences, found {found}: {old!r}')
+              p.write_text(text.replace(old, new))
+
+          replace(
+              'src/typings/Webext.d.ts',
+              """declare namespace browser.cookies {\n  interface CookiePartitionKey {\n    topLevelSite?: string;\n    hasCrossSiteAncestor?: boolean;\n  }\n\n  interface CookieProperties extends browser.cookies.Cookie {\n    firstPartyDomain?: string;\n  }\n  type OptionalCookieProperties = Partial<CookieProperties>;\n}\n""",
+              """declare namespace browser.cookies {\n  interface CookiePartitionKey {\n    topLevelSite?: string;\n    hasCrossSiteAncestor?: boolean;\n  }\n}\n\n/**\n * Cross-browser cookie shape used inside CAD. Firefox exposes\n * `firstPartyDomain`, while Chromium cookies may omit it entirely.\n */\ntype CadCookie = Omit<\n  browser.cookies.Cookie,\n  'firstPartyDomain' | 'partitionKey'\n> & {\n  firstPartyDomain?: string;\n  partitionKey?: browser.cookies.CookiePartitionKey;\n};\n""",
+              1,
+          )
+          replace(
+              'src/typings/Webext.d.ts',
+              '      cookie: browser.cookies.Cookie;',
+              '      cookie: CadCookie;',
+              1,
+          )
+
+          replace(
+              'src/typings/Cleanup.d.ts',
+              """interface CookiePropertiesCleanup extends browser.cookies.CookieProperties {\n  mainDomain: string;\n  hostname: string;\n  preparedCookieDomain: string;\n}\n""",
+              """type CookiePropertiesCleanup = CadCookie & {\n  mainDomain: string;\n  hostname: string;\n  preparedCookieDomain: string;\n};\n""",
+              1,
+          )
+
+          replace(
+              'src/services/CookieApi.ts',
+              """type PartitionAwareCookie = browser.cookies.Cookie & {\n  partitionKey?: browser.cookies.CookiePartitionKey;\n};\n\n""",
+              '',
+              1,
+          )
+          replace('src/services/CookieApi.ts', '): Promise<browser.cookies.Cookie[]> => {', '): Promise<CadCookie[]> => {', 1)
+          replace('src/services/CookieApi.ts', ') => Promise<browser.cookies.Cookie[]>)(query);', ') => Promise<CadCookie[]>)(query);', 1)
+          replace('src/services/CookieApi.ts', '  cookie: browser.cookies.Cookie,', '  cookie: CadCookie,', 1)
+          replace('src/services/CookieApi.ts', '  const partitionKey = (cookie as PartitionAwareCookie).partitionKey;', '  const { partitionKey } = cookie;', 1)
+
+          replace('src/services/Libs.ts', '): Promise<browser.cookies.Cookie[] | undefined> => {', '): Promise<CadCookie[] | undefined> => {', 1)
+          replace('src/services/Libs.ts', '  const cookies: browser.cookies.Cookie[] = [];', '  const cookies: CadCookie[] = [];', 1)
+          replace('src/services/Libs.ts', 'export const prepareCookieDomain = (cookie: browser.cookies.Cookie): string => {', 'export const prepareCookieDomain = (cookie: CadCookie): string => {', 1)
+
+          replace('src/services/CookieDomainService.ts', '): Promise<browser.cookies.Cookie[] | undefined> => {', '): Promise<CadCookie[] | undefined> => {', 1)
+          replace('src/services/CookieDomainService.ts', '  const cookies: browser.cookies.Cookie[] = [];', '  const cookies: CadCookie[] = [];', 1)
+
+          replace('src/services/CleanupService.ts', '  cookie: browser.cookies.Cookie,', '  cookie: CadCookie,', 1)
+          replace('src/services/CleanupService.ts', '    let cookies: browser.cookies.Cookie[] = [];', '    let cookies: CadCookie[] = [];', 1)
+
+          replace('src/services/CookieEvents.ts', '    cookie: browser.cookies.Cookie;', '    cookie: CadCookie;', 1)
+          replace('src/background.ts', '  cookie: browser.cookies.Cookie;', '  cookie: CadCookie;', 1)
+
+          replace('src/ui/common_components/ExpressionOptions.tsx', 'browser.cookies.CookieProperties[]', 'CadCookie[]', 3)
+
+          for path, count in {
+              '__tests__/services/CookieEvents.spec.ts': 1,
+              '__tests__/services/Libs.spec.ts': 2,
+              '__tests__/services/IPv6.regression.spec.ts': 2,
+              '__tests__/services/CookieApi.spec.ts': 2,
+              '__tests__/services/TabEvents.spec.ts': 1,
+          }.items():
+              replace(path, 'browser.cookies.Cookie', 'CadCookie', count)
+          PY
+
+          git diff --check
+          echo '=== Remaining direct Cookie type references ==='
+          grep -R 'browser\.cookies\.Cookie\|browser\.cookies\.CookieProperties' -n src __tests__ --include='*.ts' --include='*.tsx' || true
+          echo '=== Migration diff ==='
+          git diff --stat
+          git status --short
+
+      - name: Install locked dependencies
+        run: npm ci --prefer-offline --no-fund
+
+      - name: Run tests
+        run: npm run test -- --verbose
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run webpack build
+        run: npm run build
+
+      - name: Commit validated migration
+        shell: bash
+        run: |
+          git status --short
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            src/typings/Webext.d.ts \
+            src/typings/Cleanup.d.ts \
+            src/services/CookieApi.ts \
+            src/services/Libs.ts \
+            src/services/CookieDomainService.ts \
+            src/services/CleanupService.ts \
+            src/services/CookieEvents.ts \
+            src/background.ts \
+            src/ui/common_components/ExpressionOptions.tsx \
+            __tests__/services/CookieEvents.spec.ts \
+            __tests__/services/Libs.spec.ts \
+            __tests__/services/IPv6.regression.spec.ts \
+            __tests__/services/CookieApi.spec.ts \
+            __tests__/services/TabEvents.spec.ts
+          git diff --cached --check
+          git commit -m 'refactor: add cross-browser cookie type'
+          git push origin HEAD:modernization-p0
