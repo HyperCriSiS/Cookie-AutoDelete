@@ -21,35 +21,28 @@ jobs:
           from pathlib import Path
           p = Path('ROADMAP.md')
           text = p.read_text()
-          marker = '- [ ] Complete coordinated TypeScript 7 migration'
+          marker = '- [ ] Complete the coordinated TypeScript 7 migration; do not merge the open major-version Dependabot PR directly without compatibility work.'
           if marker not in text:
               raise SystemExit('TypeScript 7 roadmap marker not found')
           note = """  - [ ] Resolve TypeScript 7 WebExtension runtime typing compatibility before committing the compiler migration. Verified with TypeScript 7.0.2: legacy `moduleResolution: node` is removed (`TS5108`); both `node16` and `bundler` resolution expose `@types/firefox-webext-browser@143.0.0` as a namespace that cannot be used as the runtime `browser` value (`TS2708`). A central synthetic `browser` value declaration was rejected because it drops/overrides important API types (`Tab`, `runtime`, `cookies.OnChangedCause`, etc.). Do not use an `any`-typed browser shim. Evaluate a maintained runtime-value typing source or a compatibility layer that preserves the Firefox-specific namespace types. SWC candidate versions established by the probe: `@swc/core@1.16.0` and `@swc/jest@0.2.39`; Jest/lint/build validation remains pending until the typing boundary compiles cleanly.\n"""
           if 'Resolve TypeScript 7 WebExtension runtime typing compatibility' not in text:
               line_end = text.find('\n', text.find(marker))
               text = text[:line_end+1] + note + text[line_end+1:]
-          blocker = "- TypeScript 7.0.2 cannot yet be committed because the maintained Firefox WebExtension typings currently provide a namespace-only `browser` shape under supported TS7 module resolution; the existing global runtime usage therefore fails typecheck. A typed compatibility solution is required before the coordinated TS7/SWC migration can proceed.\n"
-          if blocker.strip() not in text:
-              # Prefer an existing blockers section; otherwise place before completion status.
-              candidates = ['## Blockers', '## Current blockers', '### Blockers', '### Current blockers']
-              pos = -1
-              for heading in candidates:
-                  h = text.find(heading)
-                  if h != -1:
-                      pos = text.find('\n', h) + 1
-                      break
-              if pos == -1:
-                  c = text.find('## Completion')
-                  if c == -1:
-                      c = len(text)
-                  text = text[:c] + '\n## Current blockers\n\n' + blocker + '\n' + text[c:]
-              else:
-                  text = text[:pos] + '\n' + blocker + text[pos:]
+          old = '- TypeScript 7 is no longer blocked by npm peer resolution, the removed legacy module-resolution setting, or WebExtension typing maintenance. The CAD-local `CadCookie` shape and the `web-ext-types@3.2.1` → `@types/firefox-webext-browser@143.0.0` migration are implemented and verified. `skipLibCheck` deliberately isolates third-party declaration incompatibilities at this intermediate stage without suppressing application use-site checking. The React-Redux/Redux generic-constraint mismatch is now isolated at the third-party declaration boundary and the TS7 whole-program compile is clean. Jest/type declarations and the ambient runtime-enum dependency are now modernized; the remaining TypeScript 7 work is the coordinated compiler/transform configuration migration and any compatibility defects exposed by the committed TS7 toolchain.'
+          new = '- TypeScript 7.0.2 is blocked at the WebExtension runtime typing boundary under supported TS7 module resolution. Legacy `moduleResolution: node` is removed (`TS5108`); with `node16` or `bundler`, `@types/firefox-webext-browser@143.0.0` exposes the Firefox API namespace but not a usable runtime `browser` value (`TS2708`). A synthetic global value declaration was tested and rejected because it degrades/overrides important Firefox API types. A typed compatibility solution is required before the coordinated TS7/SWC migration can be committed.'
+          if old in text:
+              text = text.replace(old, new)
+          elif new not in text:
+              h = text.find('## Blockers / dependencies')
+              pos = text.find('\n', h) + 1
+              text = text[:pos] + '\n' + new + '\n' + text[pos:]
+          old_completion = 'The next TypeScript/toolchain step is removing obsolete `ts-jest`-specific configuration and committing the coordinated TypeScript 7 compiler/transform dependency changes, followed by the full validation matrix on that committed toolchain.'
+          new_completion = 'The next TypeScript/toolchain step is resolving the TypeScript 7 WebExtension runtime-typing boundary; after that, obsolete `ts-jest` configuration can be removed and the coordinated TypeScript 7/SWC toolchain can be committed and fully validated.'
+          text = text.replace(old_completion, new_completion)
           p.write_text(text)
           PY
           git rm .github/workflows/tmp-ts7-transform-migration.yml
           git diff --check
-          git diff -- ROADMAP.md .github/workflows/tmp-ts7-transform-migration.yml
           git config user.name "HyperCriSiS"
           git config user.email "dev.github@w3b.world"
           git add ROADMAP.md .github/workflows/tmp-ts7-transform-migration.yml
