@@ -40,18 +40,47 @@ jobs:
           p.write_text(text)
           PY
           npx tsc --version
-      - name: Probe TS7 application diagnostics
+      - name: Capture TS7 diagnostics
+        id: tsc
         shell: bash
         run: |
-          set -uo pipefail
-          npx tsc --noEmit --pretty false 2>&1 | tee /tmp/ts7.log
-          status=${PIPESTATUS[0]}
+          set +e
+          npx tsc --noEmit --pretty false > /tmp/ts7.log 2>&1
+          status=$?
           set -e
-          echo "tsc_exit=$status"
-          echo '=== diagnostics ==='
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           cat /tmp/ts7.log
-          if grep -E 'node_modules/react-redux|node_modules/@types/node' /tmp/ts7.log; then
-            echo 'Third-party declaration diagnostics leaked through skipLibCheck.' >&2
+      - name: Classify direct third-party declaration diagnostics
+        shell: bash
+        run: |
+          if grep -Eq '^node_modules/(react-redux|@types/node)/.*error TS' /tmp/ts7.log; then
+            echo 'Direct third-party declaration diagnostics are still present.' >&2
             exit 1
           fi
-          echo 'Third-party React-Redux/Redux and Node declaration diagnostics are isolated; remaining diagnostics are application/tooling scope.'
+          echo 'No direct React-Redux or @types/node declaration diagnostics.'
+      - name: Classify CAD application diagnostics
+        shell: bash
+        continue-on-error: true
+        run: |
+          if grep -Eq '^(src|__tests__)/.*error TS' /tmp/ts7.log; then
+            echo 'CAD application/test diagnostics are present.' >&2
+            exit 1
+          fi
+          echo 'No CAD application/test diagnostics.'
+      - name: Classify remaining TS7 diagnostics
+        shell: bash
+        continue-on-error: true
+        run: |
+          if grep -Eq 'error TS' /tmp/ts7.log; then
+            echo 'Some TypeScript 7 diagnostics remain.' >&2
+            exit 1
+          fi
+          echo 'TypeScript 7 whole-program compile is clean.'
+      - name: Report TypeScript 7 compile status
+        shell: bash
+        run: |
+          if [ "${{ steps.tsc.outputs.exit_code }}" = "0" ]; then
+            echo 'TypeScript 7 whole-program compile succeeded.'
+          else
+            echo 'TypeScript 7 whole-program compile still has diagnostics; classification steps above identify their scope.'
+          fi
