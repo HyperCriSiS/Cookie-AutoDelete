@@ -1,0 +1,121 @@
+name: Temporary maintained Firefox typing swap
+
+on:
+  push:
+    branches:
+      - modernization-p0
+    paths:
+      - '.github/workflows/tmp-firefox-typing-swap.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout modernization branch
+        uses: actions/checkout@v4
+        with:
+          ref: modernization-p0
+          fetch-depth: 0
+
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Swap WebExtension typing dependency
+        shell: bash
+        run: |
+          npm uninstall --save-dev web-ext-types
+          npm install --save-dev @types/firefox-webext-browser@143.0.0
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          tsconfig = Path('tsconfig.json')
+          text = tsconfig.read_text()
+          text = text.replace('      "node_modules/web-ext-types",\n', '', 1)
+          tsconfig.write_text(text)
+
+          Path('src/typings/Webext.d.ts').write_text('''/* eslint-disable @typescript-eslint/no-unused-vars */
+/**
+ * Cookie AutoDelete compatibility additions on top of
+ * @types/firefox-webext-browser.
+ *
+ * Keep this file intentionally narrow: browser APIs should come from the
+ * maintained upstream declarations wherever possible.
+ */
+
+interface EvListener<T extends (...args: any[]) => any> {
+  addListener(callback: T): void;
+  removeListener(callback: T): void;
+  hasListener(callback: T): boolean;
+}
+
+declare namespace browser.cookies {
+  type CookiePartitionKey = PartitionKey;
+}
+
+/**
+ * Cross-browser cookie shape used inside CAD. Firefox exposes
+ * `firstPartyDomain`, while Chromium cookies may omit it entirely.
+ */
+type CadCookie = Omit<
+  browser.cookies.Cookie,
+  'firstPartyDomain' | 'partitionKey'
+> & {
+  firstPartyDomain?: string;
+  partitionKey?: browser.cookies.CookiePartitionKey;
+};
+
+declare namespace browser.contextualIdentities {
+  type contextualIdentitiesChangeInfo = {
+    contextualIdentity: ContextualIdentity;
+  };
+}
+
+declare namespace browser.tabs {
+  interface Tab {
+    /** Legacy alias retained for older Chromium-facing CAD code paths. */
+    selected?: boolean;
+  }
+
+  interface TabChangeInfo extends _OnUpdatedChangeInfo {
+    cookieChanged?: {
+      removed: boolean;
+      cookie: CadCookie;
+      cause: browser.cookies.OnChangedCause;
+    };
+  }
+}
+''')
+          PY
+
+          git diff --check
+          echo '=== dependency diff ==='
+          git diff -- package.json package-lock.json tsconfig.json src/typings/Webext.d.ts
+
+      - name: Install locked dependencies
+        run: npm ci --prefer-offline --no-fund
+
+      - name: Run tests
+        run: npm run test -- --verbose
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run webpack build
+        run: npm run build
+
+      - name: Commit validated typing swap
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json tsconfig.json src/typings/Webext.d.ts
+          git diff --cached --check
+          git commit -m 'build: replace legacy WebExtension typings'
+          git push origin HEAD:modernization-p0
