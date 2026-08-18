@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  diagnose-ts7:
+  finalize:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -21,55 +21,47 @@ jobs:
           cache: npm
       - name: Install baseline dependencies
         run: npm ci --prefer-offline --no-fund
-      - name: Apply Jest declaration modernization candidate
+      - name: Apply Jest declaration modernization
         shell: bash
         run: |
           set -euo pipefail
-          npm install --save-dev @types/jest@latest @types/jest-when@latest
+          npm install --save-dev --save-exact @types/jest@30.0.0 @types/jest-when@3.5.5
           python3 - <<'PY'
           from pathlib import Path
+          changed = []
           for p in Path('__tests__').rglob('*.ts'):
               text = p.read_text()
-              text = text.replace('.toBeCalledTimes(', '.toHaveBeenCalledTimes(')
-              text = text.replace('.toThrowError(', '.toThrow(')
-              p.write_text(text)
+              new = text.replace('.toBeCalledTimes(', '.toHaveBeenCalledTimes(').replace('.toThrowError(', '.toThrow(')
+              if new != text:
+                  p.write_text(new)
+                  changed.append(str(p))
+          if not changed:
+              raise SystemExit('Expected obsolete Jest aliases were not found')
+          print('\n'.join(changed))
           PY
-      - name: Capture TypeScript 7 diagnostics
+          npm ls @types/jest @types/jest-when jest ts-jest typescript
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Test
+        run: npm test -- --runInBand
+      - name: Lint
+        run: npm run lint
+      - name: Build Firefox
+        run: npm run build
+        env:
+          BROWSER: firefox
+      - name: Build Chromium
+        run: npm run build
+        env:
+          BROWSER: chromium
+      - name: Commit verified migration
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('tsconfig.json')
-          text = p.read_text()
-          old_module = '    "module": "commonjs" /* Specify module code generation:'
-          old_resolution = '    "moduleResolution": "node" /* Specify module resolution strategy:'
-          module_line = next(line for line in text.splitlines(True) if old_module in line)
-          resolution_line = next(line for line in text.splitlines(True) if old_resolution in line)
-          text = text.replace(module_line, '    "module": "Node16",\n', 1)
-          text = text.replace(resolution_line, '    "moduleResolution": "Node16",\n', 1)
-          p.write_text(text)
-          PY
-          npm install --no-save --package-lock=false --legacy-peer-deps typescript@7.0.2
-          {
-            echo '## Versions'
-            npx tsc --version
-            npm ls @types/jest @types/jest-when jest ts-jest typescript || true
-            echo
-            echo '## TS7 diagnostics'
-            set +e
-            npx tsc --noEmit --pretty false
-            status=$?
-            set -e
-            echo
-            echo "tsc_exit_code=$status"
-          } > .github/tmp-ts7-jest-diagnostics.txt 2>&1
-      - name: Commit TS7 diagnostic record
-        shell: bash
-        run: |
-          set -euo pipefail
+          rm -f .github/tmp-jest-types-diagnostics.txt .github/tmp-ts7-jest-diagnostics.txt
           git config user.name 'HyperCriSiS'
           git config user.email 'dev.github@w3b.world'
-          git add .github/tmp-ts7-jest-diagnostics.txt
-          git commit -m 'chore: record TS7 Jest declaration diagnostics'
+          git add -A package.json package-lock.json __tests__ .github/tmp-jest-types-diagnostics.txt .github/tmp-ts7-jest-diagnostics.txt
+          git status --short
+          git commit -m 'chore: modernize Jest type declarations'
           git push
