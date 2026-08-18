@@ -1,0 +1,57 @@
+name: Temporary TypeScript 7 application boundary probe
+
+on:
+  push:
+    branches:
+      - modernization-p0
+    paths:
+      - .github/workflows/tmp-ts7-application-boundary.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install baseline dependencies
+        run: npm ci --prefer-offline --no-fund
+      - name: Install TypeScript 7 probe compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm uninstall --save-dev ts-jest typescript
+          npm install --save-dev typescript@7.0.2
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tsconfig.json')
+          text = p.read_text()
+          old_module = '    "module": "commonjs" /* Specify module code generation: \'none\', \'commonjs\', \'amd\', \'system\', \'umd\', \'es2015\', or \'ESNext\'. */,\n'
+          old_resolution = '    "moduleResolution": "node" /* Specify module resolution strategy: \'node\' (Node.js) or \'classic\' (TypeScript pre-1.6). */,\n'
+          if text.count(old_module) != 1 or text.count(old_resolution) != 1:
+              raise SystemExit('Expected legacy module/moduleResolution settings exactly once')
+          text = text.replace(old_module, '    "module": "Node16",\n', 1)
+          text = text.replace(old_resolution, '    "moduleResolution": "Node16",\n', 1)
+          p.write_text(text)
+          PY
+          npx tsc --version
+      - name: Probe TS7 application diagnostics
+        shell: bash
+        run: |
+          set -uo pipefail
+          npx tsc --noEmit --pretty false 2>&1 | tee /tmp/ts7.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "tsc_exit=$status"
+          echo '=== diagnostics ==='
+          cat /tmp/ts7.log
+          if grep -E 'node_modules/react-redux|node_modules/@types/node' /tmp/ts7.log; then
+            echo 'Third-party declaration diagnostics leaked through skipLibCheck.' >&2
+            exit 1
+          fi
+          echo 'Third-party React-Redux/Redux and Node declaration diagnostics are isolated; remaining diagnostics are application/tooling scope.'
