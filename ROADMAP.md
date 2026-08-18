@@ -10,7 +10,7 @@ Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension wh
 
 Active modernization work is on `modernization-p0`, tracked by draft PR #1 into `3.X.X-Branch`. The branch is the integration and validation branch for the modernization effort and is not yet release-ready.
 
-Regular functional CI on the modernization PR is green on the latest validated head: `Initial Checks`, `Tests, Builds, Coverage`, CodeQL and the JavaScript/TypeScript/Actions analyses succeed. The separate `github-advanced-security` agent still fails before repository analysis because its hosted model request is unsupported; this is treated as an external GitHub service/configuration issue rather than a functional repository defect.
+Regular functional CI on the modernization PR has been green on validated heads. The separate `github-advanced-security` agent has failed before repository analysis because its hosted model request is unsupported; this is treated as an external GitHub service/configuration issue rather than a functional repository defect.
 
 There are currently no repository issues and no fork releases. Remaining Dependabot updates require compatibility review rather than automatic merging.
 
@@ -47,7 +47,7 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 - [x] Verify cleanup behavior on tab close, domain change and browser restart for supported policy combinations. Existing regression coverage verifies tab-close cleanup scheduling/direct cleanup and per-tab state removal, session-backed domain-change detection (including worker restart), and restart/greylist/open-tab cleanup semantics; background listener wiring and startup dispatch paths were re-checked against the current branch.
 - [x] Verify session/transient-state restoration across realistic MV3 service-worker suspension/restart scenarios beyond persisted-list/settings unit coverage. `MV3WorkerRestart.regression.spec.ts` discards and reloads the Jest module graph while preserving `browser.storage.session`, proving per-tab domain state is restored and cleanup still fires after worker-memory loss.
 - [x] Verify popup/options interactions and state synchronization in both Firefox and Chromium builds. Existing UIStore/StoreBridge coverage verifies initial state hydration, UI dispatch, pushed background state and subscriber updates; `UIStoreReconnect.regression.spec.ts` verifies disconnect/reconnect state refresh after background-worker loss, while `UIBuildSurface.regression.spec.js` and build-stage validation confirm both generated browser targets keep popup/options entry points and bundles wired. Packaged manual interaction remains part of Phase 4.
-- [ ] Verify container/contextual-identity behavior where the browser exposes the required APIs.
+- [x] Verify container/contextual-identity behavior where the browser exposes the required APIs. `BrowserCapabilities` detects the API dynamically and gates listener registration when unavailable; existing `ContextualIdentitiesEvents` and `ContextualIdentityService` regression coverage exercises create/update/remove behavior and container naming when the API is present, while Chromium legacy-profile coverage verifies unsupported container settings are disabled.
 - [ ] Add regression tests for every migration/runtime defect found during this compatibility pass.
 
 ## Phase 3 — dependency and build modernization
@@ -65,20 +65,20 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 
 - [ ] Produce Firefox and Chromium release-candidate packages from the same validated source state.
 - [ ] Perform representative manual browser smoke tests in addition to automated CI.
-- [ ] Confirm existing user settings/data survive a real release-candidate upgrade path in both target browser families.
-- [ ] Confirm popup/options, cleanup triggers, allowlist/greylist and restart behavior in packaged builds rather than source/unit tests alone.
-- [ ] Merge `modernization-p0` into `3.X.X-Branch` only after migration/runtime checks and release-candidate validation are green.
-- [ ] Create a tagged fork release only after the integrated branch has passed the release checklist.
+- [ ] Confirm existing user settings/data survive the real release-candidate upgrade path in both browser families.
+- [ ] Verify packaged popup/options, cleanup, allowlist/greylist and restart behavior in both browser families.
+- [ ] Merge `modernization-p0` into `3.X.X-Branch` only after required checks and migration validation are green.
+- [ ] Create a tagged fork release only after the release checklist is complete.
 - [ ] Consider an upstream proposal only after the fork branch is stable and the modernization scope is documented.
 
 ## Blockers / dependencies
 
-- No known functional CI blocker exists on the latest validated `modernization-p0` head.
-- Real exported legacy profiles are not present in the repository, so the real-profile upgrade item cannot be completed from repository evidence alone; synthetic legacy-shape regression coverage is already green.
+- No known functional CI blocker exists on validated `modernization-p0` heads.
 - The separate GitHub Advanced Security agent can fail before repository analysis because its requested hosted model is unsupported; this is external to the codebase.
 - Major dependency upgrades must remain isolated and validated.
+- Representative real exported legacy Firefox/Chromium profiles are not present in the repository, so the real-profile upgrade-validation item remains blocked until suitable fixtures are available.
 - Manual packaged-browser validation is still required before release readiness can be claimed.
 
 ## Completion status
 
-**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization, synthetic legacy-profile compatibility coverage, StoreBridge/UIStore list matching, cleanup-trigger compatibility, module-reset MV3 worker restart coverage and popup/options source-level state synchronization plus cross-browser build wiring are validated. The next priority is container/contextual-identity behavior where the browser exposes the required APIs. Real legacy-profile export validation remains blocked until representative exports are available, and release-candidate packaged-browser testing remains open.
+**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization, synthetic legacy-profile compatibility coverage, StoreBridge/UIStore list matching, cleanup-trigger compatibility, module-reset MV3 worker restart coverage, popup/options source-level synchronization and contextual-identity compatibility are validated. The next actionable priority is ensuring every migration/runtime defect found during the compatibility pass has explicit regression coverage; real legacy-profile export validation remains blocked until representative exports are available, and dependency/release-candidate work remains open.
