@@ -3,7 +3,10 @@ name: Temporary coordinated TypeScript 7 migration
 on:
   push:
     branches: [modernization-p0]
-    paths: ['.github/workflows/tmp-ts7-coordinated-migration.yml']
+    paths:
+      - '.github/workflows/tmp-ts7-coordinated-migration.yml'
+      - 'src/redux/Actions.ts'
+      - 'src/ui/common_components/IconButton.tsx'
 
 permissions:
   contents: write
