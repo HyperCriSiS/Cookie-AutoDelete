@@ -1,6 +1,9 @@
 name: TS7 WebExtension typings probe
 
 on:
+  push:
+    branches:
+      - modernization-p0
   workflow_dispatch:
 
 permissions:
