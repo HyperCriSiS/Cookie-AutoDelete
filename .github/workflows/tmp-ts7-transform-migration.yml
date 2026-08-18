@@ -1,28 +1,57 @@
-name: Temporary TypeScript 7 transform migration
+name: Temporary TypeScript 7 compatibility probe finalization
 
 on:
   push:
     branches: [modernization-p0]
     paths: ['.github/workflows/tmp-ts7-transform-migration.yml']
 
+permissions:
+  contents: write
+
 jobs:
-  probe:
+  finalize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-      - run: npm ci --legacy-peer-deps
-      - name: Show used browser namespaces
-        run: grep -RhoE 'browser\.[A-Za-z_][A-Za-z0-9_]*' src test* 2>/dev/null | sort -u || true
-      - name: Test typed runtime declaration under TS7
+      - name: Record verified TS7 blocker and remove probe
+        shell: bash
         run: |
-          npm install --no-save --legacy-peer-deps typescript@7.0.2
-          node <<'NODE'
-          const fs=require('fs');
-          let t=fs.readFileSync('tsconfig.json','utf8').replace('"module": "commonjs"','"module": "esnext"').replace('"moduleResolution": "node"','"moduleResolution": "bundler"');
-          fs.writeFileSync('tsconfig.json',t);
-          fs.appendFileSync('src/typings/Webext.d.ts', `\n\ntype CadBrowserApi = {\n  alarms: typeof browser.alarms;\n  browserAction: typeof browser.browserAction;\n  browsingData: typeof browser.browsingData;\n  contextualIdentities: typeof browser.contextualIdentities;\n  cookies: typeof browser.cookies;\n  extension: typeof browser.extension;\n  i18n: typeof browser.i18n;\n  notifications: typeof browser.notifications;\n  permissions: typeof browser.permissions;\n  runtime: typeof browser.runtime;\n  storage: typeof browser.storage;\n  tabs: typeof browser.tabs;\n  windows: typeof browser.windows;\n};\ndeclare const browser: CadBrowserApi;\n`);
-          NODE
-          npx tsc --noEmit
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('ROADMAP.md')
+          text = p.read_text()
+          marker = '- [ ] Complete coordinated TypeScript 7 migration'
+          if marker not in text:
+              raise SystemExit('TypeScript 7 roadmap marker not found')
+          note = """  - [ ] Resolve TypeScript 7 WebExtension runtime typing compatibility before committing the compiler migration. Verified with TypeScript 7.0.2: legacy `moduleResolution: node` is removed (`TS5108`); both `node16` and `bundler` resolution expose `@types/firefox-webext-browser@143.0.0` as a namespace that cannot be used as the runtime `browser` value (`TS2708`). A central synthetic `browser` value declaration was rejected because it drops/overrides important API types (`Tab`, `runtime`, `cookies.OnChangedCause`, etc.). Do not use an `any`-typed browser shim. Evaluate a maintained runtime-value typing source or a compatibility layer that preserves the Firefox-specific namespace types. SWC candidate versions established by the probe: `@swc/core@1.16.0` and `@swc/jest@0.2.39`; Jest/lint/build validation remains pending until the typing boundary compiles cleanly.\n"""
+          if 'Resolve TypeScript 7 WebExtension runtime typing compatibility' not in text:
+              line_end = text.find('\n', text.find(marker))
+              text = text[:line_end+1] + note + text[line_end+1:]
+          blocker = "- TypeScript 7.0.2 cannot yet be committed because the maintained Firefox WebExtension typings currently provide a namespace-only `browser` shape under supported TS7 module resolution; the existing global runtime usage therefore fails typecheck. A typed compatibility solution is required before the coordinated TS7/SWC migration can proceed.\n"
+          if blocker.strip() not in text:
+              # Prefer an existing blockers section; otherwise place before completion status.
+              candidates = ['## Blockers', '## Current blockers', '### Blockers', '### Current blockers']
+              pos = -1
+              for heading in candidates:
+                  h = text.find(heading)
+                  if h != -1:
+                      pos = text.find('\n', h) + 1
+                      break
+              if pos == -1:
+                  c = text.find('## Completion')
+                  if c == -1:
+                      c = len(text)
+                  text = text[:c] + '\n## Current blockers\n\n' + blocker + '\n' + text[c:]
+              else:
+                  text = text[:pos] + '\n' + blocker + text[pos:]
+          p.write_text(text)
+          PY
+          git rm .github/workflows/tmp-ts7-transform-migration.yml
+          git diff --check
+          git diff -- ROADMAP.md .github/workflows/tmp-ts7-transform-migration.yml
+          git config user.name "HyperCriSiS"
+          git config user.email "dev.github@w3b.world"
+          git add ROADMAP.md .github/workflows/tmp-ts7-transform-migration.yml
+          git commit -m "docs: record TypeScript 7 browser typing blocker"
+          git push origin HEAD:modernization-p0
