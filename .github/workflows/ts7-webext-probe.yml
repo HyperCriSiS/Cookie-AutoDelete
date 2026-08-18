@@ -19,6 +19,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Remove incompatible test compiler dependencies from probe only
+        run: |
+          npm pkg delete devDependencies.ts-jest
+          npm pkg delete devDependencies.typescript
+          rm -rf node_modules/ts-jest node_modules/typescript
       - name: Install isolated TS7 typing probe dependencies
         run: npm install --no-save --no-package-lock typescript@7.0.2 @types/firefox-webext-browser@latest
       - name: Compile with Firefox WebExtension typings
