@@ -1,0 +1,32 @@
+name: TypeScript 7 SWC probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Show current test transform
+        run: |
+          grep -n "ts-jest\|transform" jest.config.js || true
+          node -e "const p=require('./package.json'); console.log({typescript:p.devDependencies.typescript,jest:p.devDependencies.jest,tsJest:p.devDependencies['ts-jest'],eslint:p.devDependencies.eslint,tsEslint:p.devDependencies['@typescript-eslint/parser']})"
+      - name: Probe dependency migration
+        run: |
+          npm uninstall --save-dev ts-jest
+          npm install --save-dev typescript@7.0.2 @swc/core@latest @swc/jest@latest
+          sed -i "s/'ts-jest'/'@swc\\/jest'/g; s/\"ts-jest\"/\"@swc\\/jest\"/g" jest.config.js
+          echo '--- transformed config ---'
+          grep -n "swc\|ts-jest\|transform" jest.config.js || true
+          echo '--- package versions ---'
+          npm ls typescript @swc/core @swc/jest jest ts-jest @typescript-eslint/parser @typescript-eslint/eslint-plugin ts-loader || true
+      - name: Run tests
+        run: npm test -- --runInBand
