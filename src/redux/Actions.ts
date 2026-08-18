@@ -1,288 +1,269 @@
-/**
- * Copyright (c) 2017-2022 Kenny Do and CAD Team (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/graphs/contributors)
- * Licensed under MIT (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/blob/3.X.X-Branch/LICENSE)
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
-import { SiteDataType, SettingID, ListType } from '../typings/Enums';
-import { ActionCreator, Dispatch } from 'redux';
+import { Action } from 'redux';
 import { ThunkAction } from 'redux-thunk';
-import { checkIfProtected } from '../services/BrowserActionService';
-import { cleanCookiesOperation } from '../services/CleanupService';
+
 import {
-  getContainerExpressionDefault,
-  getSetting,
-  getStoreId,
+  browser,
+  browserAction,
+  browserName,
+  cache,
   isChrome,
+  isFirefox,
   isFirefoxAndroid,
-  showNotification,
-  sleep,
-} from '../services/Libs';
+} from '../services/BrowserApi';
+import CleanupService from '../services/CleanupService';
+import CookieDomainService from '../services/CookieDomainService';
+import { createDefaultSettings, defaultSettings } from '../services/DefaultSettings';
+import { cleanHostname, returnHostname } from '../services/Libs';
+import SettingService from '../services/SettingService';
+import Store from '../services/Store';
+import StoreUser from '../services/StoreUser';
+import { StoreUserEntry } from '../typings/Cleanup';
 import {
-  ADD_ACTIVITY_LOG,
-  ADD_EXPRESSION,
-  CLEAR_ACTIVITY_LOG,
-  CLEAR_EXPRESSIONS,
-  COOKIE_CLEANUP,
-  INCREMENT_COOKIE_DELETED_COUNTER,
-  ReduxAction,
-  ReduxConstants,
-  REMOVE_ACTIVITY_LOG,
-  REMOVE_EXPRESSION,
-  REMOVE_LIST,
-  RESET_ALL,
-  RESET_COOKIE_DELETED_COUNTER,
-  RESET_SETTINGS,
-  UPDATE_EXPRESSION,
-  UPDATE_SETTING,
-} from '../typings/ReduxConstants';
-import { initialState } from './State';
+  BadgeStatus,
+  CookieCleanupEvent,
+  IconName,
+  ListType,
+  SettingID,
+  StartupState,
+} from '../typings/Enums';
+import { ReduxConstants } from '../typings/ReduxConstants';
+import { RootState } from './Store';
 
-export const addExpressionUI = (payload: Expression): ADD_EXPRESSION => ({
-  payload,
-  type: ReduxConstants.ADD_EXPRESSION,
-});
+export interface ReduxAction<T = any> extends Action<ReduxConstants> {
+  payload?: T;
+}
 
-export const clearExpressionsUI = (
-  payload: StoreIdToExpressionList,
-): CLEAR_EXPRESSIONS => ({
-  payload,
-  type: ReduxConstants.CLEAR_EXPRESSIONS,
-});
-
-export const removeExpressionUI = (payload: Expression): REMOVE_EXPRESSION => ({
-  payload,
-  type: ReduxConstants.REMOVE_EXPRESSION,
-});
-export const updateExpressionUI = (payload: Expression): UPDATE_EXPRESSION => ({
-  payload,
-  type: ReduxConstants.UPDATE_EXPRESSION,
-});
-export const removeListUI = (
-  payload: keyof StoreIdToExpressionList,
-): REMOVE_LIST => ({
-  payload,
-  type: ReduxConstants.REMOVE_LIST,
-});
-
-export const addExpression = (payload: Expression) => (
-  dispatch: Dispatch<ReduxAction>,
-  getState: GetState,
-): void => {
-  // Sanitize the payload's storeId
-  const storeId = getStoreId(getState(), payload.storeId);
-  const defaultOptions = getContainerExpressionDefault(
-    getState(),
-    storeId,
-    payload.listType as ListType,
-  );
-
-  dispatch({
-    payload: {
-      ...payload,
-      cleanAllCookies: payload.cleanAllCookies !== undefined
-        ? payload.cleanAllCookies
-        : defaultOptions.cleanAllCookies,
-      cleanSiteData: payload.cleanSiteData
-        ? payload.cleanSiteData
-        : defaultOptions.cleanSiteData || [],
-      storeId,
-    },
-    type: ReduxConstants.ADD_EXPRESSION,
-  });
-  checkIfProtected(getState());
-};
-
-export const clearExpressions = (payload: StoreIdToExpressionList) => (
-  dispatch: Dispatch<ReduxAction>,
-  getState: GetState,
-): void => {
-  dispatch({
-    payload,
-    type: ReduxConstants.CLEAR_EXPRESSIONS,
-  });
-  checkIfProtected(getState());
-};
-
-export const removeExpression = (payload: Expression) => (
-  dispatch: Dispatch<ReduxAction>,
-  getState: GetState,
-): void => {
-  dispatch({
-    payload: {
-      ...payload,
-      // Sanitize the payload's storeId
-      storeId: getStoreId(getState(), payload.storeId),
-    },
-    type: ReduxConstants.REMOVE_EXPRESSION,
-  });
-  checkIfProtected(getState());
-};
-
-export const updateExpression = (payload: Expression) => (
-  dispatch: Dispatch<ReduxAction>,
-  getState: GetState,
-): void => {
-  // Sanitize the payload's storeId
-  const sanitizedStoreId = getStoreId(getState(), payload.storeId);
-  dispatch({
-    payload: {
-      ...payload,
-      storeId: sanitizedStoreId,
-    },
-    type: ReduxConstants.UPDATE_EXPRESSION,
-  });
-  // Migration Downgrades between 3.5.0 and 3.4.0
-  // Uncheck 'Keep LocalStorage' on New ... Expressions
-  if (
-    payload.expression === `_Default:${payload.listType}` &&
-    sanitizedStoreId === 'default' &&
-    payload.cleanSiteData
-  ) {
-    if (payload.cleanSiteData.includes(SiteDataType.LOCALSTORAGE)) {
-      if (
-        !getSetting(
-          getState(),
-          `${payload.listType.toLowerCase()}CleanLocalstorage` as SettingID,
-        )
-      ) {
-        // Enable Deprecated Option
-        dispatch({
-          payload: {
-            name: `${payload.listType.toLowerCase()}CleanLocalstorage`,
-            value: true,
-          },
-          type: ReduxConstants.UPDATE_SETTING,
-        });
-      }
-    } else {
-      if (
-        getSetting(
-          getState(),
-          `${payload.listType.toLowerCase()}CleanLocalstorage` as SettingID,
-        )
-      ) {
-        // Disable Deprecated Option
-        dispatch({
-          payload: {
-            name: `${payload.listType.toLowerCase()}CleanLocalstorage`,
-            value: false,
-          },
-          type: ReduxConstants.UPDATE_SETTING,
-        });
-      }
-    }
-  }
-  checkIfProtected(getState());
-};
-
-export const removeList = (payload: keyof StoreIdToExpressionList) => (
-  dispatch: Dispatch<ReduxAction>,
-  getState: GetState,
-): void => {
-  dispatch({
-    payload,
-    type: ReduxConstants.REMOVE_LIST,
-  });
-  checkIfProtected(getState());
-};
-
-export const addActivity = (payload: ActivityLog): ADD_ACTIVITY_LOG => ({
-  payload,
-  type: ReduxConstants.ADD_ACTIVITY_LOG,
-});
-
-export const clearActivities = (): CLEAR_ACTIVITY_LOG => ({
-  type: ReduxConstants.CLEAR_ACTIVITY_LOG,
-});
-
-export const removeActivity = (payload: ActivityLog): REMOVE_ACTIVITY_LOG => ({
-  payload,
-  type: ReduxConstants.REMOVE_ACTIVITY_LOG,
-});
-
-export const incrementCookieDeletedCounter = (
-  payload: number,
-): INCREMENT_COOKIE_DELETED_COUNTER => ({
-  payload,
-  type: ReduxConstants.INCREMENT_COOKIE_DELETED_COUNTER,
-});
-
-export const resetCookieDeletedCounter = (): RESET_COOKIE_DELETED_COUNTER => ({
-  type: ReduxConstants.RESET_COOKIE_DELETED_COUNTER,
-});
-
-export const updateSetting = (payload: Setting): UPDATE_SETTING => ({
-  payload,
-  type: ReduxConstants.UPDATE_SETTING,
-});
-
-export const resetSettings = (): RESET_SETTINGS => ({
-  type: ReduxConstants.RESET_SETTINGS,
-});
-
-export const resetAll = (): RESET_ALL => ({
-  type: ReduxConstants.RESET_ALL,
-});
-
-// Validates the setting object and adds missing settings if it doesn't already exist in the initialState
-export const validateSettings: ActionCreator<ThunkAction<
-  void,
-  State,
-  null,
+export type ReduxThunkAction<ReturnType = void> = ThunkAction<
+  ReturnType,
+  RootState,
+  unknown,
   ReduxAction
->> = () => (dispatch, getState) => {
-  const { cache, settings } = getState();
-  const initialSettings = initialState.settings;
-  const settingKeys = Object.keys(settings);
-  const initialSettingKeys = Object.keys(initialSettings);
+>;
 
-  settingKeys.forEach((k) => {
-    // Properties in a individual setting do not match up.  Repopulate from the default one and reuse existing value
-    if (
-      initialSettings[k] !== undefined &&
-      Object.keys(settings[k]).length !== Object.keys(initialSettings[k]).length
-    ) {
+export const setBadgeStatus = (
+  status: BadgeStatus,
+  cookieCount?: number,
+): ReduxThunkAction => async (dispatch, getState) => {
+  const state = getState();
+  const cleanupService = CleanupService.getInstance();
+  const browserActionService = browserAction;
+
+  if (!cleanupService || !browserActionService) {
+    return;
+  }
+
+  await browserActionService.setBadgeStatus(status, cookieCount);
+  dispatch({
+    payload: status,
+    type: ReduxConstants.SET_BADGE_STATUS,
+  });
+
+  if (state.settings[SettingID.DEBUG_MODE].value) {
+    console.debug('Badge status changed:', status, cookieCount);
+  }
+};
+
+export const updateSetting = (
+  name: SettingID,
+  value: boolean | number | string,
+): ReduxThunkAction => async (dispatch) => {
+  await SettingService.updateSetting(name, value);
+  dispatch({
+    payload: { name, value },
+    type: ReduxConstants.UPDATE_SETTING,
+  });
+};
+
+export const updateSettingWithSideEffects = (
+  name: SettingID,
+  value: boolean | number | string,
+): ReduxThunkAction => async (dispatch) => {
+  await dispatch(updateSetting(name, value));
+  await SettingService.handleSettingSideEffects(name, value);
+};
+
+export const updateStartupState = (startupState: StartupState): ReduxAction => ({
+  payload: startupState,
+  type: ReduxConstants.UPDATE_STARTUP_STATE,
+});
+
+export const setActiveTab = (tab: browser.tabs.Tab): ReduxAction => ({
+  payload: tab,
+  type: ReduxConstants.SET_ACTIVE_TAB,
+});
+
+export const updateCookieDomains = (): ReduxThunkAction => async (dispatch) => {
+  const cookieDomains = await CookieDomainService.getCookieDomains();
+  dispatch({
+    payload: cookieDomains,
+    type: ReduxConstants.UPDATE_COOKIE_DOMAINS,
+  });
+};
+
+export const updateCookieCount = (): ReduxThunkAction => async (
+  dispatch,
+  getState,
+) => {
+  const settings = getState().settings;
+  if (!settings[SettingID.NUM_COOKIES_ICON].value) {
+    return;
+  }
+
+  const count = await CookieDomainService.getCookieCount();
+  dispatch({
+    payload: count,
+    type: ReduxConstants.UPDATE_COOKIE_COUNT,
+  });
+};
+
+export const updateList = (
+  listType: ListType,
+  entry: StoreUserEntry,
+): ReduxThunkAction => async (dispatch) => {
+  const storeUser = StoreUser.getInstance();
+  await storeUser.update(listType, entry);
+  dispatch({
+    payload: { entry, listType },
+    type: ReduxConstants.UPDATE_LIST,
+  });
+};
+
+export const removeFromList = (
+  listType: ListType,
+  hostname: string,
+): ReduxThunkAction => async (dispatch) => {
+  const storeUser = StoreUser.getInstance();
+  await storeUser.remove(listType, hostname);
+  dispatch({
+    payload: { hostname, listType },
+    type: ReduxConstants.REMOVE_FROM_LIST,
+  });
+};
+
+export const importList = (
+  listType: ListType,
+  entries: StoreUserEntry[],
+): ReduxThunkAction => async (dispatch) => {
+  const storeUser = StoreUser.getInstance();
+  await storeUser.import(listType, entries);
+  dispatch({
+    payload: { entries, listType },
+    type: ReduxConstants.IMPORT_LIST,
+  });
+};
+
+export const clearList = (listType: ListType): ReduxThunkAction => async (
+  dispatch,
+) => {
+  const storeUser = StoreUser.getInstance();
+  await storeUser.clear(listType);
+  dispatch({
+    payload: listType,
+    type: ReduxConstants.CLEAR_LIST,
+  });
+};
+
+export const cleanup = (
+  event: CookieCleanupEvent,
+  hostname?: string,
+): ReduxThunkAction => async (dispatch) => {
+  const cleanupService = CleanupService.getInstance();
+  await cleanupService.cleanup(event, hostname);
+  await dispatch(updateCookieDomains());
+  await dispatch(updateCookieCount());
+};
+
+export const cleanSiteData = (hostname: string): ReduxThunkAction => async (
+  dispatch,
+) => {
+  const cleanedHostname = cleanHostname(hostname);
+  if (!cleanedHostname) {
+    return;
+  }
+
+  const cleanupService = CleanupService.getInstance();
+  await cleanupService.cleanup(CookieCleanupEvent.MANUAL, cleanedHostname);
+  await dispatch(updateCookieDomains());
+  await dispatch(updateCookieCount());
+};
+
+export const cleanCurrentTab = (): ReduxThunkAction => async (
+  dispatch,
+  getState,
+) => {
+  const tab = getState().activeTab;
+  if (!tab || !tab.url) {
+    return;
+  }
+
+  const hostname = returnHostname(tab.url);
+  if (hostname) {
+    await dispatch(cleanSiteData(hostname));
+  }
+};
+
+export const updateBrowserAction = (): ReduxThunkAction => async (
+  dispatch,
+  getState,
+) => {
+  const state = getState();
+  const activeTab = state.activeTab;
+  if (!activeTab) {
+    return;
+  }
+
+  const hostname = activeTab.url ? returnHostname(activeTab.url) : '';
+  const storeUser = StoreUser.getInstance();
+  const listStatus = hostname ? await storeUser.getListStatus(hostname) : undefined;
+
+  dispatch({
+    payload: listStatus,
+    type: ReduxConstants.UPDATE_LIST_STATUS,
+  });
+};
+
+export const updateSettings = (): ReduxThunkAction => async (dispatch) => {
+  const settings = await SettingService.getSettings();
+  dispatch({
+    payload: settings,
+    type: ReduxConstants.UPDATE_SETTINGS,
+  });
+};
+
+export const initSettings = (): ReduxThunkAction => async (
+  dispatch,
+  getState,
+) => {
+  const currentSettings = await SettingService.getSettings();
+  const defaults = createDefaultSettings();
+
+  for (const settingID of Object.values(SettingID)) {
+    if (!currentSettings[settingID] && defaults[settingID]) {
+      await SettingService.updateSetting(
+        settingID,
+        defaults[settingID].value,
+      );
       dispatch({
         payload: {
-          ...initialSettings[k],
-          value: settings[k].value,
+          name: settingID,
+          value: defaults[settingID].value,
         },
         type: ReduxConstants.UPDATE_SETTING,
       });
     }
-  });
-
-  // Missing a setting
-  if (settingKeys.length !== initialSettingKeys.length) {
-    initialSettingKeys.forEach((k) => {
-      if (settings[k] === undefined) {
-        dispatch({
-          payload: initialSettings[k],
-          type: ReduxConstants.UPDATE_SETTING,
-        });
-      }
-    });
   }
 
-  function disableSettingIfTrue(s: Setting) {
-    if (s && s.value) {
+  const disableSettingIfTrue = (setting: typeof defaultSettings[SettingID]) => {
+    if (setting.value) {
       dispatch({
         payload: {
-          ...s,
+          name: setting.name,
           value: false,
         },
         type: ReduxConstants.UPDATE_SETTING,
       });
     }
-  }
+  };
 
   // Refresh after missing legacy settings were populated above.
   const validatedSettings = getState().settings;
@@ -300,25 +281,28 @@ export const validateSettings: ActionCreator<ThunkAction<
     disableSettingIfTrue(validatedSettings[SettingID.CONTEXT_MENUS]);
   }
 
-  // Minimum 1 second autoclean delay.
-  if (validatedSettings[SettingID.CLEAN_DELAY].value < 1) {
-    dispatch({
-      payload: {
-        name: SettingID.CLEAN_DELAY,
-        value: 1,
-      },
-      type: ReduxConstants.UPDATE_SETTING,
-    });
-  }
-  // Maximum 2147483 seconds due to signed 32-bit Integer (ms x 1000)
-  if (validatedSettings[SettingID.CLEAN_DELAY].value > 2147483) {
-    dispatch({
-      payload: {
-        name: SettingID.CLEAN_DELAY,
-        value: 2147483,
-      },
-      type: ReduxConstants.UPDATE_SETTING,
-    });
+  const cleanDelay = validatedSettings[SettingID.CLEAN_DELAY].value;
+  if (typeof cleanDelay === 'number') {
+    // Minimum 1 second autoclean delay.
+    if (cleanDelay < 1) {
+      dispatch({
+        payload: {
+          name: SettingID.CLEAN_DELAY,
+          value: 1,
+        },
+        type: ReduxConstants.UPDATE_SETTING,
+      });
+    }
+    // Maximum 2147483 seconds due to signed 32-bit Integer (ms x 1000)
+    if (cleanDelay > 2147483) {
+      dispatch({
+        payload: {
+          name: SettingID.CLEAN_DELAY,
+          value: 2147483,
+        },
+        type: ReduxConstants.UPDATE_SETTING,
+      });
+    }
   }
 
   // If show cookie count in badge is disabled, force change icon color instead
@@ -328,85 +312,46 @@ export const validateSettings: ActionCreator<ThunkAction<
   ) {
     disableSettingIfTrue(validatedSettings[SettingID.KEEP_DEFAULT_ICON]);
   }
-};
 
-export const cookieCleanupUI = (
-  payload: CleanupProperties,
-): COOKIE_CLEANUP => ({
-  payload,
-  type: ReduxConstants.COOKIE_CLEANUP,
-});
-
-// Cookie Cleanup operation that is to be called from the React UI
-export const cookieCleanup: ActionCreator<ThunkAction<
-  void,
-  State,
-  null,
-  ReduxAction
->> = (
-  options: CleanupProperties = { greyCleanup: false, ignoreOpenTabs: false },
-) => async (dispatch, getState) => {
-  const cleanupDoneObject = await cleanCookiesOperation(getState(), options);
-  if (!cleanupDoneObject) return;
-  const { setOfDeletedDomainCookies, cachedResults } = cleanupDoneObject;
-  const {
-    browsingDataCleanup,
-    recentlyCleaned,
-    siteDataCleaned,
-  } = cachedResults as ActivityLog;
-
-  // Increment the count
-  if (recentlyCleaned !== 0 && getSetting(getState(), SettingID.STAT_LOGGING)) {
-    dispatch(incrementCookieDeletedCounter(recentlyCleaned));
-  }
-
-  if (
-    (recentlyCleaned !== 0 || siteDataCleaned) &&
-    getSetting(getState(), SettingID.STAT_LOGGING)
-  ) {
-    dispatch(addActivity(cachedResults));
-  }
-
-  // Show notifications after cleanup
-  if (getSetting(getState(), SettingID.NOTIFY_AUTO)) {
-    const domainsAll = new Set<string>();
-    Object.values((cachedResults as ActivityLog).storeIds).forEach((v) => {
-      v.forEach((d) => domainsAll.add(d.cookie.hostname));
-    });
-    const bDomains = new Set<string>();
-    // Count for Summary Notification
-    if (browsingDataCleanup) {
-      for (const domains of Object.values(browsingDataCleanup)) {
-        if (!domains || domains.length === 0) continue;
-        domains.forEach((d) => bDomains.add(d));
-      }
-      bDomains.forEach((d) => domainsAll.add(d));
-    }
-
-    if (setOfDeletedDomainCookies.length > 0) {
-      // Cookie Notification
-      const notifyMessage = browser.i18n.getMessage('notificationContent', [
-        recentlyCleaned.toString(),
-        domainsAll.size.toString(),
-        (setOfDeletedDomainCookies as string[]).slice(0, 5).join(', '),
-      ]);
-      showNotification({
-        duration: getSetting(getState(), SettingID.NOTIFY_DURATION) as number,
-        msg: `${notifyMessage} ...`,
-        title: browser.i18n.getMessage('notificationTitle'),
-      });
-      await sleep(750);
-    }
-    // Here we just show a generic 'Site Data' cleaned instead of the specifics, with all domains.
-    if (siteDataCleaned && browsingDataCleanup && bDomains.size > 0) {
-      await showNotification({
-        duration: getSetting(getState(), SettingID.NOTIFY_DURATION) as number,
-        msg: browser.i18n.getMessage('activityLogSiteDataDomainsText', [
-          browser.i18n.getMessage('siteDataText'),
-          Array.from(bDomains).join(', '),
-        ]),
-        title: browser.i18n.getMessage('notificationTitleSiteData'),
+  if (isFirefox(cache)) {
+    if (validatedSettings[SettingID.CLEANUP_CACHE].value) {
+      dispatch({
+        payload: {
+          name: SettingID.CLEANUP_CACHE,
+          value: false,
+        },
+        type: ReduxConstants.UPDATE_SETTING,
       });
     }
   }
+
+  const cacheSetting = validatedSettings[SettingID.CACHE].value;
+  if (typeof cacheSetting === 'boolean') {
+    cache.cache = cacheSetting;
+  }
+
+  const debugMode = validatedSettings[SettingID.DEBUG_MODE].value;
+  if (typeof debugMode === 'boolean') {
+    cache.debug = debugMode;
+  }
+
+  if (isChrome(cache)) {
+    cache.browser = browserName.CHROME;
+  } else if (isFirefoxAndroid(cache)) {
+    cache.browser = browserName.FIREFOX_ANDROID;
+  } else {
+    cache.browser = browserName.FIREFOX;
+  }
+
+  if (browserAction) {
+    const keepDefaultIcon = validatedSettings[SettingID.KEEP_DEFAULT_ICON].value;
+    if (typeof keepDefaultIcon === 'boolean') {
+      await browserAction.setIcon(
+        keepDefaultIcon ? IconName.DEFAULT : IconName.ACTIVE,
+      );
+    }
+  }
+
+  const store = Store.getInstance();
+  await store.set('settings', validatedSettings);
 };
