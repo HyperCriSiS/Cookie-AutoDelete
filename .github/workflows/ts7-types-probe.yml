@@ -1,4 +1,4 @@
-name: TypeScript 7 type dependency probe
+name: TypeScript 7 browser typing probe
 
 on:
   push:
@@ -19,39 +19,19 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Inspect current dependency versions
+      - name: Inspect browser and UI typing dependencies
         run: |
           node <<'NODE'
           const p = require('./package.json');
           const deps = {...p.dependencies, ...p.devDependencies};
-          for (const k of [
-            'typescript', 'ts-jest', '@types/firefox-webext-browser',
-            '@types/react', '@types/react-dom', '@types/react-redux',
-            'react', 'react-dom', 'react-redux', 'redux'
-          ]) console.log(`${k}: ${deps[k] ?? '(absent)'}`);
+          for (const [k,v] of Object.entries(deps).sort()) {
+            if (/type|browser|chrome|firefox|webext|react|redux/i.test(k)) console.log(`${k}: ${v}`);
+          }
           NODE
-      - name: Inspect compatible type-package lines
-        run: |
-          npm view @types/firefox-webext-browser version
-          npm view @types/react@17 version --json | tail -20
-          npm view @types/react-dom@17 version --json | tail -20
-          npm view @types/react-redux@7 version --json | tail -20
-          npm view @types/firefox-webext-browser@latest engines --json || true
-      - name: Probe TypeScript 7 with same-runtime-major type updates
-        shell: bash
-        run: |
-          set -euxo pipefail
           npm ci
-          npm pkg delete devDependencies.ts-jest
-          npm install --no-save --package-lock=false \
-            typescript@7.0.2 \
-            @types/firefox-webext-browser@latest \
-            @types/react@17 \
-            @types/react-dom@17 \
-            @types/react-redux@7
-          node -e "const p=require('./node_modules/typescript/package.json'); console.log('typescript probe:',p.version)"
-          npx tsc --noEmit --module Node16 --moduleResolution Node16 --pretty false 2>&1 | tee /tmp/ts7.log
-          status=${PIPESTATUS[0]}
-          echo "TS7_ERROR_COUNT=$(grep -c 'error TS' /tmp/ts7.log || true)"
-          echo "TS7_ERROR_FILES=$(grep 'error TS' /tmp/ts7.log | sed -E 's/\([0-9]+,[0-9]+\): error TS.*//' | sort | uniq -c | sort -nr | head -30)"
-          exit "$status"
+          echo '--- top-level relevant packages ---'
+          npm ls --depth=0 2>/dev/null | grep -Ei 'type|browser|chrome|firefox|webext|react|redux' || true
+          echo '--- browser namespace declaration sources ---'
+          grep -RIl --include='*.d.ts' 'declare namespace browser\|namespace browser' node_modules src/typings 2>/dev/null | head -80
+          echo '--- relevant TS config ---'
+          cat tsconfig.json
