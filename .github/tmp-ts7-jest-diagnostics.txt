@@ -1,0 +1,593 @@
+## Versions
+Version 7.0.2
+cookie-autodelete@3.8.2 /home/runner/work/Cookie-AutoDelete/Cookie-AutoDelete
+├─┬ @types/jest-when@3.5.5
+│ └── @types/jest@30.0.0 deduped
+├── @types/jest@30.0.0
+├─┬ @typescript-eslint/eslint-plugin@4.33.0
+│ └─┬ tsutils@3.21.0
+│   └── typescript@7.0.2 deduped invalid: "^4.9.4" from the root project, ">=3.8 <5.0" from node_modules/ts-jest
+├─┬ jest-when@3.7.0
+│ └── jest@26.6.3 deduped
+├── jest@26.6.3
+├─┬ ts-jest@26.5.6
+│ ├── jest@26.6.3 deduped
+│ └── typescript@7.0.2 deduped invalid: "^4.9.4" from the root project, ">=3.8 <5.0" from node_modules/ts-jest
+├─┬ ts-loader@9.6.2
+│ └── typescript@7.0.2 deduped invalid: "^4.9.4" from the root project, ">=3.8 <5.0" from node_modules/ts-jest
+└── typescript@7.0.2 invalid: "^4.9.4" from the root project, ">=3.8 <5.0" from node_modules/ts-jest
+
+npm error code ELSPROBLEMS
+npm error invalid: typescript@7.0.2 /home/runner/work/Cookie-AutoDelete/Cookie-AutoDelete/node_modules/typescript
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-08-18T17_10_30_243Z-debug-0.log
+
+## TS7 diagnostics
+__tests__/services/BrowserApi.spec.ts(12,27): error TS2591: Cannot find name 'require'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+__tests__/services/BrowserApi.spec.ts(20,27): error TS2591: Cannot find name 'require'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+__tests__/services/CleanupService.spec.ts(43,3): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type 'Tab'.
+__tests__/services/ContextMenuEvents.spec.ts(67,41): error TS2708: Cannot use namespace 'browser' as a value.
+__tests__/services/ContextMenuEvents.spec.ts(78,3): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type 'Tab'.
+__tests__/services/ContextMenuEvents.spec.ts(94,35): error TS2694: Namespace 'browser' has no exported member 'contextMenus'.
+__tests__/services/ContextMenuEvents.spec.ts(100,32): error TS2694: Namespace 'browser' has no exported member 'contextMenus'.
+__tests__/services/ContextMenuEvents.spec.ts(105,32): error TS2694: Namespace 'browser' has no exported member 'contextMenus'.
+__tests__/services/ContextMenuEvents.spec.ts(110,32): error TS2694: Namespace 'browser' has no exported member 'contextMenus'.
+__tests__/services/ContextMenuEvents.spec.ts(115,40): error TS2694: Namespace 'browser' has no exported member 'contextMenus'.
+__tests__/services/ContextMenuEvents.spec.ts(281,25): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/ContextMenuEvents.spec.ts(517,25): error TS2353: Object literal may only specify known properties, and 'cookieStoreId' does not exist in type 'Tab'.
+__tests__/services/ContextMenuEvents.spec.ts(532,25): error TS2353: Object literal may only specify known properties, and 'cookieStoreId' does not exist in type 'Tab'.
+__tests__/services/ContextMenuEvents.spec.ts(614,25): error TS2353: Object literal may only specify known properties, and 'cookieStoreId' does not exist in type 'Tab'.
+__tests__/services/ContextMenuEvents.spec.ts(629,25): error TS2353: Object literal may only specify known properties, and 'cookieStoreId' does not exist in type 'Tab'.
+__tests__/services/ContextualIdentitiesEvents.spec.ts(82,63): error TS2694: Namespace 'browser.contextualIdentities' has no exported member 'ContextualIdentity'.
+__tests__/services/CookieEvents.spec.ts(37,3): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type 'Tab'.
+__tests__/services/DomainChangeEvents.spec.ts(72,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'TabChangeInfo'.
+__tests__/services/DomainChangeEvents.spec.ts(86,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'TabChangeInfo'.
+__tests__/services/DomainChangeEvents.spec.ts(99,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'TabChangeInfo'.
+__tests__/services/Libs.spec.ts(267,7): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type 'Partial<Tab>'.
+__tests__/services/Libs.spec.ts(296,44): error TS2353: Object literal may only specify known properties, and 'cookieStoreId' does not exist in type 'Partial<Tab>'.
+__tests__/services/Libs.spec.ts(328,9): error TS2708: Cannot use namespace 'browser' as a value.
+__tests__/services/Libs.spec.ts(342,9): error TS2708: Cannot use namespace 'browser' as a value.
+__tests__/services/Libs.spec.ts(356,9): error TS2708: Cannot use namespace 'browser' as a value.
+__tests__/services/Libs.spec.ts(370,9): error TS2708: Cannot use namespace 'browser' as a value.
+__tests__/services/Libs.spec.ts(503,7): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type 'Tab'.
+__tests__/services/Libs.spec.ts(536,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/Libs.spec.ts(540,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/Libs.spec.ts(549,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/Libs.spec.ts(557,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/Libs.spec.ts(565,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/Libs.spec.ts(574,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/Libs.spec.ts(603,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/Libs.spec.ts(641,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/Libs.spec.ts(1558,14): error TS2708: Cannot use namespace 'browser' as a value.
+__tests__/services/Libs.spec.ts(1698,14): error TS2708: Cannot use namespace 'browser' as a value.
+__tests__/services/MV3WorkerRestart.regression.spec.ts(9,3): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type 'Tab'.
+__tests__/services/MV3WorkerRestart.regression.spec.ts(28,49): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../src/redux/Store.js'?
+__tests__/services/MV3WorkerRestart.regression.spec.ts(29,41): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../src/redux/State.js'?
+__tests__/services/MV3WorkerRestart.regression.spec.ts(30,42): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../src/redux/Actions.js'?
+__tests__/services/MV3WorkerRestart.regression.spec.ts(31,47): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../src/services/StoreUser.js'?
+__tests__/services/MV3WorkerRestart.regression.spec.ts(33,5): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../src/services/DomainChangeEvents.js'?
+__tests__/services/MV3WorkerRestart.regression.spec.ts(35,47): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../../src/services/TabEvents.js'?
+__tests__/services/SettingService.spec.ts(82,3): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type 'Tab'.
+__tests__/services/StoreUser.spec.ts(7,23): error TS2591: Cannot find name 'require'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+__tests__/services/StoreUser.spec.ts(18,23): error TS2591: Cannot find name 'require'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+__tests__/services/StoreUser.spec.ts(33,23): error TS2591: Cannot find name 'require'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+__tests__/services/StoreUser.spec.ts(52,23): error TS2591: Cannot find name 'require'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+__tests__/services/TabEvents.spec.ts(74,3): error TS2353: Object literal may only specify known properties, and 'discarded' does not exist in type 'TabChangeInfo'.
+__tests__/services/TabEvents.spec.ts(82,3): error TS2353: Object literal may only specify known properties, and 'active' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(142,59): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(147,59): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(152,59): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(155,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(161,59): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(168,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(180,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(192,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(204,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(216,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(228,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(241,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(250,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(270,9): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(297,32): error TS2353: Object literal may only specify known properties, and 'discarded' does not exist in type 'TabChangeInfo'.
+__tests__/services/TabEvents.spec.ts(326,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(334,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(344,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(356,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(361,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(374,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(383,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(394,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(404,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(414,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(427,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(439,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(452,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+__tests__/services/TabEvents.spec.ts(464,9): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Tab'.
+src/background.ts(43,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(50,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(54,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(62,31): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(98,30): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(130,7): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(143,33): error TS2694: Namespace 'browser' has no exported member 'runtime'.
+src/background.ts(148,26): error TS2694: Namespace 'browser.cookies' has no exported member 'OnChangedCause'.
+src/background.ts(163,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(165,35): error TS2694: Namespace 'browser' has no exported member 'runtime'.
+src/background.ts(169,31): error TS7006: Parameter 'pp' implicitly has an 'any' type.
+src/background.ts(177,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(179,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(181,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(187,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(188,3): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(191,3): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(194,3): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(229,32): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(236,39): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(238,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(256,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(267,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(271,9): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(294,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(306,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(309,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(312,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(315,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(318,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(323,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(327,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/background.ts(330,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/redux/Actions.ts(303,7): error TS2365: Operator '<' cannot be applied to types 'string | number | boolean' and 'number'.
+src/redux/Actions.ts(313,7): error TS2365: Operator '>' cannot be applied to types 'string | number | boolean' and 'number'.
+src/redux/Actions.ts(387,29): error TS2708: Cannot use namespace 'browser' as a value.
+src/redux/Actions.ts(395,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/redux/Actions.ts(403,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/redux/Actions.ts(404,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/redux/Actions.ts(407,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/redux/UIStore.ts(39,10): error TS2708: Cannot use namespace 'browser' as a value.
+src/redux/UIStore.ts(41,15): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/redux/UIStore.ts(54,26): error TS2708: Cannot use namespace 'browser' as a value.
+src/redux/UIStore.ts(75,26): error TS2708: Cannot use namespace 'browser' as a value.
+src/redux/UIStore.ts(101,31): error TS2694: Namespace 'browser' has no exported member 'runtime'.
+src/services/AlarmEvents.ts(31,28): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/AlarmEvents.ts(45,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/AlarmEvents.ts(54,49): error TS2694: Namespace 'browser' has no exported member 'alarms'.
+src/services/AlarmEvents.ts(64,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/AlarmEvents.ts(69,27): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/AlarmEvents.ts(94,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/AlarmEvents.ts(95,3): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/BrowserActionService.ts(24,18): error TS2339: Property 'id' does not exist on type 'Tab'.
+src/services/BrowserActionService.ts(31,18): error TS2339: Property 'id' does not exist on type 'Tab'.
+src/services/BrowserActionService.ts(45,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/BrowserActionService.ts(53,18): error TS2339: Property 'id' does not exist on type 'Tab'.
+src/services/BrowserActionService.ts(62,16): error TS2339: Property 'id' does not exist on type 'Tab'.
+src/services/BrowserActionService.ts(77,18): error TS2339: Property 'id' does not exist on type 'Tab'.
+src/services/BrowserActionService.ts(95,18): error TS2339: Property 'id' does not exist on type 'Tab'.
+src/services/BrowserActionService.ts(113,28): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/BrowserActionService.ts(117,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/BrowserActionService.ts(142,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/BrowserActionService.ts(151,12): error TS2339: Property 'cookieStoreId' does not exist on type 'Tab'.
+src/services/BrowserActionService.ts(152,24): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/BrowserApi.ts(11,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/BrowserApi.ts(12,33): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/BrowserApi.ts(17,27): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/BrowserCapabilities.ts(133,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(319,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(354,36): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/CleanupService.ts(359,20): error TS2339: Property 'cookieStoreId' does not exist on type 'Tab'.
+src/services/CleanupService.ts(367,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(384,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(385,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(387,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(401,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(402,9): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(439,13): error TS2339: Property 'id' does not exist on type 'Tab'.
+src/services/CleanupService.ts(441,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(450,28): error TS2339: Property 'id' does not exist on type 'Tab'.
+src/services/CleanupService.ts(461,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(462,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(463,27): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/CleanupService.ts(464,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(466,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(467,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(469,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(485,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(486,9): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(487,25): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/CleanupService.ts(522,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(527,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(531,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(566,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(577,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(578,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(581,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(786,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(839,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(847,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(857,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CleanupService.ts(864,31): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(66,10): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(79,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(85,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(91,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(102,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(110,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(121,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(128,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(134,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(140,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(146,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(152,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(158,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(165,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(171,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(177,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(183,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(189,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(195,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(202,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(208,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(214,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(220,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(228,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(234,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(247,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(253,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(258,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(269,41): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(271,12): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(277,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(288,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(307,9): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(310,75): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(326,19): error TS2694: Namespace 'browser' has no exported member 'contextMenus'.
+src/services/ContextMenuEvents.ts(344,39): error TS2339: Property 'cookieStoreId' does not exist on type 'Tab'.
+src/services/ContextMenuEvents.ts(354,40): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/ContextMenuEvents.ts(369,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(370,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(374,21): error TS2339: Property 'title' does not exist on type 'Tab'.
+src/services/ContextMenuEvents.ts(375,21): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/ContextMenuEvents.ts(626,26): error TS7006: Parameter 'text' implicitly has an 'any' type.
+src/services/ContextMenuEvents.ts(663,26): error TS7006: Parameter 'text' implicitly has an 'any' type.
+src/services/ContextMenuEvents.ts(700,26): error TS7006: Parameter 'text' implicitly has an 'any' type.
+src/services/ContextMenuEvents.ts(737,26): error TS7006: Parameter 'text' implicitly has an 'any' type.
+src/services/ContextMenuEvents.ts(785,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(786,22): error TS2339: Property 'index' does not exist on type 'Tab'.
+src/services/ContextMenuEvents.ts(814,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(842,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextMenuEvents.ts(855,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextualIdentitiesEvents.ts(47,8): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextualIdentitiesEvents.ts(51,38): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextualIdentitiesEvents.ts(142,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/ContextualIdentitiesEvents.ts(164,42): error TS7006: Parameter 'object' implicitly has an 'any' type.
+src/services/ContextualIdentitiesEvents.ts(177,7): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CookieApi.ts(24,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CookieDomainService.ts(26,12): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/CookieDomainService.ts(26,23): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/CookieDomainService.ts(27,11): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/CookieDomainService.ts(27,43): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/CookieDomainService.ts(31,11): error TS2339: Property 'cookieStoreId' does not exist on type 'Tab'.
+src/services/CookieDomainService.ts(31,26): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/CookieDomainService.ts(109,21): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/CookieEvents.ts(22,28): error TS2694: Namespace 'browser.cookies' has no exported member 'OnChangedCause'.
+src/services/CookieEvents.ts(27,28): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/CookieEvents.ts(31,23): error TS7006: Parameter 'tab' implicitly has an 'any' type.
+src/services/DomainChangeEvents.ts(22,34): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/DomainChangeEvents.ts(23,34): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/DomainChangeEvents.ts(33,13): error TS2339: Property 'status' does not exist on type 'Tab'.
+src/services/DomainChangeEvents.ts(40,58): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/DomainChangeEvents.ts(43,20): error TS2339: Property 'favIconUrl' does not exist on type 'TabChangeInfo'.
+src/services/DomainChangeEvents.ts(44,18): error TS2339: Property 'favIconUrl' does not exist on type 'TabChangeInfo'.
+src/services/DomainChangeEvents.ts(65,11): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/DomainChangeEvents.ts(66,11): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/DomainChangeEvents.ts(67,11): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/DomainChangeEvents.ts(68,11): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/DomainChangeEvents.ts(157,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(34,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(89,5): error TS2353: Object literal may only specify known properties, and 'cookieStoreId' does not exist in type 'Partial<Tab>'.
+src/services/Libs.ts(89,24): error TS2339: Property 'cookieStoreId' does not exist on type 'Partial<Tab>'.
+src/services/Libs.ts(90,20): error TS2339: Property 'discarded' does not exist on type 'Partial<Tab>'.
+src/services/Libs.ts(91,13): error TS2339: Property 'id' does not exist on type 'Partial<Tab>'.
+src/services/Libs.ts(92,20): error TS2339: Property 'incognito' does not exist on type 'Partial<Tab>'.
+src/services/Libs.ts(93,17): error TS2339: Property 'status' does not exist on type 'Partial<Tab>'.
+src/services/Libs.ts(94,14): error TS2339: Property 'url' does not exist on type 'Partial<Tab>'.
+src/services/Libs.ts(95,19): error TS2339: Property 'windowId' does not exist on type 'Partial<Tab>'.
+src/services/Libs.ts(185,12): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/Libs.ts(185,23): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/Libs.ts(186,11): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/Libs.ts(186,43): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/Libs.ts(189,11): error TS2339: Property 'cookieStoreId' does not exist on type 'Tab'.
+src/services/Libs.ts(189,26): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/Libs.ts(205,30): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(219,16): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/services/Libs.ts(220,17): error TS7006: Parameter 'cc' implicitly has an 'any' type.
+src/services/Libs.ts(234,30): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(241,25): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/services/Libs.ts(258,37): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(265,32): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/services/Libs.ts(280,43): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(287,38): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/services/Libs.ts(301,33): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(307,28): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/services/Libs.ts(315,21): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/Libs.ts(594,10): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(602,13): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/services/Libs.ts(825,3): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(826,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(828,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(829,27): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(834,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(864,3): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(865,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(867,12): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(871,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(895,26): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(901,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(907,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(911,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(915,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/Libs.ts(920,12): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/SettingService.ts(84,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/SettingService.ts(104,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/SettingService.ts(111,9): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/SettingService.ts(115,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/StatePersistence.ts(21,7): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/StoreBridge.ts(98,23): error TS2694: Namespace 'browser' has no exported member 'runtime'.
+src/services/StoreBridge.ts(126,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/StoreBridge.ts(129,1): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/TabEvents.ts(49,22): error TS2339: Property 'favIconUrl' does not exist on type 'TabChangeInfo'.
+src/services/TabEvents.ts(50,20): error TS2339: Property 'favIconUrl' does not exist on type 'TabChangeInfo'.
+src/services/TabEvents.ts(52,22): error TS2339: Property 'discarded' does not exist on type 'TabChangeInfo'.
+src/services/TabEvents.ts(52,39): error TS2339: Property 'discarded' does not exist on type 'Tab'.
+src/services/TabEvents.ts(77,13): error TS2339: Property 'status' does not exist on type 'Tab'.
+src/services/TabEvents.ts(84,22): error TS2339: Property 'favIconUrl' does not exist on type 'TabChangeInfo'.
+src/services/TabEvents.ts(85,20): error TS2339: Property 'favIconUrl' does not exist on type 'TabChangeInfo'.
+src/services/TabEvents.ts(134,13): error TS2339: Property 'status' does not exist on type 'Tab'.
+src/services/TabEvents.ts(136,60): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(138,22): error TS2339: Property 'favIconUrl' does not exist on type 'TabChangeInfo'.
+src/services/TabEvents.ts(139,20): error TS2339: Property 'favIconUrl' does not exist on type 'TabChangeInfo'.
+src/services/TabEvents.ts(153,15): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(154,15): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(155,15): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(156,15): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(237,27): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/TabEvents.ts(261,14): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(261,25): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(262,13): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(262,45): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(301,22): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(302,12): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(309,49): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(313,24): error TS2339: Property 'cookieStoreId' does not exist on type 'Tab'.
+src/services/TabEvents.ts(314,20): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/services/TabEvents.ts(318,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/services/TabEvents.ts(318,66): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/ui/common_components/ActivityTable.tsx(81,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(84,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(89,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(93,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(100,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(103,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(104,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(206,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(243,12): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(244,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(260,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(281,26): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(307,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(328,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ActivityTable.tsx(331,27): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ErrorBoundary.tsx(64,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ErrorBoundary.tsx(66,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ErrorBoundary.tsx(75,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ErrorBoundary.tsx(93,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ErrorBoundary.tsx(94,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ErrorBoundary.tsx(104,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ErrorBoundary.tsx(105,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ErrorBoundary.tsx(113,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ErrorBoundary.tsx(114,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionOptions.tsx(273,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionOptions.tsx(337,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(142,30): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(143,30): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(155,26): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(193,28): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(206,28): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(238,28): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(269,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(270,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(276,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/ExpressionTable.tsx(277,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/common_components/IconButton.tsx(64,9): error TS2322: Type '{ accept?: string | undefined; href?: string | undefined; type?: string | undefined; title?: string | undefined; download?: string | undefined; role?: string | undefined; target?: string | undefined; ... 5 more ...; children: (string | ... 2 more ... | undefined)[]; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'className' does not exist on type 'IntrinsicAttributes'.
+src/ui/popup/App.tsx(64,24): error TS2694: Namespace 'browser' has no exported member 'runtime'.
+src/ui/popup/App.tsx(80,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(104,22): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/ui/popup/App.tsx(128,38): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/ui/popup/App.tsx(134,40): error TS2339: Property 'url' does not exist on type 'Tab'.
+src/ui/popup/App.tsx(140,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(143,42): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/ui/popup/App.tsx(149,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/ui/popup/App.tsx(153,48): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(186,32): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(189,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(213,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(214,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(218,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(219,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(235,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(238,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(239,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(262,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(263,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(280,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(289,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(290,38): error TS2339: Property 'cookieStoreId' does not exist on type 'Tab'.
+src/ui/popup/App.tsx(291,30): error TS2339: Property 'index' does not exist on type 'Tab'.
+src/ui/popup/App.tsx(295,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(296,30): error TS2339: Property 'index' does not exist on type 'Tab'.
+src/ui/popup/App.tsx(302,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(303,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(315,16): error TS2339: Property 'favIconUrl' does not exist on type 'Tab'.
+src/ui/popup/App.tsx(315,35): error TS2339: Property 'favIconUrl' does not exist on type 'Tab'.
+src/ui/popup/App.tsx(318,24): error TS2339: Property 'favIconUrl' does not exist on type 'Tab'.
+src/ui/popup/App.tsx(350,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(397,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(398,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(411,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/App.tsx(412,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/components/CleanCollapseGroup.tsx(65,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/components/CleanCollapseGroup.tsx(66,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/components/CleanCollapseGroup.tsx(74,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/components/CleanCollapseGroup.tsx(86,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/components/CleanCollapseGroup.tsx(89,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/components/CleanDataButton.tsx(94,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/components/CleanDataButton.tsx(102,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/components/FilteredExpression.tsx(34,30): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/popup/components/FilteredExpression.tsx(53,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/App.tsx(39,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/App.tsx(61,5): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(32,25): error TS2694: Namespace 'browser' has no exported member 'runtime'.
+src/ui/settings/components/About.tsx(84,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(86,12): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(88,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(91,12): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(96,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(100,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(109,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(119,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(129,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(135,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(154,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(155,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(164,13): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'typeof platformOS'.
+src/ui/settings/components/About.tsx(170,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(203,38): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(207,38): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(216,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(217,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(223,13): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(261,38): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(265,38): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(274,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/About.tsx(275,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/ActivityLog.tsx(48,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/ActivityLog.tsx(107,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(64,68): error TS2694: Namespace 'browser.contextualIdentities' has no exported member 'ContextualIdentity'.
+src/ui/settings/components/Expressions.tsx(82,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(95,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(109,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(136,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(142,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(189,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(191,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(198,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(246,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(250,9): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(265,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(279,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(283,9): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(298,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(352,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(380,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(394,26): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(417,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(445,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(446,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(456,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(457,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(477,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(478,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(487,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(490,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(507,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(508,26): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(533,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(534,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(548,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(549,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(576,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(578,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(581,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(601,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(618,28): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(627,36): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Expressions.tsx(639,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(86,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(101,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(121,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(123,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(144,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(171,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(204,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(217,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(226,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(227,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(239,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(240,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(252,28): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(256,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(257,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(278,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(285,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(288,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(316,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(317,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(323,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(334,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(343,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(354,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(367,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(375,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(377,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(378,15): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(387,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(391,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(409,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(421,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(435,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(449,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(463,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(477,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(491,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(495,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(498,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(514,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(532,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(540,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(547,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(561,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(573,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(586,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(598,24): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(600,20): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(609,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(623,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(633,21): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(643,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(654,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(662,23): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(668,43): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(672,25): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(675,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Settings.tsx(676,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/SideBar.tsx(24,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/SideBar.tsx(28,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/SideBar.tsx(32,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/SideBar.tsx(36,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/SideBar.tsx(40,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/SideBar.tsx(92,14): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/SideBar.tsx(99,16): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/SideBar.tsx(101,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/SideBar.tsx(122,22): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(82,12): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(85,10): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(86,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(92,17): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(93,18): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(99,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(103,19): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(108,10): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(110,11): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(114,12): error TS2708: Cannot use namespace 'browser' as a value.
+src/ui/settings/components/Welcome.tsx(118,10): error TS2708: Cannot use namespace 'browser' as a value.
+
+tsc_exit_code=1
