@@ -2,54 +2,27 @@ name: Temporary TypeScript 7 transform migration
 
 on:
   push:
-    branches:
-      - modernization-p0
-    paths:
-      - '.github/workflows/tmp-ts7-transform-migration.yml'
-
-permissions:
-  contents: write
+    branches: [modernization-p0]
+    paths: ['.github/workflows/tmp-ts7-transform-migration.yml']
 
 jobs:
-  migrate:
+  probe:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - name: Install current dependencies
-        run: npm ci --legacy-peer-deps
-      - name: Apply TypeScript 7, bundler resolution and SWC Jest migration
-        shell: bash
+      - run: npm ci --legacy-peer-deps
+      - name: Show used browser namespaces
+        run: grep -RhoE 'browser\.[A-Za-z_][A-Za-z0-9_]*' src test* 2>/dev/null | sort -u || true
+      - name: Test typed runtime declaration under TS7
         run: |
-          set -euo pipefail
-          npm uninstall --save-dev ts-jest --legacy-peer-deps
-          npm install --save-dev --save-exact typescript@7.0.2 @swc/core@1.16.0 @swc/jest@0.2.39 --legacy-peer-deps
+          npm install --no-save --legacy-peer-deps typescript@7.0.2
           node <<'NODE'
-          const fs = require('fs');
-          let s = fs.readFileSync('jest.config.js', 'utf8');
-          s = s.replace(/\n\s*globals:\s*\{\s*'ts-jest':\s*\{\s*tsconfig:\s*'tsconfig\.json',?\s*\},?\s*\},?/m, '');
-          s = s.replace(/\n\s*preset:\s*'ts-jest',?/m, '');
-          s = s.replace("'^.+\\\\.tsx?$': 'ts-jest'", "'^.+\\\\.tsx?$': ['@swc/jest', { jsc: { parser: { syntax: 'typescript', tsx: true }, target: 'es2017', transform: { react: { runtime: 'automatic' } } }, module: { type: 'commonjs' } }]");
-          if (s.includes('ts-jest')) throw new Error('ts-jest reference remains in jest.config.js');
-          fs.writeFileSync('jest.config.js', s);
-
-          let t = fs.readFileSync('tsconfig.json', 'utf8');
-          t = t.replace('"module": "commonjs"', '"module": "esnext"');
-          t = t.replace('"moduleResolution": "node"', '"moduleResolution": "bundler"');
-          fs.writeFileSync('tsconfig.json', t);
+          const fs=require('fs');
+          let t=fs.readFileSync('tsconfig.json','utf8').replace('"module": "commonjs"','"module": "esnext"').replace('"moduleResolution": "node"','"moduleResolution": "bundler"');
+          fs.writeFileSync('tsconfig.json',t);
+          fs.appendFileSync('src/typings/Webext.d.ts', `\n\ntype CadBrowserApi = {\n  alarms: typeof browser.alarms;\n  browserAction: typeof browser.browserAction;\n  browsingData: typeof browser.browsingData;\n  contextualIdentities: typeof browser.contextualIdentities;\n  cookies: typeof browser.cookies;\n  extension: typeof browser.extension;\n  i18n: typeof browser.i18n;\n  notifications: typeof browser.notifications;\n  permissions: typeof browser.permissions;\n  runtime: typeof browser.runtime;\n  storage: typeof browser.storage;\n  tabs: typeof browser.tabs;\n  windows: typeof browser.windows;\n};\ndeclare const browser: CadBrowserApi;\n`);
           NODE
-          git diff -- package.json package-lock.json jest.config.js tsconfig.json
-      - name: Typecheck TypeScript 7
-        run: npx tsc --noEmit
-      - name: Run Jest suite through SWC
-        run: npm test -- --runInBand
-      - name: Lint
-        run: npm run lint
-      - name: Build webpack bundle
-        run: npm run compile
-      - name: Verify migration diff
-        run: |
-          git diff --check
-          test -z "$(grep -R "ts-jest" -n package.json jest.config.js package-lock.json || true)"
+          npx tsc --noEmit
