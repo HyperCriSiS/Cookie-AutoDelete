@@ -55,6 +55,10 @@ describe('AlarmEvents', () => {
     expect(whenValue).toBeGreaterThanOrEqual(before + 60 * 1000);
   });
 
+  it('keeps the precise short-delay path below one minute for supported legacy Chromium versions', () => {
+    expect((AlarmEvents as any).RELIABLE_ALARM_DELAY_MS).toBe(60 * 1000);
+  });
+
   it('does not schedule a duplicate while an alarm already exists', async () => {
     when(global.browser.alarms.get)
       .calledWith(AlarmEvents.ACTIVE_MODE_ALARM)
