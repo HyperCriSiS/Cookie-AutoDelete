@@ -66,7 +66,8 @@ There are currently no repository issues and no fork releases. Several Dependabo
   - [x] Inspect Dependabot PR #7 (`typescript` 4.9.4 → 7.0.2): it is based on `3.X.X-Branch`, not the current `modernization-p0` integration head.
   - [x] Confirm PR #7 does not provide a usable compatibility proof: both `Tests, Builds, Coverage` checks fail during `npm ci` before tests, lint or builds run; `Initial Checks` pass.
   - [x] Identify the concrete install-time blocker from PR #7 CI: `ts-jest@26.5.6` declares peer `typescript >=3.8 <5.0`, so npm rejects `typescript@7.0.2` with `ERESOLVE`. `ts-loader@9.4.2` itself accepts `typescript@*` and is not the immediate peer conflict.
-  - [ ] Upgrade the Jest/TypeScript test toolchain coherently on `modernization-p0` (at minimum replace the obsolete `ts-jest@26.5.6`/Jest 26-era pairing with a TypeScript-7-compatible combination), regenerate the lockfile, then run the complete tests/lint/Firefox+Chromium build/package matrix. Do not use `--force` or `--legacy-peer-deps` as the migration solution.
+  - [x] Verify the current upstream `ts-jest` line is still not TypeScript-7-compatible: upstream `ts-jest` 29.4.12 declares peer `typescript >=4.3 <7` even while supporting Jest 29/30, so merely upgrading Jest/`ts-jest` cannot satisfy the TypeScript 7 gate.
+  - [ ] Replace `ts-jest` with a TypeScript-7-compatible test transform/toolchain (or otherwise decouple Jest transpilation from the TypeScript compiler), then migrate TypeScript on `modernization-p0`, regenerate the lockfile, and run the complete tests/lint/Firefox+Chromium build/package matrix. Do not use `--force` or `--legacy-peer-deps` as the migration solution.
 - [ ] Review the remaining open Dependabot updates (`form-data`, `tough-cookie`, grouped npm updates) individually and integrate only those proven compatible.
 - [ ] Re-check generated Firefox and Chromium package contents after all remaining dependency/toolchain migrations.
 
@@ -83,10 +84,10 @@ There are currently no repository issues and no fork releases. Several Dependabo
 ## Blockers / dependencies
 
 - Real historical Firefox/Chromium profile exports are not present as repository fixtures, so the real-world upgrade-path release gate cannot yet be marked complete.
-- TypeScript 7 cannot be treated as a safe one-line dependency bump: the concrete current blocker is the `ts-jest@26.5.6` peer range (`typescript >=3.8 <5.0`). The Jest/ts-jest test toolchain and lockfile therefore require a coordinated migration on `modernization-p0` before TypeScript 7 can be validated.
+- TypeScript 7 cannot be treated as a safe one-line dependency bump. The repository currently uses `ts-jest@26.5.6` (`typescript >=3.8 <5.0`), and even current upstream `ts-jest` 29.4.12 still declares `typescript >=4.3 <7`; therefore the TypeScript 7 migration requires replacing or decoupling the Jest TypeScript transform rather than only upgrading `ts-jest`.
 - The separate GitHub Advanced Security agent fails before repository analysis because its requested hosted model is unsupported. This is external to the codebase and does not currently block functional modernization work.
 - Manual packaged-browser validation remains required before release readiness can be claimed.
 
 ## Completion status
 
-**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization and the automated migration/runtime compatibility pass are complete. The TypeScript 7 gate is now diagnosed precisely: the existing Jest 26-era `ts-jest@26.5.6` peer constraint blocks installation and must be migrated coherently rather than bypassed. Real historical-profile upgrade validation and packaged-browser release-candidate checks remain open.
+**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization and the automated migration/runtime compatibility pass are complete. The TypeScript 7 gate is now diagnosed through the current upstream ecosystem: upgrading to current `ts-jest` alone is insufficient because `ts-jest` 29.4.12 still excludes TypeScript 7, so the remaining work is to replace/decouple the Jest TypeScript transform and then validate the full TypeScript 7 toolchain. Real historical-profile upgrade validation and packaged-browser release-candidate checks remain open.
