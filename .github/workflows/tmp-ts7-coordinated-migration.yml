@@ -45,7 +45,23 @@ jobs:
           let jest = fs.readFileSync('jest.config.js', 'utf8');
           jest = jest.replace(/  \/\/ A set of global variables[\s\S]*?  },\n\n  \/\/ An array of directory names/, '  // An array of directory names');
           jest = jest.replace(/  \/\/ A preset that is used as a base for Jest's configuration\n  preset: 'ts-jest',\n\n/, '');
-          jest = jest.replace("    '^.+\\\\.tsx?$': 'ts-jest',", "    '^.+\\\\.tsx?$': [\n      '@swc/jest',\n      {\n        jsc: {\n          parser: { syntax: 'typescript', tsx: true },\n          transform: { react: { runtime: 'automatic' } },\n          target: 'es2017',\n        },\n        module: { type: 'commonjs' },\n        sourceMaps: 'inline',\n      },\n    ],");
+          const transformPattern = "    '^.+\\\\.tsx?$': 'ts-jest',";
+          const swcTransform = [
+            "    '^.+\\\\.tsx?$': [",
+            "      '@swc/jest',",
+            '      {',
+            '        jsc: {',
+            "          parser: { syntax: 'typescript', tsx: true },",
+            "          transform: { react: { runtime: 'automatic' } },",
+            "          target: 'es2017',",
+            '        },',
+            "        module: { type: 'commonjs' },",
+            "        sourceMaps: 'inline',",
+            '      },',
+            '    ],',
+          ].join('\n');
+          if (!jest.includes(transformPattern)) throw new Error('ts-jest transform pattern not found');
+          jest = jest.replace(transformPattern, swcTransform);
           if (jest.includes('ts-jest')) throw new Error('ts-jest configuration remained in jest.config.js');
           fs.writeFileSync('jest.config.js', jest);
           NODE
