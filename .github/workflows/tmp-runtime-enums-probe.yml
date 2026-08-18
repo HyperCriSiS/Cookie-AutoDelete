@@ -8,30 +8,197 @@ on:
       - .github/workflows/tmp-runtime-enums-probe.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  probe:
+  migrate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Show enum declarations and usage surface
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Convert selected ambient const enums to runtime-safe imports
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import os, re
+
+          enum_file = Path('src/typings/Enums.ts')
+          enum_text = enum_file.read_text()
+          additions = r'''
+
+export enum browserName {
+  Firefox = 'Firefox',
+  Chrome = 'Chrome',
+  Safari = 'Safari',
+  Opera = 'Opera',
+  IE = 'IE',
+  Edge = 'Edge',
+  EdgeChromium = 'EdgeChromium',
+  Blink = 'Blink',
+  Unknown = 'UnknownBrowser',
+}
+
+export enum SiteDataType {
+  CACHE = 'Cache',
+  INDEXEDDB = 'IndexedDB',
+  LOCALSTORAGE = 'LocalStorage',
+  PLUGINDATA = 'PluginData',
+  SERVICEWORKERS = 'ServiceWorkers',
+}
+
+export enum SettingID {
+  ACTIVE_MODE = 'activeMode',
+  CLEAN_DELAY = 'delayBeforeClean',
+  CLEAN_DISCARDED = 'discardedCleanup',
+  CLEAN_DOMAIN_CHANGE = 'domainChangeCleanup',
+  CLEAN_EXPIRED = 'cleanExpiredCookies',
+  CLEAN_OPEN_TABS_STARTUP = 'cleanCookiesFromOpenTabsOnStartup',
+  CLEANUP_CACHE = 'cacheCleanup',
+  CLEANUP_INDEXEDDB = 'indexedDBCleanup',
+  CLEANUP_LOCALSTORAGE = 'localStorageCleanup',
+  CLEANUP_LOCALSTORAGE_OLD = 'localstorageCleanup',
+  CLEANUP_PLUGINDATA = 'pluginDataCleanup',
+  CLEANUP_SERVICEWORKERS = 'serviceWorkersCleanup',
+  CONTEXT_MENUS = 'contextMenus',
+  CONTEXTUAL_IDENTITIES = 'contextualIdentities',
+  CONTEXTUAL_IDENTITIES_AUTOREMOVE = 'contextualIdentitiesAutoRemove',
+  DEBUG_MODE = 'debugMode',
+  ENABLE_GREYLIST = 'enableGreyListCleanup',
+  ENABLE_NEW_POPUP = 'enableNewVersionPopup',
+  KEEP_DEFAULT_ICON = 'keepDefaultIcon',
+  NOTIFY_AUTO = 'showNotificationAfterCleanup',
+  NOTIFY_MANUAL = 'manualNotifications',
+  NOTIFY_DURATION = 'notificationOnScreen',
+  NUM_COOKIES_ICON = 'showNumOfCookiesInIcon',
+  OLD_GREY_CLEAN_LOCALSTORAGE = 'greyCleanLocalstorage',
+  OLD_WHITE_CLEAN_LOCALSTORAGE = 'whiteCleanLocalstorage',
+  SITEDATA_EMPTY_ON_ENABLE = 'siteDataEmptyOnEnable',
+  SIZE_POPUP = 'sizePopup',
+  SIZE_SETTING = 'sizeSetting',
+  STAT_LOGGING = 'statLogging',
+}
+
+export enum ListType {
+  WHITE = 'WHITE',
+  GREY = 'GREY',
+}
+
+export enum ReasonClean {
+  StartupNoMatchedExpression = 'reasonCleanStartupNoList',
+  StartupCleanupAndGreyList = 'reasonCleanGreyList',
+  NoMatchedExpression = 'reasonCleanNoList',
+  MatchedExpressionButNoCookieName = 'reasonCleanCookieName',
+  ExpiredCookie = 'reasonCleanCookieExpired',
+  ExpiredCookieRestart = 'reasonCleanCookieExpiredRestart',
+  CADSiteDataCookie = 'reasonCADSiteDataCookie',
+  CADSiteDataCookieRestart = 'reasonCADSiteDataCookieRestart',
+}
+
+export enum OpenTabStatus {
+  TabsWasNotIgnored = 'reasonTabsWereNotIgnored',
+  TabsWereIgnored = 'reasonTabsWereIgnored',
+}
+'''
+          if 'export enum browserName' not in enum_text:
+              enum_file.write_text(enum_text.rstrip() + additions + '\n')
+
+          global_path = Path('src/typings/Global.d.ts')
+          global_text = global_path.read_text()
+          replacements = {
+              'browserName': "type browserName = import('./Enums').browserName;",
+              'SiteDataType': "type SiteDataType = import('./Enums').SiteDataType;",
+              'SettingID': "type SettingID = import('./Enums').SettingID;",
+              'ListType': "type ListType = import('./Enums').ListType;",
+          }
+          for name, repl in replacements.items():
+              pattern = rf'declare const enum {name} \{{.*?\n\}}'
+              global_text, count = re.subn(pattern, repl, global_text, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one ambient {name} declaration, found {count}')
+          global_path.write_text(global_text)
+
+          cleanup_path = Path('src/typings/Cleanup.d.ts')
+          cleanup_text = cleanup_path.read_text()
+          for name in ('ReasonClean', 'OpenTabStatus'):
+              repl = f"type {name} = import('./Enums').{name};"
+              pattern = rf'declare const enum {name} \{{.*?\n\}}'
+              cleanup_text, count = re.subn(pattern, repl, cleanup_text, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one ambient {name} declaration, found {count}')
+          cleanup_path.write_text(cleanup_text)
+
+          symbols = ('browserName', 'SiteDataType', 'SettingID', 'ListType', 'ReasonClean', 'OpenTabStatus')
+          enum_target = Path('src/typings/Enums.ts').resolve()
+
+          def insert_import(text: str, statement: str) -> str:
+              first_import = re.search(r'^import\s', text, flags=re.M)
+              if first_import:
+                  return text[:first_import.start()] + statement + '\n' + text[first_import.start():]
+              if text.startswith('/**') or text.startswith('/*'):
+                  end = text.find('*/')
+                  if end != -1:
+                      end += 2
+                      while end < len(text) and text[end] in '\r\n':
+                          end += 1
+                      return text[:end] + '\n\n' + statement + '\n' + text[end:]
+              return statement + '\n' + text
+
+          changed_files = []
+          for root in (Path('src'), Path('__tests__')):
+              if not root.exists():
+                  continue
+              for path in sorted(list(root.rglob('*.ts')) + list(root.rglob('*.tsx'))):
+                  if path.suffixes[-2:] == ['.d', '.ts'] or path.resolve() == enum_target:
+                      continue
+                  text = path.read_text()
+                  used = [s for s in symbols if re.search(rf'\b{s}\b', text)]
+                  if not used:
+                      continue
+                  rel = os.path.relpath(enum_target.with_suffix(''), path.parent.resolve()).replace(os.sep, '/')
+                  if not rel.startswith('.'):
+                      rel = './' + rel
+                  import_re = re.compile(rf"^import\s+\{{([^}}]+)\}}\s+from\s+['\"]{re.escape(rel)}['\"];?\s*$", re.M)
+                  match = import_re.search(text)
+                  if match:
+                      existing = [x.strip() for x in match.group(1).split(',')]
+                      names = sorted(set(existing + used))
+                      replacement = f"import {{ {', '.join(names)} }} from '{rel}';"
+                      text = text[:match.start()] + replacement + text[match.end():]
+                  else:
+                      statement = f"import {{ {', '.join(used)} }} from '{rel}';"
+                      text = insert_import(text, statement)
+                  path.write_text(text)
+                  changed_files.append(str(path))
+
+          print(f'Added explicit runtime enum imports to {len(changed_files)} source/test files')
+          print('\n'.join(changed_files))
+          PY
+      - name: Show migration diff
+        run: git diff --stat && git diff -- src/typings/Enums.ts src/typings/Global.d.ts src/typings/Cleanup.d.ts | sed -n '1,360p'
+      - name: Typecheck current compiler
+        run: npx tsc --noEmit
+      - name: Run Jest suite
+        run: npm test -- --runInBand
+      - name: Lint
+        run: npm run lint
+      - name: Build webpack bundle
+        run: npm run compile
+      - name: Typecheck with TypeScript 7
+        run: npx --yes --package=typescript@7.0.2 tsc --noEmit
+      - name: Verify clean patch
+        run: git diff --check
+      - name: Commit validated migration
         shell: bash
         run: |
           set -euo pipefail
-          echo '=== ambient const enum declarations ==='
-          grep -RIn --include='*.d.ts' 'declare const enum' src/typings || true
-          echo
-          echo '=== relevant files ==='
-          for file in src/typings/Global.d.ts src/typings/Cleanup.d.ts src/typings/Enums.ts __tests__/tsconfig.json tsconfig.json package.json; do
-            if [ -f "$file" ]; then
-              echo "--- $file ---"
-              sed -n '1,360p' "$file"
-            fi
-          done
-          echo
-          echo '=== usage files and matching lines (src + tests) ==='
-          for symbol in browserName SiteDataType SettingID ListType ReasonClean OpenTabStatus; do
-            echo "--- $symbol ---"
-            grep -RIn --include='*.ts' --include='*.tsx' --exclude='*.d.ts' -E "\\b${symbol}\\b" src __tests__ 2>/dev/null || true
-          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src __tests__
+          git commit -m 'refactor: make shared enums runtime-safe'
+          git push
