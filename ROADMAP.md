@@ -1,8 +1,8 @@
-# Cookie AutoDelete Roadmap
+# Cookie AutoDelete Modernization Roadmap
 
 ## Project goal
 
-Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension while preserving established cleanup behavior, user data/settings, UI compatibility and project attribution.
+Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension while preserving existing cleanup semantics, user data, privacy behavior, Firefox-specific capabilities and Chromium compatibility. Changes must remain attributable, testable and reversible; dependency/toolchain major upgrades are integrated only after compatibility has been demonstrated.
 
 ## Current status
 
@@ -10,75 +10,69 @@ Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension wh
 
 Active modernization work is on `modernization-p0`, tracked by draft PR #1 into `3.X.X-Branch`. The branch is the integration and validation branch for the modernization effort and is not yet release-ready.
 
-Regular functional CI on the validated modernization heads is green (`Initial Checks`, `Tests, Builds, Coverage`, CodeQL and JavaScript/TypeScript/Actions analysis where reported). The separate `github-advanced-security` agent still fails before repository analysis because the GitHub-hosted agent requests an unsupported model; this is classified as an external GitHub service/configuration problem rather than a functional repository defect.
+Regular functional CI has been green on validated modernization heads (`Initial Checks`, `Tests, Builds, Coverage`, CodeQL and JavaScript/TypeScript/Actions analysis where reported). The separate `github-advanced-security` agent can fail before repository analysis because the GitHub-hosted agent requests an unsupported model; this is classified as an external GitHub service/configuration problem rather than a functional repository defect.
 
-There are currently no repository issues and no fork releases. Several Dependabot PRs remain open and require compatibility review rather than automatic merging.
+There are currently no repository issues and no fork releases. Remaining Dependabot updates require compatibility review rather than automatic merging.
 
 ## Phase 0 — Manifest V3 modernization foundation
 
 - [x] Add Manifest V3 build/manifest foundations for Chromium and Firefox.
 - [x] Make background lifecycle and listener registration service-worker-safe.
-- [x] Add browser-action abstraction for cross-browser runtime differences.
-- [x] Replace timer-dependent transient state with persistence/session-backed state where required by MV3 lifecycle constraints.
-- [x] Correct cleanup result accounting, including failed cookie-removal operations.
-- [x] Migrate injected-script usage to the MV3 scripting API.
-- [x] Replace runtime `redux-webext` dependency with local StoreBridge/UIStore infrastructure.
-- [x] Add reproducible browser-specific build staging and package validation.
-- [x] Restore the hardened validation workflow after P0 repair work.
-- [x] Preserve the legacy popup during the MV3 migration.
+- [x] Add session-backed state persistence needed for MV3 worker restart behavior.
+- [x] Introduce StoreBridge/UIStore synchronization for extension UI state.
+- [x] Preserve cleanup/list behavior across the initial MV3 migration.
 - [x] Fix the legacy settings migration payload shape.
 - [x] Preserve existing author, contributor, license, support, donation and project-origin information unless explicitly reviewed separately.
 
-## Phase 1 — functional CI stabilization
+## Phase 1 — functional stabilization and CI
 
-- [x] Repair the malformed Jest assertion introduced during P0 work.
-- [x] Repair the incomplete `otherBrowsingDataCleanup(...)` test call.
+- [x] Keep Initial Checks green on validated modernization heads.
+- [x] Repair malformed/incomplete Jest assertions and cleanup-test calls introduced during P0 work.
 - [x] Align the legacy Firefox cleanup success-path test with the production contract that only browser-confirmed removals count.
-- [x] Restore a clean functional test/build matrix.
-- [x] Keep CodeQL / JavaScript-TypeScript / Actions analysis green where reported on the validated modernization head.
-- [x] Classify the separate `github-advanced-security` failure as external GitHub infrastructure/configuration: the job aborts before repository analysis because the requested model is unsupported.
+- [x] Restore a clean functional test/build matrix and keep CodeQL / JavaScript-TypeScript / Actions analysis green where reported.
+- [x] Classify the separate `github-advanced-security` failure as external GitHub infrastructure/configuration because it aborts before repository analysis.
 
 ## Phase 2 — migration and behavioral compatibility
 
-- [x] Validate the Firefox legacy-profile activation path without destructive cleanup.
+- [x] Preserve non-destructive upgrades when older persisted profiles lack settings introduced by newer versions.
+- [x] Guard staged legacy-profile upgrades while later-introduced site-data cleanup settings are still absent.
+- [x] Validate Firefox legacy-profile activation with a later-introduced cleanup setting missing without destructive cleanup.
 - [x] Validate the equivalent Chromium legacy-profile activation path without destructive cleanup.
 - [x] Normalize legacy persisted settings before later-added keys are consumed while retaining the pre-normalization snapshot for side-effect comparisons.
-- [x] Exercise persisted allowlist/greylist restoration through `StatePersistence` → `parsePersistedState()` → `createStore()` across a simulated service-worker restart.
-- [x] Verify persisted cleanup-policy settings (`ACTIVE_MODE`, `ENABLE_GREYLIST`, `CLEAN_OPEN_TABS_STARTUP`) survive a persisted-state restart.
-- [x] Add synthetic representative older Firefox/Chromium settings-profile regression coverage, preserving custom values while filling later-added defaults.
+- [x] Add broader synthetic regression coverage for representative older Firefox/Chromium settings structures while preserving existing custom values.
 - [ ] Validate upgrades from real representative historical Cookie AutoDelete Firefox and Chromium profile/settings exports without destructive resets or silent data loss.
-  - Blocked until representative historical exports are available as fixtures; synthetic legacy-profile coverage is already present but does not replace this release-gate check.
-- [x] Verify allowlist/greylist matching semantics after StoreBridge/UIStore migration, including wildcard/subdomain, exact greylist and container-isolation cases.
+- [x] Verify allowlist/greylist matching semantics after StoreBridge/UIStore migration, including wildcard/subdomain, exact greylist and container-sensitive cases.
 - [x] Verify cleanup behavior on tab close, domain change and browser restart for supported policy combinations.
-- [x] Verify session/transient-state restoration across realistic MV3 service-worker module restart by discarding module state while preserving `browser.storage.session`.
-- [x] Verify popup/options state synchronization, including UIStore reconnect/hydration after background-worker loss and generated Firefox/Chromium entry surfaces.
-- [x] Verify container/contextual-identity behavior where the browser exposes the required APIs, including capability gating when unavailable.
-- [x] Add regression tests for every migration/runtime defect found during this compatibility pass.
-  - [x] Audit modernization/runtime fix history against explicit tests.
-  - [x] Add and validate explicit coverage for the legacy Chromium 60-second cleanup-alarm threshold.
+- [x] Verify persisted allowlist/greylist and cleanup-policy settings survive `StatePersistence` → `parsePersistedState()` → `createStore()` restart.
+- [x] Verify session/transient tab-domain state restores across a realistic simulated MV3 service-worker module restart and still triggers the expected cleanup.
+- [x] Verify popup/options state synchronization and reconnect behavior, including generated Firefox/Chromium manifest entry points.
+- [x] Verify container/contextual-identity behavior is capability-gated and functions where the browser exposes the required APIs.
+- [x] Audit migration/runtime defects found during the compatibility pass for explicit regression coverage; add the previously missing legacy Chromium 60-second alarm-threshold regression.
 
 ## Phase 3 — dependency and build modernization
 
+- [x] Review and synchronize dependency updates that were independently validated against the modernization branch instead of blindly merging Dependabot branches.
+- [x] Update verified GitHub Actions dependencies used by modernization workflows.
 - [x] Migrate packaging to Archiver 8 using its ESM `ZipArchive` API while preserving Firefox/Chromium packaging behavior.
 - [x] Migrate the Redux stack to Redux 5 / Redux Thunk 3 / React-Redux 8 while retaining React 17 and adapting imports/types required by the new APIs.
 - [x] Remove obsolete runtime `redux-webext` and redundant Redux type packages as part of the validated Redux migration.
-- [ ] Evaluate and migrate to TypeScript 7 only through the modernization branch with full install/test/build validation; do not merge the open major-version Dependabot PR directly.
-  - [x] Inspect Dependabot PR #7 (`typescript` 4.9.4 → 7.0.2): it is based on `3.X.X-Branch`, not the current `modernization-p0` integration head.
-  - [x] Confirm PR #7 does not provide a usable compatibility proof: both `Tests, Builds, Coverage` checks fail during `npm ci` before tests, lint or builds run; `Initial Checks` pass.
-  - [x] Identify the concrete install-time blocker from PR #7 CI: `ts-jest@26.5.6` declares peer `typescript >=3.8 <5.0`, so npm rejects `typescript@7.0.2` with `ERESOLVE`. `ts-loader@9.4.2` itself accepts `typescript@*` and is not the immediate peer conflict.
-  - [x] Verify the current upstream `ts-jest` line is still not TypeScript-7-compatible: upstream `ts-jest` 29.4.12 declares peer `typescript >=4.3 <7` even while supporting Jest 29/30, so merely upgrading Jest/`ts-jest` cannot satisfy the TypeScript 7 gate.
-  - [x] Prove an isolated `modernization-p0` dependency probe can remove `ts-jest` and install `typescript@7.0.2`, `@swc/core@1.16.0` and `@swc/jest@0.2.39` without `--force` or `--legacy-peer-deps`; the former npm peer-install blocker is therefore avoidable by decoupling Jest transpilation from `ts-jest`.
-  - [x] Identify the first TypeScript 7 compiler-config incompatibility: the existing `moduleResolution: "node"` is interpreted as removed `node10` behavior and fails with TS5108, so the TypeScript 7 migration must update/remove that legacy compiler setting.
-  - [x] Identify why a plain SWC Jest transform is not behaviorally equivalent to the current compiler-backed transform: `src/typings/Global.d.ts` exposes `browserName`, `SiteDataType`, `SettingID` and `ListType` as ambient `declare const enum` values that depend on whole-program TypeScript inlining. The isolated SWC probe therefore reached Jest but produced runtime `ReferenceError`s and failed 27 of 36 suites (9 passed).
-  - [x] Probe TypeScript 7 whole-program compilation with `module`/`moduleResolution` moved to `Node16`: this clears the former TS5108 configuration gate but exposes broad type-ecosystem incompatibilities before emitted tests can be used. The dominant failures are stale WebExtension declarations (`browser.runtime`, `browser.tabs`, `browser.cookies`, `browser.i18n`, contextual identities) plus React/Redux declaration incompatibilities; a few stricter application-level TS7 errors also surface.
-  - [x] Identify the actual browser-typing source and exhaust the in-place upgrade path: the project uses `web-ext-types` through `typeRoots`, not `@types/firefox-webext-browser`; `web-ext-types@3.2.1` is already the latest published version. Adding current `@types/firefox-webext-browser` plus latest React-17/ReactDOM-17 typings does not repair the TS7 compile and instead leaves the browser namespace broadly incomplete under the current declaration setup.
-  - [x] Confirm the remaining UI declaration failure is not solved by React-17 type-only updates: `react-redux@8.1.3` with `redux@5.0.1` still produces `Action<unknown>` versus `Action<string>` generic-constraint errors under TypeScript 7, so this requires a coordinated React-Redux declaration/runtime-compatible update or targeted migration rather than another redundant `@types/react-redux` package.
-  - [ ] Replace or adapt the `web-ext-types@3.2.1` declaration layer with a maintained TypeScript-7-compatible WebExtension typing strategy while preserving Firefox-specific APIs such as contextual identities and cross-browser namespaces.
+- [ ] Complete the coordinated TypeScript 7 migration; do not merge the open major-version Dependabot PR directly without compatibility work.
+  - [x] Confirm direct TypeScript 7 installation is blocked by legacy `ts-jest@26.5.6` peer constraints rather than application code.
+  - [x] Confirm current upstream `ts-jest` still excludes TypeScript 7, so a plain `ts-jest` upgrade is not a viable TS7 path.
+  - [x] Confirm TypeScript 7 can be installed with a compiler-independent Jest transform such as SWC without `--force` or `--legacy-peer-deps`.
+  - [x] Identify the old `moduleResolution: "node"` / removed `node10` behavior as the first compiler-config gate and prove modern module-resolution settings progress beyond it.
+  - [x] Identify why a plain SWC Jest transform is not behaviorally equivalent: ambient `declare const enum` globals (`browserName`, `SiteDataType`, `SettingID`, `ListType`, `ReasonClean`, `OpenTabStatus`) depend on TypeScript whole-program inlining.
+  - [x] Probe TypeScript 7 whole-program compilation after clearing the module-resolution gate and isolate stale declaration-ecosystem failures from stricter application-level errors.
+  - [x] Confirm `web-ext-types@3.2.1` is the browser-typing source currently used through `typeRoots` and that its published upgrade path is exhausted.
+  - [x] Confirm React-17 type-only updates do not solve the `react-redux@8.1.3` / `redux@5.0.1` TypeScript-7 `Action<unknown>` vs. `Action<string>` declaration mismatch.
+  - [x] Probe `@types/firefox-webext-browser` under TypeScript 7 with the legacy `src/typings/Webext.d.ts` removed. The maintained declarations cover the required Firefox namespaces, including contextual identities, but are not a drop-in replacement. Remaining browser-specific compile gaps are limited to compatibility-name/shape differences such as `tabs.TabChangeInfo`, `cookies.CookieProperties`, `cookies.CookiePartitionKey` (maintained type: `PartitionKey`), contextual-identity change-info naming, legacy `Tab.selected`, and cookie `firstPartyDomain` expectations.
+  - [ ] Replace/adapt `web-ext-types@3.2.1` using `@types/firefox-webext-browser` as the maintained base plus the smallest explicit local compatibility augmentation needed by Cookie AutoDelete; preserve Firefox-specific APIs and cross-browser behavior rather than reintroducing the old broad declaration file.
   - [ ] Resolve the `react-redux@8.1.3` / `redux@5.0.1` TypeScript-7 declaration incompatibility without unnecessarily changing the React 17 runtime major, then re-run the whole-program compile to isolate real application typing defects.
-  - [ ] Replace the ambient global `declare const enum` dependency with explicit importable runtime-safe constants/enums, or choose a TypeScript-7-compatible Jest transform that preserves equivalent whole-program semantics; do not mask the problem with test-only globals. The ambient enum scope also includes `ReasonClean` and `OpenTabStatus`, so the fix must cover all ambient const-enum globals rather than only the four names first exposed by the SWC probe.
-  - [ ] Remove obsolete `ts-jest`-specific Jest configuration when the replacement transform is selected, then commit the coordinated TypeScript 7 dependency/configuration changes and regenerate the lockfile.
+  - [ ] Replace the ambient global `declare const enum` dependency with explicit importable runtime-safe constants/enums, or choose a TypeScript-7-compatible Jest transform that preserves equivalent whole-program semantics; do not mask the problem with test-only globals.
+  - [ ] Modernize the Jest/type declarations needed for TS7 rather than relying on the Jest-26-era `NodeJS.Global` typings exposed by the isolated probe.
+  - [ ] Remove obsolete `ts-jest`-specific Jest configuration when the replacement transform is selected, commit the coordinated TypeScript 7 dependency/configuration changes and regenerate the lockfile.
   - [ ] Run the complete tests, lint, typecheck, Firefox/Chromium build and package-validation matrix on the committed TypeScript 7 toolchain and fix all resulting compatibility defects before marking the migration complete.
-- [ ] Review the remaining open Dependabot updates (`form-data`, `tough-cookie`, grouped npm updates) individually and integrate only those proven compatible.
+- [ ] Review remaining open Dependabot updates individually and integrate only those proven compatible.
 - [ ] Re-check generated Firefox and Chromium package contents after all remaining dependency/toolchain migrations.
 
 ## Phase 4 — release readiness
@@ -93,11 +87,11 @@ There are currently no repository issues and no fork releases. Several Dependabo
 
 ## Blockers / dependencies
 
-- Real historical Firefox/Chromium profile exports are not present as repository fixtures, so the real-world upgrade-path release gate cannot yet be marked complete.
-- TypeScript 7 is no longer blocked by npm peer resolution or the old `moduleResolution=node10` setting once the planned toolchain changes are made. The current declaration gates are now concrete: `web-ext-types@3.2.1` is already the latest published browser-typing package used by this project but does not provide a viable TS7 path in the present setup, and `react-redux@8.1.3` with Redux 5 exposes generic-constraint errors under TS7. A compiler-independent SWC transform also remains non-equivalent because the codebase relies on ambient `declare const enum` inlining (`browserName`, `SiteDataType`, `SettingID`, `ListType`, `ReasonClean`, `OpenTabStatus`).
-- The separate GitHub Advanced Security agent fails before repository analysis because its requested hosted model is unsupported. This is external to the codebase and does not currently block functional modernization work.
+- Real historical Firefox/Chromium profile or settings exports are not present as repository fixtures, so the real-world upgrade-path release gate cannot yet be marked complete.
+- TypeScript 7 is no longer blocked by npm peer resolution, the removed legacy module-resolution setting, or lack of a maintained WebExtension typing base. `@types/firefox-webext-browser` reaches whole-program compilation once the legacy WebExtension declarations are removed, but requires a narrow Cookie AutoDelete compatibility augmentation for several legacy type names/shapes. The separate React-Redux/Redux generic-constraint errors, Jest-26-era declaration incompatibilities and ambient `declare const enum`/Jest-transform dependency remain open engineering work.
+- The separate GitHub Advanced Security agent can fail before repository analysis because its requested hosted model is unsupported. This is external to the codebase and does not currently block functional modernization work.
 - Manual packaged-browser validation remains required before release readiness can be claimed.
 
 ## Completion status
 
-**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization and the automated migration/runtime compatibility pass are complete. TypeScript 7 now has an explicit migration path rather than an unresolved install problem: replace/adapt the already-current `web-ext-types` declaration layer, resolve the React-Redux/Redux TS7 declaration mismatch, then remove the ambient const-enum/Jest-transform dependency and address remaining stricter application errors. Real historical-profile upgrade validation and packaged-browser release-candidate checks remain open.
+**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization and the automated migration/runtime compatibility pass are complete. TypeScript 7 now has a verified WebExtension typing direction: use `@types/firefox-webext-browser` as the maintained base and add only the narrow compatibility layer required by Cookie AutoDelete, then resolve the React-Redux/Redux mismatch, Jest/type-declaration modernization, ambient const-enum/Jest-transform dependency and remaining stricter application errors. Real historical-profile upgrade validation and packaged-browser release-candidate checks remain open.
