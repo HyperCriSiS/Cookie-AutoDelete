@@ -24,9 +24,13 @@ jobs:
           npm install --save-dev typescript@7.0.2 @swc/core@latest @swc/jest@latest
           sed -i "s/'ts-jest'/'@swc\\/jest'/g; s/\"ts-jest\"/\"@swc\\/jest\"/g" jest.config.js
           sed -i "/^[[:space:]]*preset: '@swc\/jest',[[:space:]]*$/d" jest.config.js
-          echo '--- transformed config ---'
-          grep -n "swc\|ts-jest\|preset\|transform" jest.config.js || true
+          echo '--- enum declarations ---'
+          cat src/typings/Enums.ts
+          echo '--- relevant jest config ---'
+          grep -n -B3 -A8 "swc\|ts-jest\|preset\|transform" jest.config.js || true
           echo '--- package versions ---'
           npm ls typescript @swc/core @swc/jest jest ts-jest @typescript-eslint/parser @typescript-eslint/eslint-plugin ts-loader || true
+      - name: Typecheck with TypeScript 7
+        run: npx tsc --noEmit
       - name: Run tests
         run: npm test -- --runInBand
