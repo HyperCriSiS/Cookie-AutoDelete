@@ -1,4 +1,4 @@
-name: Temporary roadmap update
+name: Temporary roadmap inspection
 
 on:
   push:
@@ -8,43 +8,14 @@ on:
       - .github/workflows/ts7-typing-inspect.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  update-roadmap:
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: modernization-p0
-          fetch-depth: 0
-      - name: Record validated WebExtension typing findings
+      - name: Show TS7 roadmap section
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('ROADMAP.md')
-          text = path.read_text()
-          anchor = "- [ ] Replace/adapt `web-ext-types@3.2.1` using `@types/firefox-webext-browser` as maintained base plus the smallest explicit local compatibility augmentation"
-          idx = text.find(anchor)
-          if idx < 0:
-              raise SystemExit('Roadmap anchor not found')
-          line_end = text.find('\n', idx)
-          insert_at = line_end + 1
-          addition = (
-              "  - [x] Validate the minimal compatibility-layer shape against the maintained Firefox typings: `CookiePartitionKey` can alias `PartitionKey`, `TabChangeInfo` can extend `_OnUpdatedChangeInfo`, legacy `Tab.selected` and contextual-identity change-info need only small local augmentations, and the generic event helper can be expressed structurally without retaining `web-ext-types`.\n"
-              "  - [ ] Retype CAD-internal cookie paths and representative fixtures to the project cross-browser cookie shape so Chromium cookies may omit `firstPartyDomain`; then rerun webpack/tests before committing the dependency swap.\n"
-          )
-          if "Validate the minimal compatibility-layer shape" not in text:
-              text = text[:insert_at] + addition + text[insert_at:]
-              path.write_text(text)
-          PY
-          git config user.name "HyperCriSiS"
-          git config user.email "dev.github@w3b.world"
-          git add ROADMAP.md
-          if git diff --cached --quiet; then
-            echo 'No roadmap change needed.'
-            exit 0
-          fi
-          git commit -m "docs: record WebExtension typing compatibility gate"
-          git push origin HEAD:modernization-p0
+          grep -n -A35 -B8 'web-ext-types\|TypeScript 7\|firefox-webext-browser' ROADMAP.md | head -160 || true
