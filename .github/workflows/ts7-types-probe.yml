@@ -19,18 +19,15 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Probe modern web-ext-types with TypeScript 7
+      - name: Probe current browser and React 17 typings with TypeScript 7
         shell: bash
         run: |
           set -euxo pipefail
           echo "latest web-ext-types: $(npm view web-ext-types version)"
-          npm view web-ext-types@latest engines --json || true
           npm ci
           npm pkg delete devDependencies.ts-jest
           npm install --no-save --package-lock=false typescript@7.0.2 web-ext-types@latest @types/react@17.0.93 @types/react-dom@17.0.26
-          node -e "console.log('web-ext-types probe:', require('./node_modules/web-ext-types/package.json').version)"
-          node -e "console.log('typescript probe:', require('./node_modules/typescript/package.json').version)"
-          npx tsc --noEmit --module commonjs --moduleResolution node16 --pretty false 2>&1 | tee /tmp/ts7.log
+          npx tsc --noEmit --module Node16 --moduleResolution Node16 --pretty false 2>&1 | tee /tmp/ts7.log
           status=${PIPESTATUS[0]}
           echo "TS7_ERROR_COUNT=$(grep -c 'error TS' /tmp/ts7.log || true)"
           echo '--- top error files ---'
