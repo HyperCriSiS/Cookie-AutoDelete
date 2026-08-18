@@ -1,0 +1,47 @@
+name: TS7 Browser Types Probe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Inspect current TypeScript configuration
+        run: |
+          echo '--- tsconfig files ---'
+          find . -maxdepth 3 -name 'tsconfig*.json' -print
+          echo '--- browser typing references ---'
+          grep -R "web-ext-types\|firefox-webext\|typeRoots\|types" -n tsconfig*.json src/typings package.json 2>/dev/null || true
+      - name: Install TS7 probe dependencies without mutating lockfile
+        run: |
+          npm ci --legacy-peer-deps
+          npm install --no-save --legacy-peer-deps typescript@7.0.2 @types/firefox-webext-browser@latest
+      - name: Probe Firefox WebExtension typings with TS7
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'tsconfig.json';
+          const cfg = JSON.parse(fs.readFileSync(path, 'utf8'));
+          cfg.compilerOptions ||= {};
+          cfg.compilerOptions.module = 'Node16';
+          cfg.compilerOptions.moduleResolution = 'Node16';
+          const roots = cfg.compilerOptions.typeRoots || [];
+          cfg.compilerOptions.typeRoots = [...new Set(['./node_modules/@types', './src/typings', ...roots.filter(r => !r.includes('web-ext-types'))])];
+          fs.writeFileSync('/tmp/tsconfig.ts7-browser.json', JSON.stringify(cfg, null, 2));
+          console.log(JSON.stringify(cfg.compilerOptions, null, 2));
+          NODE
+          ./node_modules/.bin/tsc -p /tmp/tsconfig.ts7-browser.json --noEmit 2>&1 | tee /tmp/ts7-browser.log
+        continue-on-error: true
+      - name: Summarize probe
+        if: always()
+        run: |
+          echo '--- first 200 TypeScript diagnostics ---'
+          sed -n '1,200p' /tmp/ts7-browser.log 2>/dev/null || true
+          echo '--- browser/contextual identity diagnostics ---'
+          grep -Ei 'browser\.|contextual|cookieStore|webextension|firefox' /tmp/ts7-browser.log 2>/dev/null | head -100 || true
