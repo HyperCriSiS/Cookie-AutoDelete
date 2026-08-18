@@ -1,4 +1,4 @@
-name: Temporary TS7 typing inspection
+name: Temporary TS7 typing probe
 
 on:
   push:
@@ -11,18 +11,73 @@ permissions:
   contents: read
 
 jobs:
-  inspect:
+  probe:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Show relevant configuration
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Replace legacy WebExtension type package in workspace
         shell: bash
         run: |
-          echo '=== package.json ==='
-          cat package.json
-          echo '=== src/typings/Webext.d.ts ==='
-          cat src/typings/Webext.d.ts
-          echo '=== tsconfig.json ==='
-          cat tsconfig.json
-          echo '=== jest config references ==='
-          grep -R "ts-jest\|Webext.d.ts\|web-ext-types" -n --exclude-dir=node_modules . | head -200 || true
+          npm uninstall --save-dev web-ext-types
+          npm install --save-dev @types/firefox-webext-browser
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tsconfig.json')
+          s = p.read_text()
+          s = s.replace('      "node_modules/web-ext-types",\n', '')
+          p.write_text(s)
+          Path('src/typings/Webext.d.ts').write_text(r'''/* eslint-disable @typescript-eslint/no-unused-vars */
+/**
+ * Compatibility additions used by Cookie AutoDelete on top of
+ * @types/firefox-webext-browser.
+ */
+
+declare namespace browser.cookies {
+  type CookiePartitionKey = PartitionKey;
+
+  interface Cookie {
+    firstPartyDomain?: string;
+  }
+
+  interface CookieProperties extends Cookie {
+    firstPartyDomain?: string;
+  }
+
+  type OptionalCookieProperties = Partial<CookieProperties>;
+}
+
+declare namespace browser.contextualIdentities {
+  type contextualIdentitiesChangeInfo = {
+    contextualIdentity: ContextualIdentity;
+  };
+}
+
+declare namespace browser.tabs {
+  type TabChangeInfo = OnUpdatedChangeInfoType;
+
+  interface Tab {
+    selected?: boolean;
+  }
+}
+''')
+          PY
+          echo '=== dependency diff ==='
+          git diff -- package.json package-lock.json tsconfig.json src/typings/Webext.d.ts
+      - name: Typecheck with existing TypeScript
+        shell: bash
+        run: npx tsc --noEmit
+      - name: Run existing validation
+        shell: bash
+        run: |
+          npm run lint
+          npm test -- --runInBand
+          npm run build
+      - name: Show legacy compatibility symbol usage
+        if: always()
+        shell: bash
+        run: |
+          grep -R "EvListener\|CookiePartitionKey\|TabChangeInfo\|CookieProperties\|firstPartyDomain\|\.selected" -n src --include='*.ts' --include='*.tsx' | head -300 || true
