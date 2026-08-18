@@ -1,3 +1,4 @@
+import { browserName } from '../../src/typings/Enums';
 import {
   cookiePartitionDetails,
   getAllCookiesIncludingPartitions,

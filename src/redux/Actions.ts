@@ -11,6 +11,7 @@
  * SOFTWARE.
  */
 
+import { SiteDataType, SettingID, ListType } from '../typings/Enums';
 import { ActionCreator, Dispatch } from 'redux';
 import { ThunkAction } from 'redux-thunk';
 import { checkIfProtected } from '../services/BrowserActionService';

@@ -1,3 +1,4 @@
+import { ListType } from '../../src/typings/Enums';
 import { expressions } from '../../src/redux/Reducers';
 import { ReduxConstants } from '../../src/typings/ReduxConstants';
 

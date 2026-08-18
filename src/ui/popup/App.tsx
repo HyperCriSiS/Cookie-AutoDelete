@@ -32,7 +32,7 @@ import {
 import {
   getAllCookiesForDomainIncludingPartitions,
 } from '../../services/CookieDomainService';
-import { FilterOptions } from '../../typings/Enums';
+import { FilterOptions, ListType, SettingID } from '../../typings/Enums';
 import { ReduxAction } from '../../typings/ReduxConstants';
 import ActivityTable from '../common_components/ActivityTable';
 import IconButton from '../common_components/IconButton';

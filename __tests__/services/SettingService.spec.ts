@@ -11,6 +11,7 @@
  * SOFTWARE.
  */
 
+import { browserName, SettingID } from '../../src/typings/Enums';
 import { when } from 'jest-when';
 import { Store } from 'redux';
 import { initialState } from '../../src/redux/State';

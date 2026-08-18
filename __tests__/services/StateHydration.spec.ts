@@ -1,3 +1,4 @@
+import { ListType } from '../../src/typings/Enums';
 import { initialState } from '../../src/redux/State';
 import { parsePersistedState } from '../../src/services/StateHydration';
 

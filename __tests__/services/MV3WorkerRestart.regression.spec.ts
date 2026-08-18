@@ -5,6 +5,9 @@
  * (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/blob/3.X.X-Branch/LICENSE)
  */
 
+
+
+import { SettingID } from '../../src/typings/Enums';
 const makeTab = (url: string): browser.tabs.Tab => ({
   active: true,
   discarded: false,

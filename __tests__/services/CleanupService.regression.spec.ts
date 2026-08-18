@@ -1,3 +1,4 @@
+import { browserName, SiteDataType, ReasonClean, OpenTabStatus } from '../../src/typings/Enums';
 import { when } from 'jest-when';
 
 import { initialState } from '../../src/redux/State';

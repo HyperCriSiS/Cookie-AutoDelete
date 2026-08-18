@@ -2,6 +2,7 @@
  * Regression coverage for representative persisted legacy profiles.
  */
 
+import { browserName, SettingID } from '../../src/typings/Enums';
 import { validateSettings } from '../../src/redux/Actions';
 import { initialState } from '../../src/redux/State';
 // tslint:disable-next-line: import-name

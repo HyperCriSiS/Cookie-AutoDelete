@@ -1,3 +1,4 @@
+import { SettingID } from '../../src/typings/Enums';
 import StatePersistence from '../../src/services/StatePersistence';
 import { parsePersistedState } from '../../src/services/StateHydration';
 import createStore from '../../src/redux/Store';

@@ -11,6 +11,7 @@
  * SOFTWARE.
  */
 
+import { SettingID } from '../typings/Enums';
 import { generateId } from './IdService';
 import {
   getAllCookiesForDomainIncludingPartitions,

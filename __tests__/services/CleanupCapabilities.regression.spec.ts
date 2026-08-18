@@ -1,3 +1,4 @@
+import { browserName, SiteDataType, SettingID } from '../../src/typings/Enums';
 import { initialState } from '../../src/redux/State';
 import {
   otherBrowsingDataCleanup,

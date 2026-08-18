@@ -10,6 +10,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { SettingID } from '../../typings/Enums';
 import { Component } from 'react';
 import { connect } from 'react-redux';
 import ErrorBoundary from '../common_components/ErrorBoundary';

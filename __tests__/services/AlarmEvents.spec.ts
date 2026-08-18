@@ -3,6 +3,7 @@
  * Licensed under MIT (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/blob/3.X.X-Branch/LICENSE)
  */
 
+import { SettingID } from '../../src/typings/Enums';
 import { Store } from 'redux';
 import { when } from 'jest-when';
 import * as Actions from '../../src/redux/Actions';

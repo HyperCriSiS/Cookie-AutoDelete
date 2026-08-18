@@ -11,6 +11,7 @@
  * SOFTWARE.
  */
 
+import { SettingID, ListType } from '../../src/typings/Enums';
 import { when } from 'jest-when';
 import { Store } from 'redux';
 

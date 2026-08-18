@@ -11,6 +11,7 @@
  * SOFTWARE.
  */
 
+import { browserName, SiteDataType, SettingID, ListType, ReasonClean, OpenTabStatus } from '../typings/Enums';
 import {
   getStorageTypeSupport,
   usesBrowsingDataOrigins,

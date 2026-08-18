@@ -8,6 +8,7 @@
  * legacy Libs helper remains available while older tests are migrated.
  */
 
+import { SettingID } from '../typings/Enums';
 import { getAllCookiesIncludingPartitions } from './CookieApi';
 import {
   cadLog,

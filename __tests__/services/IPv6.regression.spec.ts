@@ -1,3 +1,4 @@
+import { browserName, ListType } from '../../src/typings/Enums';
 import {
   extractMainDomain,
   getMatchedExpressions,

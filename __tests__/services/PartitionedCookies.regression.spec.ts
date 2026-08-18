@@ -1,3 +1,4 @@
+import { ReasonClean, OpenTabStatus } from '../../src/typings/Enums';
 import { initialState } from '../../src/redux/State';
 import { cleanCookies } from '../../src/services/CleanupService';
 

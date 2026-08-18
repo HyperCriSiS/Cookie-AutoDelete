@@ -1,3 +1,4 @@
+import { browserName, SettingID } from '../../src/typings/Enums';
 import StoreUser from '../../src/services/StoreUser';
 import {
   handleStoreConnection,

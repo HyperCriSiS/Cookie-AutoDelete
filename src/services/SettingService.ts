@@ -11,6 +11,7 @@
  * SOFTWARE.
  */
 
+import { SiteDataType, SettingID } from '../typings/Enums';
 import StoreUser from './StoreUser';
 import ContextualIdentitiesEvents from './ContextualIdentitiesEvents';
 import { validateSettings } from '../redux/Actions';

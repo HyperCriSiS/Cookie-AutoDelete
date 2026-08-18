@@ -37,21 +37,9 @@ declare const enum ReasonKeep {
   MatchedExpression = 'reasonKeep',
 }
 
-declare const enum ReasonClean {
-  StartupNoMatchedExpression = 'reasonCleanStartupNoList',
-  StartupCleanupAndGreyList = 'reasonCleanGreyList',
-  NoMatchedExpression = 'reasonCleanNoList',
-  MatchedExpressionButNoCookieName = 'reasonCleanCookieName',
-  ExpiredCookie = 'reasonCleanCookieExpired',
-  ExpiredCookieRestart = 'reasonCleanCookieExpiredRestart',
-  CADSiteDataCookie = 'reasonCADSiteDataCookie',
-  CADSiteDataCookieRestart = 'reasonCADSiteDataCookieRestart'
-}
+type ReasonClean = import('./Enums').ReasonClean;
 
-declare const enum OpenTabStatus {
-  TabsWasNotIgnored = 'reasonTabsWereNotIgnored',
-  TabsWereIgnored = 'reasonTabsWereIgnored',
-}
+type OpenTabStatus = import('./Enums').OpenTabStatus;
 
 interface CleanReasonObject {
   cached: boolean;

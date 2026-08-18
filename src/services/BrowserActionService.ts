@@ -11,6 +11,7 @@
  * SOFTWARE.
  */
 
+import { SettingID, ListType } from '../typings/Enums';
 import { getHostname, returnMatchedExpressionObject } from './Libs';
 import { actionApi } from './BrowserApi';
 

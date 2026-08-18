@@ -20,17 +20,7 @@ declare const browserDetect: () => browserName;
 /**
  * This only works if browserDetect function doesn't change its return method/string.
  */
-declare const enum browserName {
-  Firefox = 'Firefox',
-  Chrome = 'Chrome',
-  Safari = 'Safari',
-  Opera = 'Opera',
-  IE = 'IE',
-  Edge = 'Edge',
-  EdgeChromium = 'EdgeChromium',
-  Blink = 'Blink',
-  Unknown = 'UnknownBrowser',
-}
+type browserName = import('./Enums').browserName;
 
 type StoreIdToExpressionList = Readonly<{
   [storeId: string]: ReadonlyArray<Expression>;
@@ -65,13 +55,7 @@ type Expression = Readonly<{
   cookieNames?: string[];
 }>;
 
-declare const enum SiteDataType {
-  CACHE = 'Cache',
-  INDEXEDDB = 'IndexedDB',
-  LOCALSTORAGE = 'LocalStorage',
-  PLUGINDATA = 'PluginData',
-  SERVICEWORKERS = 'ServiceWorkers',
-}
+type SiteDataType = import('./Enums').SiteDataType;
 
 type Setting = Readonly<{
   id?: string | number;
@@ -79,42 +63,9 @@ type Setting = Readonly<{
   value: boolean | number | string;
 }>;
 
-declare const enum SettingID {
-  ACTIVE_MODE = 'activeMode',
-  CLEAN_DELAY = 'delayBeforeClean',
-  CLEAN_DISCARDED = 'discardedCleanup',
-  CLEAN_DOMAIN_CHANGE = 'domainChangeCleanup',
-  CLEAN_EXPIRED = 'cleanExpiredCookies',
-  CLEAN_OPEN_TABS_STARTUP = 'cleanCookiesFromOpenTabsOnStartup',
-  CLEANUP_CACHE = 'cacheCleanup',
-  CLEANUP_INDEXEDDB = 'indexedDBCleanup',
-  CLEANUP_LOCALSTORAGE = 'localStorageCleanup',
-  CLEANUP_LOCALSTORAGE_OLD = 'localstorageCleanup',
-  CLEANUP_PLUGINDATA = 'pluginDataCleanup',
-  CLEANUP_SERVICEWORKERS = 'serviceWorkersCleanup',
-  CONTEXT_MENUS = 'contextMenus',
-  CONTEXTUAL_IDENTITIES = 'contextualIdentities',
-  CONTEXTUAL_IDENTITIES_AUTOREMOVE = 'contextualIdentitiesAutoRemove',
-  DEBUG_MODE = 'debugMode',
-  ENABLE_GREYLIST = 'enableGreyListCleanup',
-  ENABLE_NEW_POPUP = 'enableNewVersionPopup',
-  KEEP_DEFAULT_ICON = 'keepDefaultIcon',
-  NOTIFY_AUTO = 'showNotificationAfterCleanup',
-  NOTIFY_MANUAL = 'manualNotifications',
-  NOTIFY_DURATION = 'notificationOnScreen',
-  NUM_COOKIES_ICON = 'showNumOfCookiesInIcon',
-  OLD_GREY_CLEAN_LOCALSTORAGE = 'greyCleanLocalstorage',
-  OLD_WHITE_CLEAN_LOCALSTORAGE = 'whiteCleanLocalstorage',
-  SITEDATA_EMPTY_ON_ENABLE = 'siteDataEmptyOnEnable',
-  SIZE_POPUP = 'sizePopup',
-  SIZE_SETTING = 'sizeSetting',
-  STAT_LOGGING = 'statLogging',
-}
+type SettingID = import('./Enums').SettingID;
 
-declare const enum ListType {
-  WHITE = 'WHITE',
-  GREY = 'GREY',
-}
+type ListType = import('./Enums').ListType;
 
 interface ReleaseNote {
   readonly version: string;

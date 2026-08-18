@@ -1,3 +1,4 @@
+import { browserName, SiteDataType } from '../../src/typings/Enums';
 import {
   getBrowserMajorVersionFromUserAgent,
   getRuntimeCapabilities,

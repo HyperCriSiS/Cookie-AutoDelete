@@ -1,3 +1,4 @@
+import { browserName, SettingID } from '../../src/typings/Enums';
 import createUIStore from '../../src/redux/UIStore';
 import {
   STORE_CONNECTION_NAME,

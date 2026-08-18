@@ -9,6 +9,7 @@
  * shutdowns while automatically discarding stale tab IDs on browser restart.
  */
 
+import { SettingID } from '../typings/Enums';
 import {
   cadLog,
   createPartialTabInfo,

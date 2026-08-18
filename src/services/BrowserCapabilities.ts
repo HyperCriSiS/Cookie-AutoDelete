@@ -9,6 +9,9 @@
  * and UI code. Runtime-detectable APIs are detected directly where possible.
  */
 
+
+
+import { browserName, SiteDataType } from '../typings/Enums';
 export type StorageTypeSupport = Readonly<{
   cache: boolean;
   indexedDb: boolean;
