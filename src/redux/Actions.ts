@@ -1,259 +1,121 @@
-import { Action } from 'redux';
-import { ThunkAction } from 'redux-thunk';
-
-import {
-  browser,
-  browserAction,
-  browserName,
-  cache,
-  isChrome,
-  isFirefox,
-  isFirefoxAndroid,
-} from '../services/BrowserApi';
-import CleanupService from '../services/CleanupService';
-import CookieDomainService from '../services/CookieDomainService';
-import { createDefaultSettings, defaultSettings } from '../services/DefaultSettings';
-import { cleanHostname, returnHostname } from '../services/Libs';
-import SettingService from '../services/SettingService';
-import Store from '../services/Store';
-import StoreUser from '../services/StoreUser';
-import { StoreUserEntry } from '../typings/Cleanup';
-import {
-  BadgeStatus,
-  CookieCleanupEvent,
-  IconName,
-  ListType,
-  SettingID,
-  StartupState,
-} from '../typings/Enums';
+import { browser } from './BrowserApi';
+import store from './Store';
+import { ActivityLog } from '../typings/Cleanup';
+import { BrowserName, SettingID } from '../typings/Enums';
 import { ReduxConstants } from '../typings/ReduxConstants';
-import { RootState } from './Store';
+import {
+  cleanCookies,
+  getDomain,
+  getSetting,
+  isSameDomain,
+  showNotification,
+  sleep,
+} from '../services/Libs';
+import { StoreUserEntry } from '../services/StoreUser';
 
-export interface ReduxAction<T = any> extends Action<ReduxConstants> {
-  payload?: T;
-}
-
-export type ReduxThunkAction<ReturnType = void> = ThunkAction<
-  ReturnType,
-  RootState,
-  unknown,
-  ReduxAction
->;
-
-export const setBadgeStatus = (
-  status: BadgeStatus,
-  cookieCount?: number,
-): ReduxThunkAction => async (dispatch, getState) => {
-  const state = getState();
-  const cleanupService = CleanupService.getInstance();
-  const browserActionService = browserAction;
-
-  if (!cleanupService || !browserActionService) {
-    return;
-  }
-
-  await browserActionService.setBadgeStatus(status, cookieCount);
-  dispatch({
-    payload: status,
-    type: ReduxConstants.SET_BADGE_STATUS,
-  });
-
-  if (state.settings[SettingID.DEBUG_MODE].value) {
-    console.debug('Badge status changed:', status, cookieCount);
-  }
-};
-
-export const updateSetting = (
-  name: SettingID,
-  value: boolean | number | string,
-): ReduxThunkAction => async (dispatch) => {
-  await SettingService.updateSetting(name, value);
-  dispatch({
-    payload: { name, value },
-    type: ReduxConstants.UPDATE_SETTING,
-  });
-};
-
-export const updateSettingWithSideEffects = (
-  name: SettingID,
-  value: boolean | number | string,
-): ReduxThunkAction => async (dispatch) => {
-  await dispatch(updateSetting(name, value));
-  await SettingService.handleSettingSideEffects(name, value);
-};
-
-export const updateStartupState = (startupState: StartupState): ReduxAction => ({
-  payload: startupState,
-  type: ReduxConstants.UPDATE_STARTUP_STATE,
+export const reset = () => ({
+  type: ReduxConstants.RESET,
 });
 
-export const setActiveTab = (tab: browser.tabs.Tab): ReduxAction => ({
-  payload: tab,
-  type: ReduxConstants.SET_ACTIVE_TAB,
+export const updateSetting = (setting: Setting) => ({
+  setting,
+  type: ReduxConstants.UPDATE_SETTING,
 });
 
-export const updateCookieDomains = (): ReduxThunkAction => async (dispatch) => {
-  const cookieDomains = await CookieDomainService.getCookieDomains();
-  dispatch({
-    payload: cookieDomains,
-    type: ReduxConstants.UPDATE_COOKIE_DOMAINS,
-  });
-};
+export const updateSettings = (settings: Setting[]) => ({
+  settings,
+  type: ReduxConstants.UPDATE_SETTINGS,
+});
 
-export const updateCookieCount = (): ReduxThunkAction => async (
-  dispatch,
-  getState,
-) => {
-  const settings = getState().settings;
-  if (!settings[SettingID.NUM_COOKIES_ICON].value) {
-    return;
-  }
+export const updateList = (list: StoreUserEntry[]) => ({
+  list,
+  type: ReduxConstants.UPDATE_LIST,
+});
 
-  const count = await CookieDomainService.getCookieCount();
-  dispatch({
-    payload: count,
-    type: ReduxConstants.UPDATE_COOKIE_COUNT,
-  });
-};
+export const updateCookieCount = (cookieCount: number) => ({
+  cookieCount,
+  type: ReduxConstants.UPDATE_COOKIE_COUNT,
+});
 
-export const updateList = (
-  listType: ListType,
-  entry: StoreUserEntry,
-): ReduxThunkAction => async (dispatch) => {
-  const storeUser = StoreUser.getInstance();
-  await storeUser.update(listType, entry);
-  dispatch({
-    payload: { entry, listType },
-    type: ReduxConstants.UPDATE_LIST,
-  });
-};
+export const updateActiveTab = (activeTab: browser.tabs.Tab) => ({
+  activeTab,
+  type: ReduxConstants.UPDATE_ACTIVE_TAB,
+});
 
-export const removeFromList = (
-  listType: ListType,
-  hostname: string,
-): ReduxThunkAction => async (dispatch) => {
-  const storeUser = StoreUser.getInstance();
-  await storeUser.remove(listType, hostname);
-  dispatch({
-    payload: { hostname, listType },
-    type: ReduxConstants.REMOVE_FROM_LIST,
-  });
-};
+export const updateContextualIdentities = (
+  contextualIdentities: browser.contextualIdentities.ContextualIdentity[],
+) => ({
+  contextualIdentities,
+  type: ReduxConstants.UPDATE_CONTEXTUAL_IDENTITIES,
+});
 
-export const importList = (
-  listType: ListType,
-  entries: StoreUserEntry[],
-): ReduxThunkAction => async (dispatch) => {
-  const storeUser = StoreUser.getInstance();
-  await storeUser.import(listType, entries);
-  dispatch({
-    payload: { entries, listType },
-    type: ReduxConstants.IMPORT_LIST,
-  });
-};
+export const updateBrowser = (browserName: BrowserName) => ({
+  browserName,
+  type: ReduxConstants.UPDATE_BROWSER,
+});
 
-export const clearList = (listType: ListType): ReduxThunkAction => async (
-  dispatch,
-) => {
-  const storeUser = StoreUser.getInstance();
-  await storeUser.clear(listType);
-  dispatch({
-    payload: listType,
-    type: ReduxConstants.CLEAR_LIST,
-  });
-};
+export const updateDarkTheme = (darkTheme: boolean) => ({
+  darkTheme,
+  type: ReduxConstants.UPDATE_DARK_THEME,
+});
 
-export const cleanup = (
-  event: CookieCleanupEvent,
-  hostname?: string,
-): ReduxThunkAction => async (dispatch) => {
-  const cleanupService = CleanupService.getInstance();
-  await cleanupService.cleanup(event, hostname);
-  await dispatch(updateCookieDomains());
-  await dispatch(updateCookieCount());
-};
+export const updateActiveTabList = (activeTabList: StoreUserEntry | null) => ({
+  activeTabList,
+  type: ReduxConstants.UPDATE_ACTIVE_TAB_LIST,
+});
 
-export const cleanSiteData = (hostname: string): ReduxThunkAction => async (
-  dispatch,
-) => {
-  const cleanedHostname = cleanHostname(hostname);
-  if (!cleanedHostname) {
-    return;
-  }
+export const updateContainerList = (containerList: StoreUserEntry | null) => ({
+  containerList,
+  type: ReduxConstants.UPDATE_CONTAINER_LIST,
+});
 
-  const cleanupService = CleanupService.getInstance();
-  await cleanupService.cleanup(CookieCleanupEvent.MANUAL, cleanedHostname);
-  await dispatch(updateCookieDomains());
-  await dispatch(updateCookieCount());
-};
+export const updateCookieDomainList = (cookieDomainList: StoreUserEntry[]) => ({
+  cookieDomainList,
+  type: ReduxConstants.UPDATE_COOKIE_DOMAIN_LIST,
+});
 
-export const cleanCurrentTab = (): ReduxThunkAction => async (
-  dispatch,
-  getState,
-) => {
-  const tab = getState().activeTab;
-  if (!tab || !tab.url) {
-    return;
-  }
+export const updateTabDomainList = (tabDomainList: StoreUserEntry[]) => ({
+  tabDomainList,
+  type: ReduxConstants.UPDATE_TAB_DOMAIN_LIST,
+});
 
-  const hostname = returnHostname(tab.url);
-  if (hostname) {
-    await dispatch(cleanSiteData(hostname));
-  }
-};
+export const updateRemainingDomainList = (
+  remainingDomainList: StoreUserEntry[],
+) => ({
+  remainingDomainList,
+  type: ReduxConstants.UPDATE_REMAINING_DOMAIN_LIST,
+});
 
-export const updateBrowserAction = (): ReduxThunkAction => async (
-  dispatch,
-  getState,
-) => {
-  const state = getState();
-  const activeTab = state.activeTab;
-  if (!activeTab) {
-    return;
-  }
+export const updateCleanupEnabled = (cleanupEnabled: boolean) => ({
+  cleanupEnabled,
+  type: ReduxConstants.UPDATE_CLEANUP_ENABLED,
+});
 
-  const hostname = activeTab.url ? returnHostname(activeTab.url) : '';
-  const storeUser = StoreUser.getInstance();
-  const listStatus = hostname ? await storeUser.getListStatus(hostname) : undefined;
+export const updateRecentlyCleaned = (recentlyCleaned: number) => ({
+  recentlyCleaned,
+  type: ReduxConstants.UPDATE_RECENTLY_CLEANED,
+});
 
-  dispatch({
-    payload: listStatus,
-    type: ReduxConstants.UPDATE_LIST_STATUS,
-  });
-};
+export const updateActivityLog = (activityLog: ActivityLog) => ({
+  activityLog,
+  type: ReduxConstants.UPDATE_ACTIVITY_LOG,
+});
 
-export const updateSettings = (): ReduxThunkAction => async (dispatch) => {
-  const settings = await SettingService.getSettings();
-  dispatch({
-    payload: settings,
-    type: ReduxConstants.UPDATE_SETTINGS,
-  });
-};
+export const updateBrowsingDataCleanup = (
+  browsingDataCleanup: BrowsingDataCleanup | null,
+) => ({
+  browsingDataCleanup,
+  type: ReduxConstants.UPDATE_BROWSING_DATA_CLEANUP,
+});
 
-export const initSettings = (): ReduxThunkAction => async (
-  dispatch,
-  getState,
-) => {
-  const currentSettings = await SettingService.getSettings();
-  const defaults = createDefaultSettings();
+export const updateSiteDataCleaned = (siteDataCleaned: boolean) => ({
+  siteDataCleaned,
+  type: ReduxConstants.UPDATE_SITE_DATA_CLEANED,
+});
 
-  for (const settingID of Object.values(SettingID)) {
-    if (!currentSettings[settingID] && defaults[settingID]) {
-      await SettingService.updateSetting(
-        settingID,
-        defaults[settingID].value,
-      );
-      dispatch({
-        payload: {
-          name: settingID,
-          value: defaults[settingID].value,
-        },
-        type: ReduxConstants.UPDATE_SETTING,
-      });
-    }
-  }
-
-  const disableSettingIfTrue = (setting: typeof defaultSettings[SettingID]) => {
+export const init = () => async (dispatch: any, getState: any) => {
+  const { settings } = getState();
+  const disableSettingIfTrue = (setting: Setting) => {
     if (setting.value) {
       dispatch({
         payload: {
@@ -264,6 +126,19 @@ export const initSettings = (): ReduxThunkAction => async (
       });
     }
   };
+
+  const cache = await browser.storage.local.get();
+  const defaults = store.getState().settings;
+  const existingSettings = settings || defaults;
+
+  for (const setting of defaults) {
+    if (existingSettings[setting.name] === undefined) {
+      dispatch({
+        payload: setting,
+        type: ReduxConstants.UPDATE_SETTING,
+      });
+    }
+  }
 
   // Refresh after missing legacy settings were populated above.
   const validatedSettings = getState().settings;
@@ -325,33 +200,91 @@ export const initSettings = (): ReduxThunkAction => async (
     }
   }
 
-  const cacheSetting = validatedSettings[SettingID.CACHE].value;
-  if (typeof cacheSetting === 'boolean') {
-    cache.cache = cacheSetting;
-  }
+  const activeTab = (await browser.tabs.query({ active: true, currentWindow: true }))[0];
+  dispatch(updateActiveTab(activeTab));
+};
 
-  const debugMode = validatedSettings[SettingID.DEBUG_MODE].value;
-  if (typeof debugMode === 'boolean') {
-    cache.debug = debugMode;
-  }
+export const cleanup = (
+  activeTabs: browser.tabs.Tab[],
+  cookieDomains: Set<string>,
+  keepDomains: Set<string>,
+  cache: any,
+) => async (dispatch: any, getState: any) => {
+  const domains = new Set<string>();
+  activeTabs.forEach((tab) => {
+    if (tab.url) domains.add(getDomain(tab.url));
+  });
 
-  if (isChrome(cache)) {
-    cache.browser = browserName.CHROME;
-  } else if (isFirefoxAndroid(cache)) {
-    cache.browser = browserName.FIREFOX_ANDROID;
-  } else {
-    cache.browser = browserName.FIREFOX;
-  }
-
-  if (browserAction) {
-    const keepDefaultIcon = validatedSettings[SettingID.KEEP_DEFAULT_ICON].value;
-    if (typeof keepDefaultIcon === 'boolean') {
-      await browserAction.setIcon(
-        keepDefaultIcon ? IconName.DEFAULT : IconName.ACTIVE,
-      );
+  const deleted = new Set<string>();
+  for (const domain of cookieDomains) {
+    if (!keepDomains.has(domain) && !domains.has(domain)) {
+      await cleanCookies(domain, cache);
+      deleted.add(domain);
     }
   }
 
-  const store = Store.getInstance();
-  await store.set('settings', validatedSettings);
+  dispatch(updateRecentlyCleaned(deleted.size));
+};
+
+export const updateTab = (
+  tabId: number,
+  changeInfo: browser.tabs.TabChangeInfo,
+  tab: browser.tabs.Tab,
+) => async (dispatch: any, getState: any) => {
+  if (changeInfo.url && tab.url) {
+    const state = getState();
+    const previousTab = state.activeTab;
+    if (previousTab && previousTab.url && !isSameDomain(previousTab.url, tab.url)) {
+      dispatch(updateActiveTab(tab));
+    }
+  }
+};
+
+export const showCleanupNotification = (
+  setOfDeletedDomainCookies: Set<string>,
+  cachedResults: ActivityLog,
+  browsingDataCleanup?: BrowsingDataCleanup,
+  siteDataCleaned = false,
+) => async (dispatch: any, getState: any) => {
+  let recentlyCleaned = setOfDeletedDomainCookies.size;
+  const domainsAll = new Set<string>();
+  setOfDeletedDomainCookies.forEach((d) => domainsAll.add(d));
+  Object.values((cachedResults as ActivityLog).storeIds).forEach((v) => {
+    v.forEach((d) => domainsAll.add(d.cookie.hostname));
+  });
+  const bDomains = new Set<string>();
+  // Count for Summary Notification
+  if (browsingDataCleanup) {
+    for (const domains of Object.values(browsingDataCleanup)) {
+      if (!domains || domains.length === 0) continue;
+      domains.forEach((d) => bDomains.add(d));
+    }
+    bDomains.forEach((d) => domainsAll.add(d));
+  }
+
+  if (setOfDeletedDomainCookies.length > 0) {
+    // Cookie Notification
+    const notifyMessage = browser.i18n.getMessage('notificationContent', [
+      recentlyCleaned.toString(),
+      domainsAll.size.toString(),
+      (setOfDeletedDomainCookies as string[]).slice(0, 5).join(', '),
+    ]);
+    showNotification({
+      duration: getSetting(getState(), SettingID.NOTIFY_DURATION) as number,
+      msg: `${notifyMessage} ...`,
+      title: browser.i18n.getMessage('notificationTitle'),
+    });
+    await sleep(750);
+  }
+  // Here we just show a generic 'Site Data' cleaned instead of the specifics, with all domains.
+  if (siteDataCleaned && browsingDataCleanup && bDomains.size > 0) {
+    await showNotification({
+      duration: getSetting(getState(), SettingID.NOTIFY_DURATION) as number,
+      msg: browser.i18n.getMessage('activityLogSiteDataDomainsText', [
+        browser.i18n.getMessage('siteDataText'),
+        Array.from(bDomains).join(', '),
+      ]),
+      title: browser.i18n.getMessage('notificationTitleSiteData'),
+    });
+  }
 };
