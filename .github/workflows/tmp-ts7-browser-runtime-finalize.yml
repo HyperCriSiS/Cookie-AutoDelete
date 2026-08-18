@@ -1,0 +1,38 @@
+name: Temporary TS7 browser runtime probe finalization
+
+on:
+  push:
+    branches: [modernization-p0]
+    paths: ['.github/workflows/tmp-ts7-browser-runtime-finalize.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record probe result and clean temporary files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('ROADMAP.md')
+          text = p.read_text()
+          old = '  - [ ] Resolve TypeScript 7 WebExtension runtime typing compatibility before committing the compiler migration. Verified with TypeScript 7.0.2: legacy `moduleResolution: node` is removed (`TS5108`); both `node16` and `bundler` resolution expose `@types/firefox-webext-browser@143.0.0` as a namespace that cannot be used as the runtime `browser` value (`TS2708`). A central synthetic `browser` value declaration was rejected because it drops/overrides important API types (`Tab`, `runtime`, `cookies.OnChangedCause`, etc.). Do not use an `any`-typed browser shim. Evaluate a maintained runtime-value typing source or a compatibility layer that preserves the Firefox-specific namespace types. SWC candidate versions established by the probe: `@swc/core@1.16.0` and `@swc/jest@0.2.39`; Jest/lint/build validation remains pending until the typing boundary compiles cleanly.'
+          new = '  - [ ] Resolve TypeScript 7 WebExtension runtime typing compatibility before committing the compiler migration. Verified with TypeScript 7.0.2: legacy `moduleResolution: node` is removed (`TS5108`); both `node16` and `bundler` resolution expose `@types/firefox-webext-browser@143.0.0` as a namespace that cannot be used as the runtime `browser` value (`TS2708`). A central synthetic `browser` value declaration was rejected because it drops/overrides important API types (`Tab`, `runtime`, `cookies.OnChangedCause`, etc.). A second probe using the maintained `@types/webextension-polyfill` as a typed runtime-value source also failed for all tested global bridge forms (`typeof import`, default import, and `import = require`) under TS7, so that package cannot simply be overlaid as an ambient `browser` value without further adaptation. Do not use an `any`-typed browser shim. Next evaluate an explicit runtime adapter/import boundary or a narrowly typed compatibility interface that preserves Firefox-specific namespace types. SWC candidate versions established by the probe: `@swc/core@1.16.0` and `@swc/jest@0.2.39`; Jest/lint/build validation remains pending until the typing boundary compiles cleanly.'
+          if old not in text:
+              raise SystemExit('Expected TS7 roadmap line not found')
+          p.write_text(text.replace(old, new))
+          PY
+          git rm --ignore-unmatch .github/workflows/tmp-ts7-browser-runtime-probe.yml
+          git rm --ignore-unmatch .github/workflows/tmp-ts7-browser-runtime-finalize.yml
+          rm -rf .tmp-ts7-probe
+          git diff --check
+          git config user.name "HyperCriSiS"
+          git config user.email "dev.github@w3b.world"
+          git add -A
+          git commit -m "docs: refine TS7 browser runtime blocker"
+          git push origin HEAD:modernization-p0
