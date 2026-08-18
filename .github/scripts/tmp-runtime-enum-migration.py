@@ -89,7 +89,7 @@ export enum OpenTabStatus {
 }
 '''
 if 'export enum browserName' not in enum_text:
-    enum_file.write_text(enum_text.rstrip() + additions + '\n')
+    enum_file.write_text(enum_text.rstrip() + additions.rstrip() + '\n')
 
 global_path = Path('src/typings/Global.d.ts')
 global_text = global_path.read_text()
