@@ -1,4 +1,4 @@
-name: Temporary maintained WebExtension typing migration
+name: Temporary roadmap finalization
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  migrate:
+  finalize:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout modernization branch
@@ -20,152 +20,38 @@ jobs:
           ref: modernization-p0
           fetch-depth: 0
 
-      - name: Use Node.js from .nvmrc
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: '.nvmrc'
-
-      - name: Install locked baseline
-        run: npm ci --prefer-offline --no-fund
-
-      - name: Apply maintained typing candidate
+      - name: Update roadmap with verified probe result
         shell: bash
         run: |
-          npm uninstall --save-dev web-ext-types
-          npm install --save-dev @types/firefox-webext-browser@143.0.0
-
           python3 - <<'PY'
           from pathlib import Path
-          import re
-
-          tsconfig = Path('tsconfig.json')
-          text = tsconfig.read_text()
-          legacy = '    "typeRoots": [\n      "node_modules/@types",\n      "node_modules/web-ext-types",\n      "src/typings"\n    ] /* List of folders to include type definitions from. */,\n'
-          if legacy in text:
-              text = text.replace(legacy, '', 1)
-          if '"skipLibCheck": true' not in text:
-              marker = '    "strict": true /* Enable all strict type-checking options. */,\n'
-              if marker not in text:
-                  raise SystemExit('tsconfig strict marker not found')
-              text = text.replace(marker, marker + '    "skipLibCheck": true /* Skip type checking declaration files from legacy dependencies. */,\n', 1)
-          tsconfig.write_text(text)
-
-          webext = (
-              '/* eslint-disable @typescript-eslint/no-unused-vars */\n'
-              '/**\n'
-              ' * Cookie AutoDelete compatibility additions on top of\n'
-              ' * @types/firefox-webext-browser.\n'
-              ' *\n'
-              ' * Keep this file intentionally narrow: browser APIs should come from the\n'
-              ' * maintained upstream declarations wherever possible.\n'
-              ' */\n\n'
-              'interface EvListener<T extends (...args: any[]) => any> {\n'
-              '  addListener(callback: T): void;\n'
-              '  removeListener(callback: T): void;\n'
-              '  hasListener(callback: T): boolean;\n'
-              '}\n\n'
-              'declare namespace browser.cookies {\n'
-              '  type CookiePartitionKey = PartitionKey;\n'
-              '}\n\n'
-              '/**\n'
-              ' * Cross-browser cookie shape used inside CAD. Firefox exposes\n'
-              ' * `firstPartyDomain`, while Chromium cookies may omit it entirely.\n'
-              ' */\n'
-              'type CadCookie = Omit<\n'
-              '  browser.cookies.Cookie,\n'
-              "  'firstPartyDomain' | 'partitionKey'\n"
-              '> & {\n'
-              '  firstPartyDomain?: string;\n'
-              '  partitionKey?: browser.cookies.CookiePartitionKey;\n'
-              '};\n\n'
-              'declare namespace browser.contextualIdentities {\n'
-              '  type contextualIdentitiesChangeInfo = {\n'
-              '    contextualIdentity: ContextualIdentity;\n'
-              '  };\n'
-              '}\n\n'
-              'declare namespace browser.tabs {\n'
-              '  interface Tab {\n'
-              '    /** Legacy alias retained for older Chromium-facing CAD code paths. */\n'
-              '    selected?: boolean;\n'
-              '  }\n\n'
-              '  interface TabChangeInfo extends _OnUpdatedChangeInfo {\n'
-              '    cookieChanged?: {\n'
-              '      removed: boolean;\n'
-              '      cookie: CadCookie;\n'
-              '      cause: browser.cookies.OnChangedCause;\n'
-              '    };\n'
-              '  }\n'
-              '}\n'
-          )
-          Path('src/typings/Webext.d.ts').write_text(webext)
-
-          fixture = Path('__tests__/services/ContextualIdentitiesEvents.spec.ts')
-          lines = fixture.read_text().splitlines(keepends=True)
-          changed_fixture = False
-          for idx, line in enumerate(lines):
-              if 'cookieStoreId:' not in line:
-                  continue
-              start = idx
-              while start > 0 and '{' not in lines[start]:
-                  start -= 1
-              end = idx
-              while end < len(lines) and '}' not in lines[end]:
-                  end += 1
-              block = ''.join(lines[start:end + 1])
-              if all(key in block for key in ('cookieStoreId:', 'color:', 'icon:', 'name:')) and 'iconUrl:' not in block and 'colorCode:' not in block:
-                  indent = re.match(r'\s*', lines[idx]).group(0)
-                  lines[end:end] = [f"{indent}iconUrl: '',\n", f"{indent}colorCode: '',\n"]
-                  changed_fixture = True
-                  break
-          if not changed_fixture:
-              raise SystemExit('ContextualIdentity fixture candidate not found')
-          fixture.write_text(''.join(lines))
-
-          app = Path('src/ui/settings/App.tsx')
-          lines = app.read_text().splitlines(keepends=True)
-          query_idx = next((i for i, line in enumerate(lines) if 'browser.tabs.query' in line), None)
-          if query_idx is None:
-              raise SystemExit('browser.tabs.query call not found in settings App')
-          stmt_start = query_idx
-          while stmt_start > 0 and not re.search(r'\b(const|let)\b.*\btab\b', lines[stmt_start]):
-              stmt_start -= 1
-          if not re.search(r'\b(const|let)\b.*\btab\b', lines[stmt_start]):
-              raise SystemExit('active tab assignment not found')
-          stmt_end = query_idx
-          while stmt_end < len(lines) and ';' not in lines[stmt_end]:
-              stmt_end += 1
-          if stmt_end >= len(lines):
-              raise SystemExit('active tab assignment terminator not found')
-          following = ''.join(lines[stmt_end + 1:stmt_end + 6])
-          if 'if (!tab)' not in following:
-              indent = re.match(r'\s*', lines[stmt_start]).group(0)
-              guard = [f'{indent}if (!tab) {{\n', f'{indent}  return;\n', f'{indent}}}\n']
-              lines[stmt_end + 1:stmt_end + 1] = guard
-          app.write_text(''.join(lines))
+          p = Path('ROADMAP.md')
+          text = p.read_text()
+          old = '    - [ ] Retype CAD-internal cookie paths and representative fixtures to the project cross-browser cookie shape so Chromium cookies may omit `firstPartyDomain`; then rerun webpack/tests before committing the dependency swap.\n'
+          new = '    - [x] Retype CAD-internal cookie paths and representative fixtures to the project cross-browser cookie shape so Chromium cookies may omit `firstPartyDomain`; the `CadCookie` migration was committed as `ca5a829e` after tests, lint and webpack build passed.\n    - [x] Re-run the maintained `@types/firefox-webext-browser@143.0.0` probe after the `CadCookie` migration and confirm that the previous cookie/`firstPartyDomain` diagnostics are gone.\n    - [ ] Complete the maintained-typing dependency swap after adapting the remaining non-cookie compatibility gaps exposed by that probe: `ContextualIdentity` test fixtures now require `iconUrl`/`colorCode`, the settings active-tab lookup must handle an empty `tabs.query()` result, and legacy third-party declaration checks must be isolated without masking application errors; then run typecheck, tests, lint and webpack before committing the swap.\n'
+          if old not in text:
+              raise SystemExit('roadmap cookie subtask not found')
+          text = text.replace(old, new, 1)
+          old = '- TypeScript 7 is no longer blocked by npm peer resolution, the removed legacy module-resolution setting, or lack of a maintained WebExtension typing base. `@types/firefox-webext-browser` reaches whole-program compilation once the legacy WebExtension declarations are removed, but requires a narrow Cookie AutoDelete compatibility augmentation for several legacy type names/shapes. The separate React-Redux/Redux generic-constraint errors, Jest-26-era declaration incompatibilities and ambient `declare const enum`/Jest-transform dependency remain open engineering work.\n'
+          new = '- TypeScript 7 is no longer blocked by npm peer resolution, the removed legacy module-resolution setting, or lack of a maintained WebExtension typing base. The CAD-local `CadCookie` shape is now implemented and a repeat probe with `@types/firefox-webext-browser@143.0.0` confirms that the former cookie/`firstPartyDomain` diagnostics are eliminated. The maintained-typing dependency swap still needs the small `ContextualIdentity` fixture and `tabs.query()` nullability adaptations plus a deliberate declaration-check policy for legacy third-party types. The separate React-Redux/Redux generic-constraint errors, Jest-26-era declaration incompatibilities and ambient `declare const enum`/Jest-transform dependency remain open engineering work.\n'
+          if old not in text:
+              raise SystemExit('roadmap blocker paragraph not found')
+          text = text.replace(old, new, 1)
+          old = '**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization and the automated migration/runtime compatibility pass are complete. TypeScript 7 now has a verified WebExtension typing direction: use `@types/firefox-webext-browser` as the maintained base and add only the narrow compatibility layer required by Cookie AutoDelete, then resolve the React-Redux/Redux mismatch, Jest/type-declaration modernization, ambient const-enum/Jest-transform dependency and remaining stricter application errors. Real historical-profile upgrade validation and packaged-browser release-candidate checks remain open.\n'
+          new = '**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization and the automated migration/runtime compatibility pass are complete. The CAD cross-browser cookie retyping is complete and its repeat maintained-Firefox-typing probe no longer reports cookie/`firstPartyDomain` errors. The next TypeScript/toolchain step is to finish the `web-ext-types` → `@types/firefox-webext-browser` dependency swap by resolving the remaining small non-cookie compatibility gaps, then continue with the React-Redux/Redux mismatch, Jest/type-declaration modernization, ambient const-enum/Jest-transform dependency and remaining stricter application errors. Real historical-profile upgrade validation and packaged-browser release-candidate checks remain open.\n'
+          if old not in text:
+              raise SystemExit('roadmap completion paragraph not found')
+          p.write_text(text.replace(old, new, 1))
           PY
-
           git diff --check
-          git diff --stat
 
-      - name: Typecheck
-        run: npx tsc --noEmit --pretty false
-
-      - name: Run tests
-        run: npm run test -- --verbose
-
-      - name: Run lint
-        run: npm run lint
-
-      - name: Run webpack build
-        run: npm run build
-
-      - name: Commit validated maintained typing migration
+      - name: Commit roadmap and remove temporary workflow
         shell: bash
         run: |
-          git diff --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json package-lock.json tsconfig.json src/typings/Webext.d.ts src/ui/settings/App.tsx __tests__/services/ContextualIdentitiesEvents.spec.ts
+          git add ROADMAP.md
+          git rm .github/workflows/tmp-cad-cookie-typing.yml
           git diff --cached --check
-          git commit -m 'build: replace legacy WebExtension typings'
+          git commit -m 'docs: record maintained WebExtension typing probe'
           git push origin HEAD:modernization-p0
