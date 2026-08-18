@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  validate:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -21,29 +21,77 @@ jobs:
           cache: npm
       - name: Install baseline dependencies
         run: npm ci --prefer-offline --no-fund
-      - name: Probe latest Jest type declarations
+      - name: Modernize Jest declarations and matcher aliases
         shell: bash
         run: |
           set -euo pipefail
           npm install --save-dev @types/jest@latest @types/jest-when@latest
-          {
-            echo '## Dependency versions'
-            npm ls @types/jest @types/jest-when jest ts-jest typescript || true
-            echo
-            echo '## Repository TypeScript diagnostics'
-            set +e
-            npx tsc --noEmit --pretty false
-            status=$?
-            set -e
-            echo
-            echo "tsc_exit_code=$status"
-          } > .github/tmp-jest-types-diagnostics.txt 2>&1
-      - name: Commit diagnostic record
+          python3 - <<'PY'
+          from pathlib import Path
+          replacements = {
+              '.toBeCalledTimes(': '.toHaveBeenCalledTimes(',
+              '.toThrowError(': '.toThrow(',
+          }
+          changed = []
+          for p in Path('__tests__').rglob('*.ts'):
+              text = p.read_text()
+              new = text
+              for old, repl in replacements.items():
+                  new = new.replace(old, repl)
+              if new != text:
+                  p.write_text(new)
+                  changed.append(str(p))
+          if not changed:
+              raise SystemExit('Expected obsolete Jest matcher aliases were not found')
+          print('\n'.join(changed))
+          PY
+          npm ls @types/jest @types/jest-when jest ts-jest typescript
+      - name: Typecheck with repository compiler
+        run: npx tsc --noEmit
+      - name: Run Jest suite
+        run: npm test -- --runInBand
+      - name: Lint
+        run: npm run lint
+      - name: Build Firefox
+        run: npm run build
+        env:
+          BROWSER: firefox
+      - name: Build Chromium
+        run: npm run build
+        env:
+          BROWSER: chromium
+      - name: Probe TypeScript 7 whole-program compile
         shell: bash
         run: |
           set -euo pipefail
+          cp tsconfig.json /tmp/tsconfig.json
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tsconfig.json')
+          text = p.read_text()
+          old_module = '    "module": "commonjs" /* Specify module code generation:'
+          old_resolution = '    "moduleResolution": "node" /* Specify module resolution strategy:'
+          if old_module not in text or old_resolution not in text:
+              raise SystemExit('Expected legacy module settings were not found')
+          module_line = next(line for line in text.splitlines(True) if old_module in line)
+          resolution_line = next(line for line in text.splitlines(True) if old_resolution in line)
+          text = text.replace(module_line, '    "module": "Node16",\n', 1)
+          text = text.replace(resolution_line, '    "moduleResolution": "Node16",\n', 1)
+          p.write_text(text)
+          PY
+          npm install --no-save --package-lock=false --legacy-peer-deps typescript@7.0.2
+          npx tsc --version
+          npx tsc --noEmit --pretty false
+          cp /tmp/tsconfig.json tsconfig.json
+      - name: Commit verified Jest declaration modernization
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- tsconfig.json
+          git rm -f .github/tmp-jest-types-diagnostics.txt
           git config user.name 'HyperCriSiS'
           git config user.email 'dev.github@w3b.world'
-          git add .github/tmp-jest-types-diagnostics.txt
-          git commit -m 'chore: record Jest type modernization diagnostics'
+          git add package.json package-lock.json __tests__
+          git status --short
+          git commit -m 'chore: modernize Jest type declarations'
           git push
