@@ -290,7 +290,7 @@ describe('CleanupService', () => {
 
     it('should be called 5 times for cookies.remove', async () => {
       await cleanCookies(initialState, removeCookies);
-      expect(global.browser.cookies.remove).toBeCalledTimes(5);
+      expect(global.browser.cookies.remove).toHaveBeenCalledTimes(5);
     });
 
     it('should throw an error for cookies.remove', async () => {
@@ -892,8 +892,8 @@ describe('CleanupService', () => {
       expect(await clearCookiesForThisDomain(initialState, googleTab)).toBe(
         true,
       );
-      expect(global.browser.cookies.remove).toBeCalledTimes(2);
-      expect(global.browser.notifications.create).toBeCalledTimes(1);
+      expect(global.browser.cookies.remove).toHaveBeenCalledTimes(2);
+      expect(global.browser.notifications.create).toHaveBeenCalledTimes(1);
       expect(global.browser.i18n.getMessage.mock.calls[1][0]).toBe(
         'manualCleanSuccess',
       );
@@ -914,8 +914,8 @@ describe('CleanupService', () => {
       expect(await clearCookiesForThisDomain(initialState, googleTab)).toBe(
         false,
       );
-      expect(global.browser.cookies.remove).toBeCalledTimes(0);
-      expect(global.browser.notifications.create).toBeCalledTimes(1);
+      expect(global.browser.cookies.remove).toHaveBeenCalledTimes(0);
+      expect(global.browser.notifications.create).toHaveBeenCalledTimes(1);
       expect(global.browser.i18n.getMessage.mock.calls[1][0]).toBe(
         'manualCleanNothing',
       );
@@ -932,8 +932,8 @@ describe('CleanupService', () => {
       expect(await clearCookiesForThisDomain(initialState, googleTab)).toBe(
         false,
       );
-      expect(global.browser.cookies.remove).toBeCalledTimes(1);
-      expect(global.browser.notifications.create).toBeCalledTimes(1);
+      expect(global.browser.cookies.remove).toHaveBeenCalledTimes(1);
+      expect(global.browser.notifications.create).toHaveBeenCalledTimes(1);
       expect(global.browser.i18n.getMessage.mock.calls[1][0]).toBe(
         'manualCleanSuccess',
       );
@@ -953,8 +953,8 @@ describe('CleanupService', () => {
       expect(
         await clearLocalStorageForThisDomain(initialState, sampleTab),
       ).toBe(true);
-      expect(global.browser.tabs.executeScript).toBeCalledTimes(1);
-      expect(global.browser.notifications.create).toBeCalledTimes(1);
+      expect(global.browser.tabs.executeScript).toHaveBeenCalledTimes(1);
+      expect(global.browser.notifications.create).toHaveBeenCalledTimes(1);
     });
     it('should show error notification if browser.tabs.executeScript threw an error', async () => {
       when(global.browser.tabs.executeScript)
@@ -963,9 +963,9 @@ describe('CleanupService', () => {
       expect(
         await clearLocalStorageForThisDomain(initialState, sampleTab),
       ).toBe(false);
-      expect(global.browser.tabs.executeScript).toBeCalledTimes(1);
-      expect(spyLib.throwErrorNotification).toBeCalledTimes(1);
-      expect(spyLib.showNotification).toBeCalledTimes(1);
+      expect(global.browser.tabs.executeScript).toHaveBeenCalledTimes(1);
+      expect(spyLib.throwErrorNotification).toHaveBeenCalledTimes(1);
+      expect(spyLib.showNotification).toHaveBeenCalledTimes(1);
     });
     it('should only show the no cleanup done notification if browser.tabs.executeScript threw a non-error type', async () => {
       when(global.browser.tabs.executeScript)
@@ -974,9 +974,9 @@ describe('CleanupService', () => {
       expect(
         await clearLocalStorageForThisDomain(initialState, sampleTab),
       ).toBe(false);
-      expect(global.browser.tabs.executeScript).toBeCalledTimes(1);
+      expect(global.browser.tabs.executeScript).toHaveBeenCalledTimes(1);
       expect(spyLib.throwErrorNotification).not.toHaveBeenCalled();
-      expect(spyLib.showNotification).toBeCalledTimes(1);
+      expect(spyLib.showNotification).toHaveBeenCalledTimes(1);
     });
   });
 

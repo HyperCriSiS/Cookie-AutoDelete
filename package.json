@@ -32,8 +32,8 @@
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "^143.0.0",
-    "@types/jest": "^26.0.24",
-    "@types/jest-when": "^3.5.2",
+    "@types/jest": "30.0.0",
+    "@types/jest-when": "3.5.5",
     "@types/react": "^17.0.52",
     "@types/react-dom": "^17.0.18",
     "@types/shortid": "2.2.0",
