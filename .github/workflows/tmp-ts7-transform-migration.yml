@@ -41,10 +41,10 @@ jobs:
           text = text.replace(old_completion, new_completion)
           p.write_text(text)
           PY
-          git rm .github/workflows/tmp-ts7-transform-migration.yml
+          git rm --ignore-unmatch .github/workflows/tmp-ts7-transform-migration.yml
           git diff --check
           git config user.name "HyperCriSiS"
           git config user.email "dev.github@w3b.world"
-          git add ROADMAP.md .github/workflows/tmp-ts7-transform-migration.yml
+          git add -A
           git commit -m "docs: record TypeScript 7 browser typing blocker"
           git push origin HEAD:modernization-p0
