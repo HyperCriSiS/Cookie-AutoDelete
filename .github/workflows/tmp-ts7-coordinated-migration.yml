@@ -61,7 +61,7 @@ jobs:
             '    ],',
           ].join('\n');
           if (!jest.includes(transformPattern)) throw new Error('ts-jest transform pattern not found');
-          jest = jest.replace(transformPattern, swcTransform);
+          jest = jest.replace(transformPattern, () => swcTransform);
           if (jest.includes('ts-jest')) throw new Error('ts-jest configuration remained in jest.config.js');
           fs.writeFileSync('jest.config.js', jest);
           NODE
