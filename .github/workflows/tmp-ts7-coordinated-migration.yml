@@ -35,7 +35,6 @@ jobs:
           let tsconfig = fs.readFileSync('tsconfig.json', 'utf8');
           tsconfig = tsconfig.replace('"module": "commonjs"', '"module": "esnext"');
           tsconfig = tsconfig.replace('"moduleResolution": "node"', '"moduleResolution": "bundler"');
-          tsconfig = tsconfig.replace('    // "types": [],', '    "types": ["firefox-webext-browser", "jest", "node"],');
           fs.writeFileSync('tsconfig.json', tsconfig);
 
           let jest = fs.readFileSync('jest.config.js', 'utf8');
@@ -47,13 +46,15 @@ jobs:
           NODE
 
           cat > src/typings/BrowserRuntime.d.ts <<'EOF'
+          /// <reference path="../../node_modules/@types/firefox-webext-browser/index.d.ts" />
+
           /**
            * TypeScript 7 with bundler module resolution keeps the Firefox WebExtension
-           * declaration namespace but does not expose its CommonJS `export = browser`
-           * declaration as the global runtime value used by WebExtensions.
+           * declaration namespaces but does not expose a global runtime `browser` value.
            *
-           * Reintroduce only the runtime surface CAD actually uses, deriving every member
-           * from the maintained Firefox namespace so no API falls back to `any`.
+           * Keep the maintained Firefox declarations as the source of truth and derive
+           * the runtime surface CAD uses from those namespaces. The explicit reference
+           * prevents module-resolution changes from silently dropping the ambient base.
            */
           type CadBrowserRuntime = {
             tabs: typeof browser.tabs;
