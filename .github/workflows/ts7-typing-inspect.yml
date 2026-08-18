@@ -1,0 +1,24 @@
+name: Temporary TS7 typing inspection
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show relevant configuration
+        shell: bash
+        run: |
+          echo '=== package.json ==='
+          cat package.json
+          echo '=== src/typings/Webext.d.ts ==='
+          cat src/typings/Webext.d.ts
+          echo '=== tsconfig.json ==='
+          cat tsconfig.json
+          echo '=== jest config references ==='
+          grep -R "ts-jest\|Webext.d.ts\|web-ext-types" -n --exclude-dir=node_modules . | head -200 || true
