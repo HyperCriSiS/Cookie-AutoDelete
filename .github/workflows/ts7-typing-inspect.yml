@@ -1,7 +1,11 @@
 name: Temporary TS7 typing inspection
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - modernization-p0
+    paths:
+      - .github/workflows/ts7-typing-inspect.yml
 
 permissions:
   contents: read
