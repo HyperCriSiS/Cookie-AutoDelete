@@ -29,8 +29,7 @@ jobs:
           pkg.devDependencies['@swc/core'] = '1.16.0';
           pkg.devDependencies['@swc/jest'] = '0.2.39';
           pkg.devDependencies['typescript'] = '7.0.2';
-          const ordered = Object.fromEntries(Object.entries(pkg.devDependencies).sort(([a],[b]) => a.localeCompare(b)));
-          pkg.devDependencies = ordered;
+          pkg.devDependencies = Object.fromEntries(Object.entries(pkg.devDependencies).sort(([a],[b]) => a.localeCompare(b)));
           fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
 
           let tsconfig = fs.readFileSync('tsconfig.json', 'utf8');
@@ -68,13 +67,14 @@ jobs:
             management: typeof browser.management;
             permissions: typeof browser.permissions;
             windows: typeof browser.windows;
+            i18n: typeof browser.i18n;
           };
 
           declare const browser: CadBrowserRuntime;
           EOF
 
-          npm install --package-lock-only --ignore-scripts
-          npm ci
+          npm install --package-lock-only --ignore-scripts --legacy-peer-deps
+          npm ci --legacy-peer-deps
       - name: TypeScript 7 typecheck
         run: npx tsc --noEmit
       - name: Jest suite
