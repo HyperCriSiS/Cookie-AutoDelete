@@ -35,6 +35,8 @@ jobs:
           let tsconfig = fs.readFileSync('tsconfig.json', 'utf8');
           tsconfig = tsconfig.replace('"module": "commonjs"', '"module": "esnext"');
           tsconfig = tsconfig.replace('"moduleResolution": "node"', '"moduleResolution": "bundler"');
+          tsconfig = tsconfig.replace('      "es2017",', '      "es2018",');
+          tsconfig = tsconfig.replace('    // "types": [],                           /* Type declaration files to be included in compilation. */', '    "types": ["jest", "node"],                 /* Type declaration files required by tests and Node-based tooling. */');
           fs.writeFileSync('tsconfig.json', tsconfig);
 
           let jest = fs.readFileSync('jest.config.js', 'utf8');
