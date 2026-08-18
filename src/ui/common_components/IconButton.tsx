@@ -24,7 +24,7 @@ interface IconButtonProps {
   className: string;
   styleReact?: React.CSSProperties;
   text?: string;
-  tag?: string;
+  tag?: React.ElementType;
   href?: string;
   type?: string;
   title?: string;
