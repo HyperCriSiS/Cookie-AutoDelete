@@ -1,0 +1,120 @@
+interface WebExtEvent<TCallback extends (...args: any[]) => any> {
+    addListener(cb: TCallback): void;
+    removeListener(cb: TCallback): void;
+    hasListener(cb: TCallback): boolean;
+}
+
+/** Not allowed in: Content scripts, Devtools pages */
+declare namespace browser._manifest {
+    /* _manifest types */
+    type PermissionPrivileged = _PermissionPrivileged;
+
+    interface ActionManifest {
+        default_title?: string | undefined;
+        default_icon?: IconPath | undefined;
+        /** Specifies icons to use for dark and light themes */
+        theme_icons?: ThemeIcons[] | undefined;
+        default_popup?: string | undefined;
+        /** Deprecated in Manifest V3. */
+        browser_style?: boolean | undefined;
+        /** Defines the location the browserAction will appear by default. The default location is navbar. */
+        default_area?: _ActionManifestDefaultArea | undefined;
+    }
+
+    /** Represents a WebExtension manifest.json file */
+    interface WebExtensionManifest extends ManifestBase {
+        /** Needs at least manifest version 3. */
+        action?: ActionManifest | undefined;
+        /** Not supported on manifest versions above 2. */
+        browser_action?: ActionManifest | undefined;
+        declarative_net_request?: _WebExtensionManifestDeclarativeNetRequest | undefined;
+        experiment_apis?: { [key: string]: experiments.ExperimentAPI } | undefined;
+        /** A list of protocol handler definitions. */
+        protocol_handlers?: ProtocolHandler[] | undefined;
+        default_locale?: string | undefined;
+        l10n_resources?: string[] | undefined;
+        minimum_chrome_version?: string | undefined;
+        minimum_opera_version?: string | undefined;
+        icons?: _WebExtensionManifestIcons | undefined;
+        /** The 'split' value is not supported. */
+        incognito?: _WebExtensionManifestIncognito | undefined;
+        background?: {
+            service_worker?: ExtensionURL | undefined;
+            page?: ExtensionURL | undefined;
+            scripts?: ExtensionURL[] | undefined;
+            /** Only supported for page/scripts; not for service_worker yet, see bug 1775574 */
+            type?: _UndefinedType | undefined;
+            /** Not supported on manifest versions above 2. */
+            persistent?: boolean | undefined;
+            preferred_environment?: _PreferredEnvironment[] | undefined;
+        } | undefined;
+        /** Alias property for options_ui.page, ignored when options_ui.page is set. When using this property the options page is always opened in a new tab. */
+        options_page?: ExtensionURL | undefined;
+        options_ui?: _WebExtensionManifestOptionsUi | undefined;
+        content_scripts?: ContentScript[] | undefined;
+        content_security_policy?: string | {
+            /** The Content Security Policy used for extension pages. */
+            extension_pages?: string | undefined;
+        } | undefined;
+        permissions?: PermissionOrOrigin[] | Permission[] | undefined;
+        granted_host_permissions?: boolean | undefined;
+        /** Needs at least manifest version 3. */
+        host_permissions?: MatchPattern[] | undefined;
+        /** Needs at least manifest version 3. */
+        optional_host_permissions?: MatchPattern[] | undefined;
+        optional_permissions?: OptionalPermissionOrOrigin[] | undefined;
+        web_accessible_resources?:
+            | string[]
+            | Array<{
+                resources: string[];
+                matches?: MatchPattern[] | undefined;
+                extension_ids?: Array<ExtensionID | "*"> | undefined;
+            }>
+            | undefined;
+        hidden?: boolean | undefined;
+        page_action?: _WebExtensionManifestPageAction | undefined;
+        theme_experiment?: ThemeExperiment | undefined;
+        /** Not supported on manifest versions above 2. */
+        user_scripts?: _WebExtensionManifestUserScripts | undefined;
+        chrome_settings_overrides?: _WebExtensionManifestChromeSettingsOverrides | undefined;
+        commands?: { [key: string]: _WebExtensionManifestCommands } | undefined;
+        devtools_page?: ExtensionURL | undefined;
+        omnibox?: _WebExtensionManifestOmnibox | undefined;
+        sidebar_action?: _WebExtensionManifestSidebarAction | undefined;
+        chrome_url_overrides?: _WebExtensionManifestChromeUrlOverrides | undefined;
+    }
+
+    type OptionalPermission = OptionalPermissionNoPrompt | _OptionalPermission;
+
+    type PermissionNoPrompt = OptionalPermissionNoPrompt | PermissionPrivileged | _PermissionNoPrompt;
+
+    type OptionalPermissionNoPrompt = _OptionalPermissionNoPrompt;
+
+    type Permission = string | PermissionNoPrompt | OptionalPermission | "declarativeNetRequest";
+
+    type OptionalOnlyPermission = "userScripts";
+
+    type CommonDataCollectionPermission = _CommonDataCollectionPermission;
+
+    type DataCollectionPermission = CommonDataCollectionPermission | "none";
+
+    type OptionalDataCollectionPermission = CommonDataCollectionPermission | "technicalAndInteraction";
+
+    /** Represents a protocol handler definition. */
+    interface ProtocolHandler {
+        /**
+         * A user-readable title string for the protocol handler. This will be displayed to the user in interface objects as needed.
+         */
+        name: string;
+        /**
+         * The protocol the site wishes to handle, specified as a string. For example, you can register to handle SMS text message links by registering to handle the "sms" scheme.
+         */
+        protocol: string | _ProtocolHandlerProtocol;
+        /**
+         * The URL of the handler, as a string. This string should include "%s" as a placeholder which will be replaced with the escaped URL of the document to be handled. This URL might be a true URL, or it could be a phone number, email address, or so forth.
+         */
+        uriTemplate: ExtensionURL | HttpURL;
+    }
+
+    /** Common properties for all manifest.json files */
+    interface ManifestBase {
