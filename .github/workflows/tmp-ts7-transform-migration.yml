@@ -7,54 +7,20 @@ on:
     paths:
       - '.github/workflows/tmp-ts7-transform-migration.yml'
 
-permissions:
-  contents: write
-
 jobs:
-  migrate:
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - name: Install current dependencies
-        run: npm ci --legacy-peer-deps
-      - name: Apply TypeScript 7 and SWC Jest migration
-        shell: bash
+      - run: npm ci --legacy-peer-deps
+      - name: Inspect browser declarations
         run: |
-          set -euo pipefail
-          npm uninstall --save-dev ts-jest --legacy-peer-deps
-          npm install --save-dev --save-exact typescript@7.0.2 @swc/core @swc/jest --legacy-peer-deps
-          node <<'NODE'
-          const fs = require('fs');
-          const path = 'jest.config.js';
-          let s = fs.readFileSync(path, 'utf8');
-          s = s.replace(/\n\s*globals:\s*\{\s*'ts-jest':\s*\{\s*tsconfig:\s*'tsconfig\.json',?\s*\},?\s*\},?/m, '');
-          s = s.replace(/\n\s*preset:\s*'ts-jest',?/m, '');
-          s = s.replace("'^.+\\\\.tsx?$': 'ts-jest'", "'^.+\\\\.tsx?$': ['@swc/jest', { jsc: { parser: { syntax: 'typescript', tsx: true }, target: 'es2017', transform: { react: { runtime: 'automatic' } } }, module: { type: 'commonjs' } }]");
-          if (s.includes('ts-jest')) throw new Error('ts-jest reference remains in jest.config.js');
-          if (!s.includes('@swc/jest')) throw new Error('SWC Jest transform was not installed in jest.config.js');
-          fs.writeFileSync(path, s);
-
-          const tsPath = 'tsconfig.json';
-          let t = fs.readFileSync(tsPath, 'utf8');
-          t = t.replace('"module": "commonjs"', '"module": "node16"');
-          t = t.replace('"moduleResolution": "node"', '"moduleResolution": "node16"');
-          fs.writeFileSync(tsPath, t);
-          NODE
-          echo '--- dependency versions ---'
-          node -e "const p=require('./package.json'); console.log(JSON.stringify({typescript:p.devDependencies.typescript,swcCore:p.devDependencies['@swc/core'],swcJest:p.devDependencies['@swc/jest'],tsJest:p.devDependencies['ts-jest']},null,2))"
-          git diff -- package.json package-lock.json jest.config.js tsconfig.json
-      - name: Typecheck TypeScript 7
-        run: npx tsc --noEmit
-      - name: Run Jest suite through SWC
-        run: npm test -- --runInBand
-      - name: Lint
-        run: npm run lint
-      - name: Build webpack bundle
-        run: npm run compile
-      - name: Verify migration diff
-        run: |
-          git diff --check
-          test -z "$(grep -R "ts-jest" -n package.json jest.config.js package-lock.json || true)"
+          echo '--- local Webext.d.ts ---'
+          cat src/typings/Webext.d.ts
+          echo '--- package declaration header/footer/browser value markers ---'
+          grep -n -E 'export as namespace|export =|declare (const|var|namespace) browser|namespace browser' node_modules/@types/firefox-webext-browser/index.d.ts | head -40 || true
+          head -40 node_modules/@types/firefox-webext-browser/index.d.ts
+          tail -40 node_modules/@types/firefox-webext-browser/index.d.ts
