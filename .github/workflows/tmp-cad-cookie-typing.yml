@@ -1,7 +1,11 @@
 name: Temporary CAD cookie typing migration
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - modernization-p0
+    paths:
+      - '.github/workflows/tmp-cad-cookie-typing.yml'
 
 permissions:
   contents: write
