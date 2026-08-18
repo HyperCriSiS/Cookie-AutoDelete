@@ -1,8 +1,8 @@
-# Cookie AutoDelete Modernization Roadmap
+# Cookie AutoDelete Roadmap
 
 ## Project goal
 
-Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension while preserving existing user data, cleanup semantics, browser-specific behavior and upstream project attribution. Modernization must remain reviewable, regression-tested and releasable for both Firefox and Chromium without destructive migration behavior.
+Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension while preserving established cleanup behavior, user data/settings, UI compatibility and project attribution.
 
 ## Current status
 
@@ -10,23 +10,22 @@ Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension wh
 
 Active modernization work is on `modernization-p0`, tracked by draft PR #1 into `3.X.X-Branch`. The branch is the integration and validation branch for the modernization effort and is not yet release-ready.
 
-Regular functional CI on the modernization PR has been green on validated heads. The separate `github-advanced-security` agent has failed before repository analysis because its hosted model request is unsupported; this is treated as an external GitHub service/configuration issue rather than a functional repository defect.
+Regular functional CI on the validated modernization heads is green (`Initial Checks`, `Tests, Builds, Coverage`, CodeQL and JavaScript/TypeScript/Actions analysis where reported). The separate `github-advanced-security` agent still fails before repository analysis because the GitHub-hosted agent requests an unsupported model; this is classified as an external GitHub service/configuration problem rather than a functional repository defect.
 
-There are currently no repository issues and no fork releases. Remaining Dependabot updates require compatibility review rather than automatic merging.
+There are currently no repository issues and no fork releases. Several Dependabot PRs remain open and require compatibility review rather than automatic merging.
 
 ## Phase 0 — Manifest V3 modernization foundation
 
 - [x] Add Manifest V3 build/manifest foundations for Chromium and Firefox.
 - [x] Make background lifecycle and listener registration service-worker-safe.
-- [x] Replace delayed `redux-webext` background/UI bridging with a local runtime-message StoreBridge/UIStore implementation.
-- [x] Package browser builds without mutating source files.
-- [x] Add browser-specific unpacked MV3 development builds.
-- [x] Validate generated browser packages before archiving and release staging.
-- [x] Centralize browser capability decisions instead of browser-name checks where practical.
-- [x] Add partitioned-cookie capability handling for modern Chromium while retaining compatibility with older supported Chromium versions.
-- [x] Replace runtime `shortid` use with a local UUID generator and remove obsolete compatibility/build aliases.
-- [x] Add versioned expression backup foundations and explicit Firefox-container import mapping safeguards.
-- [x] Pin release actions to reviewed SHAs and align CI/release Node version handling.
+- [x] Add browser-action abstraction for cross-browser runtime differences.
+- [x] Replace timer-dependent transient state with persistence/session-backed state where required by MV3 lifecycle constraints.
+- [x] Correct cleanup result accounting, including failed cookie-removal operations.
+- [x] Migrate injected-script usage to the MV3 scripting API.
+- [x] Replace runtime `redux-webext` dependency with local StoreBridge/UIStore infrastructure.
+- [x] Add reproducible browser-specific build staging and package validation.
+- [x] Restore the hardened validation workflow after P0 repair work.
+- [x] Preserve the legacy popup during the MV3 migration.
 - [x] Fix the legacy settings migration payload shape.
 - [x] Preserve existing author, contributor, license, support, donation and project-origin information unless explicitly reviewed separately.
 
@@ -36,8 +35,8 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 - [x] Repair the malformed Jest assertion introduced during P0 work.
 - [x] Repair the incomplete `otherBrowsingDataCleanup(...)` test call.
 - [x] Align the legacy Firefox cleanup success-path test with the production contract that only browser-confirmed removals count.
-- [x] Restore a clean functional test/build matrix; validated PR heads report successful `Tests, Builds, Coverage` checks.
-- [x] Keep CodeQL / JavaScript-TypeScript / Actions analysis green where reported on validated PR heads.
+- [x] Restore a clean functional test/build matrix.
+- [x] Keep CodeQL / JavaScript-TypeScript / Actions analysis green where reported on the validated modernization head.
 - [x] Classify the separate `github-advanced-security` failure as external GitHub infrastructure/configuration: the job aborts before repository analysis because the requested model is unsupported.
 
 ## Phase 2 — migration and behavioral compatibility
@@ -48,17 +47,18 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 - [x] Validate the equivalent Chromium legacy-profile activation path without destructive cleanup.
 - [x] Normalize legacy persisted settings before later-added keys are consumed while retaining the pre-normalization snapshot for side-effect comparisons.
 - [x] Exercise persisted allowlist/greylist restoration through `StatePersistence` → `parsePersistedState()` → `createStore()` across a simulated service-worker restart.
-- [x] Verify persisted cleanup-policy settings (`ACTIVE_MODE`, `ENABLE_GREYLIST`, `CLEAN_OPEN_TABS_STARTUP`) survive `StatePersistence` → `parsePersistedState()` → `createStore()` restart.
-- [ ] Validate broader upgrades from representative existing Cookie AutoDelete Firefox and Chromium profiles/settings without destructive resets or silent data loss. Synthetic legacy Firefox/Chromium profile-shape coverage is green, but representative real exported profiles are not present in the repository.
-- [x] Verify allowlist/greylist matching semantics after StoreBridge/UIStore migration, including wildcard subdomains, exact greylist rules, Firefox container isolation and background-pushed state updates.
-- [x] Verify cleanup behavior on tab close, domain change and browser restart for supported policy combinations. Existing regression coverage verifies tab-close cleanup scheduling/direct cleanup and per-tab state removal, session-backed domain-change detection (including worker restart), and restart/greylist/open-tab cleanup semantics; background listener wiring and startup dispatch paths were re-checked against the current branch.
-- [x] Verify session/transient-state restoration across realistic MV3 service-worker suspension/restart scenarios beyond persisted-list/settings unit coverage. `MV3WorkerRestart.regression.spec.ts` discards and reloads the Jest module graph while preserving `browser.storage.session`, proving per-tab domain state is restored and cleanup still fires after worker-memory loss.
-- [x] Verify popup/options interactions and state synchronization in both Firefox and Chromium builds. Existing UIStore/StoreBridge coverage verifies initial state hydration, UI dispatch, pushed background state and subscriber updates; `UIStoreReconnect.regression.spec.ts` verifies disconnect/reconnect state refresh after background-worker loss, while `UIBuildSurface.regression.spec.js` and build-stage validation confirm both generated browser targets keep popup/options entry points and bundles wired. Packaged manual interaction remains part of Phase 4.
-- [x] Verify container/contextual-identity behavior where the browser exposes the required APIs. `BrowserCapabilities` detects the API dynamically and gates listener registration when unavailable; existing `ContextualIdentitiesEvents` and `ContextualIdentityService` regression coverage exercises create/update/remove behavior and container naming when the API is present, while Chromium legacy-profile coverage verifies unsupported container settings are disabled.
+- [x] Verify persisted cleanup-policy settings (`ACTIVE_MODE`, `ENABLE_GREYLIST`, `CLEAN_OPEN_TABS_STARTUP`) survive a persisted-state restart.
+- [x] Add synthetic representative older Firefox/Chromium settings-profile regression coverage, preserving custom values while filling later-added defaults.
+- [ ] Validate upgrades from real representative historical Cookie AutoDelete Firefox and Chromium profile/settings exports without destructive resets or silent data loss.
+  - Blocked until representative historical exports are available as fixtures; synthetic legacy-profile coverage is already present but does not replace this release-gate check.
+- [x] Verify allowlist/greylist matching semantics after StoreBridge/UIStore migration, including wildcard/subdomain, exact greylist and container-isolation cases.
+- [x] Verify cleanup behavior on tab close, domain change and browser restart for supported policy combinations.
+- [x] Verify session/transient-state restoration across realistic MV3 service-worker module restart by discarding module state while preserving `browser.storage.session`.
+- [x] Verify popup/options state synchronization, including UIStore reconnect/hydration after background-worker loss and generated Firefox/Chromium entry surfaces.
+- [x] Verify container/contextual-identity behavior where the browser exposes the required APIs, including capability gating when unavailable.
 - [x] Add regression tests for every migration/runtime defect found during this compatibility pass.
-  - [x] Audit modernization/runtime fix history against explicit tests: context-menu worker state, persisted cleanup alarms/domain state, StoreBridge pass-through/readiness, persisted-state validation, expression IDs, browser capability gates, IPv6 normalization, partitioned-cookie cleanup/domain enumeration, container backup metadata/import planning, plugin-data capability gating and confirmed cookie-removal accounting all have direct regression coverage in their fix or paired test commits.
-  - [x] Identify the remaining uncovered runtime compatibility fix: commit `46d431b` raised the precise short-delay cutoff from 30 to 60 seconds for the supported Chrome 102–119 range without an explicit threshold regression test.
-  - [x] Validate the new `AlarmEvents.spec.ts` regression added in `fab7147f`, which pins `RELIABLE_ALARM_DELAY_MS` at 60 seconds. Functional push, `pull_request_target` and `pull_request` CI all completed successfully for that exact test head.
+  - [x] Audit modernization/runtime fix history against explicit tests.
+  - [x] Add and validate explicit coverage for the legacy Chromium 60-second cleanup-alarm threshold.
 
 ## Phase 3 — dependency and build modernization
 
@@ -67,7 +67,10 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 - [x] Migrate packaging to Archiver 8 using its ESM `ZipArchive` API while preserving Firefox/Chromium packaging behavior.
 - [x] Migrate the Redux stack to Redux 5 / Redux Thunk 3 / React-Redux 8 while retaining React 17 and adapting imports/types required by the new APIs.
 - [x] Remove obsolete runtime `redux-webext` and redundant Redux type packages as part of the validated Redux migration.
-- [ ] Evaluate and migrate to TypeScript 7 only on an isolated branch with full test/build validation; do not merge the open major-version Dependabot PR directly without compatibility work.
+- [ ] Evaluate and migrate to TypeScript 7 only through the modernization branch with full install/test/build validation; do not merge the open major-version Dependabot PR directly.
+  - [x] Inspect Dependabot PR #7 (`typescript` 4.9.4 → 7.0.2): it is based on `3.X.X-Branch`, not the current `modernization-p0` integration head.
+  - [x] Confirm PR #7 does not provide a usable compatibility proof: both `Tests, Builds, Coverage` checks fail during `npm ci` before tests, lint or builds run; `Initial Checks` pass.
+  - [ ] Perform a coordinated TypeScript/toolchain migration on `modernization-p0` rather than applying the isolated package bump. Resolve install-time dependency incompatibilities first, then run the complete tests/lint/Firefox+Chromium build/package matrix.
 - [ ] Review the remaining open Dependabot updates (`form-data`, `tough-cookie`, grouped npm updates) individually and integrate only those proven compatible.
 - [ ] Re-check generated Firefox and Chromium package contents after all remaining dependency/toolchain migrations.
 
@@ -75,20 +78,19 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 
 - [ ] Produce Firefox and Chromium release-candidate packages from the same validated source state.
 - [ ] Perform representative manual browser smoke tests in addition to automated CI.
-- [ ] Confirm existing user settings/data survive the real release-candidate upgrade path in both browser families.
-- [ ] Verify packaged popup/options, cleanup, allowlist/greylist and restart behavior in both browser families.
-- [ ] Merge `modernization-p0` into `3.X.X-Branch` only after required checks and migration validation are green.
-- [ ] Create a tagged fork release only after the release checklist is complete.
+- [ ] Confirm existing user settings/data survive a real release-candidate upgrade path in both target browser families.
+- [ ] Confirm popup/options, cleanup triggers, allowlist/greylist and restart behavior in packaged builds rather than source/unit tests alone.
+- [ ] Merge `modernization-p0` into `3.X.X-Branch` only after migration/runtime checks and release-candidate validation are green.
+- [ ] Create a tagged fork release only after the integrated branch has passed the release checklist.
 - [ ] Consider an upstream proposal only after the fork branch is stable and the modernization scope is documented.
 
 ## Blockers / dependencies
 
-- No known functional CI blocker exists on validated `modernization-p0` heads.
-- The separate GitHub Advanced Security agent can fail before repository analysis because its requested hosted model is unsupported; this is external to the codebase.
-- Major dependency upgrades must remain isolated and validated.
-- Representative real exported legacy Firefox/Chromium profiles are not present in the repository, so the real-profile upgrade-validation item remains blocked until suitable fixtures are available.
-- Manual packaged-browser validation is still required before release readiness can be claimed.
+- Real historical Firefox/Chromium profile exports are not present as repository fixtures, so the real-world upgrade-path release gate cannot yet be marked complete.
+- TypeScript 7 cannot be treated as a safe one-line dependency bump: existing Dependabot PR #7 fails at `npm ci` before validation and targets the pre-modernization base branch. A coordinated toolchain migration on `modernization-p0` is required.
+- The separate GitHub Advanced Security agent fails before repository analysis because its requested hosted model is unsupported. This is external to the codebase and does not currently block functional modernization work.
+- Manual packaged-browser validation remains required before release readiness can be claimed.
 
 ## Completion status
 
-**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization, synthetic legacy-profile compatibility coverage, StoreBridge/UIStore list matching, cleanup-trigger compatibility, module-reset MV3 worker restart coverage, popup/options source-level synchronization and contextual-identity compatibility are validated. The migration/runtime regression audit is complete; the previously uncovered 60-second Chromium alarm threshold now has a targeted regression test validated by functional push, `pull_request_target` and `pull_request` CI. Real legacy-profile export validation remains blocked until representative exports are available, and dependency/release-candidate work remains open.
+**Not fully completed.** Manifest V3 foundations, functional CI stabilization, Archiver 8 / Redux 5 modernization and the automated migration/runtime compatibility pass are complete. TypeScript 7 has now been isolated as a coordinated toolchain migration rather than a direct Dependabot bump; install-time compatibility must be repaired and fully validated before that phase can close. Real historical-profile upgrade validation and packaged-browser release-candidate checks remain open.
