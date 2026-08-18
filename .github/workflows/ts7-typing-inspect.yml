@@ -11,20 +11,67 @@ permissions:
   contents: read
 
 jobs:
-  inspect:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect browser type call sites
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate compatibility layer in workspace
         shell: bash
         run: |
-          echo '=== browser.cookies.Cookie references ==='
-          grep -R 'browser\.cookies\.Cookie' -n src __tests__ --include='*.ts' --include='*.tsx' | head -300 || true
-          echo '=== Libs event helper ==='
-          sed -n '90,135p' src/services/Libs.ts
-          echo '=== contextual identity event service ==='
-          sed -n '1,90p' src/services/ContextualIdentitiesEvents.ts
-          echo '=== contextual identity tests ==='
-          sed -n '65,105p' __tests__/services/ContextualIdentitiesEvents.spec.ts
-          echo '=== tabs type references ==='
-          grep -R 'browser\.tabs\.TabChangeInfo\|selected:' -n src __tests__ --include='*.ts' --include='*.tsx' | head -250 || true
+          npm uninstall --save-dev web-ext-types
+          npm install --save-dev @types/firefox-webext-browser
+          sed -i '/node_modules\/web-ext-types/d' tsconfig.json
+          cat > src/typings/Webext.d.ts <<'EOF'
+          /* eslint-disable @typescript-eslint/no-unused-vars */
+          /**
+           * Cross-browser compatibility additions on top of
+           * @types/firefox-webext-browser.
+           */
+
+          interface EvListener<T extends (...args: any[]) => any> {
+            addListener(callback: T): void;
+            removeListener(callback: T): void;
+            hasListener(callback: T): boolean;
+          }
+
+          declare namespace browser.cookies {
+            type CookiePartitionKey = PartitionKey;
+
+            interface CookieProperties extends Omit<Cookie, 'firstPartyDomain'> {
+              firstPartyDomain?: string;
+            }
+
+            type OptionalCookieProperties = Partial<CookieProperties>;
+          }
+
+          declare namespace browser.contextualIdentities {
+            type contextualIdentitiesChangeInfo = {
+              contextualIdentity: ContextualIdentity;
+            };
+          }
+
+          declare namespace browser.tabs {
+            interface Tab {
+              selected?: boolean;
+            }
+
+            interface TabChangeInfo extends _OnUpdatedChangeInfo {
+              cookieChanged?: {
+                removed: boolean;
+                cookie: browser.cookies.Cookie;
+                cause: browser.cookies.OnChangedCause;
+              };
+            }
+          }
+          EOF
+          echo '=== TypeScript errors with compatibility layer ==='
+          npx tsc --noEmit 2>&1 | tee /tmp/ts-errors.txt || true
+          echo '=== error count ==='
+          grep -c 'error TS' /tmp/ts-errors.txt || true
+          echo '=== browser compatibility errors ==='
+          grep -E 'CookieProperties|CookiePartitionKey|TabChangeInfo|contextualIdentitiesChangeInfo|selected|firstPartyDomain|EvListener' /tmp/ts-errors.txt || true
+          echo '=== webpack build ==='
+          npm run build
