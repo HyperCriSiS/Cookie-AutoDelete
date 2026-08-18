@@ -19,8 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Record verified TypeScript 7 findings
-        shell: python
+        shell: bash
         run: |
+          python <<'PY'
           from pathlib import Path
           p = Path('ROADMAP.md')
           text = p.read_text()
@@ -45,6 +46,7 @@ jobs:
               raise SystemExit('Expected completion status not found')
           text = text.replace(old_status, new_status, 1)
           p.write_text(text)
+          PY
 
       - name: Commit roadmap update
         shell: bash
