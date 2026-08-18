@@ -35,6 +35,7 @@ jobs:
           let tsconfig = fs.readFileSync('tsconfig.json', 'utf8');
           tsconfig = tsconfig.replace('"module": "commonjs"', '"module": "esnext"');
           tsconfig = tsconfig.replace('"moduleResolution": "node"', '"moduleResolution": "bundler"');
+          tsconfig = tsconfig.replace('    // "types": [],', '    "types": ["firefox-webext-browser", "jest", "node"],');
           fs.writeFileSync('tsconfig.json', tsconfig);
 
           let jest = fs.readFileSync('jest.config.js', 'utf8');
@@ -68,6 +69,10 @@ jobs:
             permissions: typeof browser.permissions;
             windows: typeof browser.windows;
             i18n: typeof browser.i18n;
+            contextMenus: typeof browser.contextMenus;
+            sessions: typeof browser.sessions;
+            browserAction: typeof browser.browserAction;
+            extension: typeof browser.extension;
           };
 
           declare const browser: CadBrowserRuntime;
@@ -75,6 +80,7 @@ jobs:
 
           npm install --package-lock-only --ignore-scripts --legacy-peer-deps
           npm ci --legacy-peer-deps
+          npm ls @types/firefox-webext-browser typescript @types/node @types/jest || true
       - name: TypeScript 7 typecheck
         run: npx tsc --noEmit
       - name: Jest suite
