@@ -1,37 +1,24 @@
-name: TypeScript 7 SWC probe
+name: TypeScript 7 migration context
 
 on:
   push:
     branches:
       - modernization-p0
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  probe:
+  context:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - name: Probe dependency migration
+      - name: Capture migration context
         run: |
-          npm uninstall --save-dev ts-jest
-          npm install --save-dev typescript@7.0.2 @swc/core@latest @swc/jest@latest
-          sed -i "s/'ts-jest'/'@swc\\/jest'/g; s/\"ts-jest\"/\"@swc\\/jest\"/g" jest.config.js
-          sed -i "/^[[:space:]]*preset: '@swc\/jest',[[:space:]]*$/d" jest.config.js
-          echo '--- TypeScript module config before compatibility edit ---'
+          echo '=== AMBIENT ENUMS ==='
+          grep -R -n -E '(^|[[:space:]])(const[[:space:]]+)?enum[[:space:]]+(SettingID|SiteDataType|ListType|browserName)' src __tests__ || true
+          echo '=== TSCONFIG MODULE SETTINGS ==='
           grep -n -E '"(target|module|moduleResolution)"' tsconfig.json || true
-          sed -i '/"moduleResolution"[[:space:]]*:[[:space:]]*"node"/d; /"moduleResolution"[[:space:]]*:[[:space:]]*"node10"/d' tsconfig.json
-          echo '--- TypeScript module config after compatibility edit ---'
-          grep -n -E '"(target|module|moduleResolution)"' tsconfig.json || true
-      - name: Typecheck with TypeScript 7
-        run: npx tsc --noEmit
-        continue-on-error: true
-      - name: Run tests with SWC
-        run: npm test -- --runInBand
-        continue-on-error: true
+          echo '=== ROADMAP START ==='
+          cat ROADMAP.md
+          echo '=== ROADMAP END ==='
