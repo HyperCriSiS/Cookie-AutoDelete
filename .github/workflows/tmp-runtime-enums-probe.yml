@@ -1,7 +1,11 @@
 name: Temporary runtime enum migration probe
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - modernization-p0
+    paths:
+      - .github/workflows/tmp-runtime-enums-probe.yml
 
 permissions:
   contents: read
@@ -21,10 +25,10 @@ jobs:
           echo '=== relevant typing files ==='
           for file in src/typings/Global.d.ts src/typings/Cleanup.d.ts src/typings/Settings.d.ts src/typings/Enums.ts __tests__/tsconfig.json tsconfig.json package.json; do
             echo "--- $file ---"
-            sed -n '1,260p' "$file"
+            sed -n '1,320p' "$file"
           done
           echo
-          echo '=== usage counts (src + tests) ==='
+          echo '=== usage files (src + tests) ==='
           for symbol in browserName SiteDataType SettingID ListType ReasonClean OpenTabStatus; do
             echo "--- $symbol ---"
             grep -RIl --include='*.ts' --include='*.tsx' "$symbol" src __tests__ | sort || true
