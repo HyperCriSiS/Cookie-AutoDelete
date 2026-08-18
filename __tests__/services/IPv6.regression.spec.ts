@@ -14,7 +14,7 @@ const expression = (value: string): Expression => ({
   storeId: 'default',
 });
 
-const cookie = (domain: string): browser.cookies.Cookie =>
+const cookie = (domain: string): CadCookie =>
   ({
     domain,
     expirationDate: undefined,
@@ -28,7 +28,7 @@ const cookie = (domain: string): browser.cookies.Cookie =>
     session: true,
     storeId: '0',
     value: 'value',
-  } as browser.cookies.Cookie);
+  } as CadCookie);
 
 describe('IPv6 regression coverage', () => {
   it('normalizes URL-style IPv6 brackets only for parser input', () => {

@@ -51,7 +51,7 @@ import {
 
 import ipaddr from 'ipaddr.js';
 
-const mockCookie: browser.cookies.Cookie = {
+const mockCookie: CadCookie = {
   domain: 'domain.com',
   hostOnly: true,
   httpOnly: true,
@@ -486,7 +486,7 @@ describe('Library Functions', () => {
         .mockResolvedValue([testCookie] as never);
     });
 
-    const testCookie: browser.cookies.Cookie = {
+    const testCookie: CadCookie = {
       domain: 'domain.com',
       hostOnly: true,
       httpOnly: true,

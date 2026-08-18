@@ -18,7 +18,7 @@ import TabEvents from './TabEvents';
 export default class CookieEvents extends StoreUser {
   public static async onCookieChanged(changeInfo: {
     removed: boolean;
-    cookie: browser.cookies.Cookie;
+    cookie: CadCookie;
     cause: browser.cookies.OnChangedCause;
   }): Promise<void> {
     // Truncate cookie value (purely for debug)

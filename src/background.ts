@@ -144,7 +144,7 @@ const cookiePopupPorts: browser.runtime.Port[] = [];
 
 async function onCookiePopupUpdates(changeInfo: {
   removed: boolean;
-  cookie: browser.cookies.Cookie;
+  cookie: CadCookie;
   cause: browser.cookies.OnChangedCause;
 }) {
   const cDomain = extractMainDomain(changeInfo.cookie.domain);

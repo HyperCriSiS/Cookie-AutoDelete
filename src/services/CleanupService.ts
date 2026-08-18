@@ -41,7 +41,7 @@ import {
 
 /** Prepare a cookie for deletion */
 export const prepareCookie = (
-  cookie: browser.cookies.Cookie,
+  cookie: CadCookie,
   debug = false,
 ): CookiePropertiesCleanup => {
   const cookieProperties = {
@@ -872,7 +872,7 @@ export const cleanCookiesOperation = async (
   }
 
   for (const id of cookieStoreIds) {
-    let cookies: browser.cookies.Cookie[] = [];
+    let cookies: CadCookie[] = [];
     try {
       cookies = await getAllCookiesIncludingPartitions(
         state,

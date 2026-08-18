@@ -67,11 +67,11 @@ describe('CookieApi partition compatibility', () => {
   it('forwards a concrete partition key only when the cookie has one', () => {
     const unpartitioned = {
       domain: 'example.com',
-    } as unknown as browser.cookies.Cookie;
+    } as unknown as CadCookie;
     const partitioned = {
       domain: 'example.com',
       partitionKey: { topLevelSite: 'https://top.example' },
-    } as unknown as browser.cookies.Cookie;
+    } as unknown as CadCookie;
 
     expect(cookiePartitionDetails(unpartitioned)).toEqual({});
     expect(cookiePartitionDetails(partitioned)).toEqual({

@@ -13,26 +13,22 @@ import { supportsPartitionedCookies } from './BrowserCapabilities';
 
 type CookieQueryDetails = Partial<CookiePropertiesCleanup>;
 
-type PartitionAwareCookie = browser.cookies.Cookie & {
-  partitionKey?: browser.cookies.CookiePartitionKey;
-};
-
 export const getAllCookiesIncludingPartitions = (
   state: State,
   details: CookieQueryDetails,
-): Promise<browser.cookies.Cookie[]> => {
+): Promise<CadCookie[]> => {
   const query = supportsPartitionedCookies(state.cache)
     ? { ...details, partitionKey: {} }
     : details;
 
   return (browser.cookies.getAll as unknown as (
     queryDetails: CookieQueryDetails,
-  ) => Promise<browser.cookies.Cookie[]>)(query);
+  ) => Promise<CadCookie[]>)(query);
 };
 
 export const cookiePartitionDetails = (
-  cookie: browser.cookies.Cookie,
+  cookie: CadCookie,
 ): { partitionKey: browser.cookies.CookiePartitionKey } | Record<string, never> => {
-  const partitionKey = (cookie as PartitionAwareCookie).partitionKey;
+  const { partitionKey } = cookie;
   return partitionKey ? { partitionKey } : {};
 };

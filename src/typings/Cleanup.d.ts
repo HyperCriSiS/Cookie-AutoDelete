@@ -62,8 +62,8 @@ interface CleanReasonObject {
   cookie: CookiePropertiesCleanup;
 }
 
-interface CookiePropertiesCleanup extends browser.cookies.CookieProperties {
+type CookiePropertiesCleanup = CadCookie & {
   mainDomain: string;
   hostname: string;
   preparedCookieDomain: string;
-}
+};

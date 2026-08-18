@@ -125,7 +125,7 @@ describe('TabEvents', () => {
         .mockResolvedValue([testCookie] as never);
     });
 
-    const testCookie: browser.cookies.Cookie = {
+    const testCookie: CadCookie = {
       domain: 'domain.com',
       hostOnly: true,
       httpOnly: true,

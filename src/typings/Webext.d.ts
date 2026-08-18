@@ -36,12 +36,19 @@ declare namespace browser.cookies {
     topLevelSite?: string;
     hasCrossSiteAncestor?: boolean;
   }
-
-  interface CookieProperties extends browser.cookies.Cookie {
-    firstPartyDomain?: string;
-  }
-  type OptionalCookieProperties = Partial<CookieProperties>;
 }
+
+/**
+ * Cross-browser cookie shape used inside CAD. Firefox exposes
+ * `firstPartyDomain`, while Chromium cookies may omit it entirely.
+ */
+type CadCookie = Omit<
+  browser.cookies.Cookie,
+  'firstPartyDomain' | 'partitionKey'
+> & {
+  firstPartyDomain?: string;
+  partitionKey?: browser.cookies.CookiePartitionKey;
+};
 
 // Until web-ext-types land this, per https://github.com/kelseasy/web-ext-types/issues/81#issuecomment-527758881
 declare namespace browser.contextMenus {
@@ -75,7 +82,7 @@ declare namespace browser.tabs {
     audible?: boolean;
     cookieChanged?: {
       removed: boolean;
-      cookie: browser.cookies.Cookie;
+      cookie: CadCookie;
       cause: browser.cookies.OnChangedCause;
     };
     discarded?: boolean;

@@ -181,7 +181,7 @@ export const extractMainDomain = (domain: string): string => {
 export const getAllCookiesForDomain = async (
   state: State,
   tab: browser.tabs.Tab,
-): Promise<browser.cookies.Cookie[] | undefined> => {
+): Promise<CadCookie[] | undefined> => {
   if (!tab.url || tab.url === '') return;
   if (tab.url.startsWith('about:') || tab.url.startsWith('chrome:')) return;
   const debug = getSetting(state, SettingID.DEBUG_MODE) as boolean;
@@ -198,7 +198,7 @@ export const getAllCookiesForDomain = async (
     );
     return;
   }
-  const cookies: browser.cookies.Cookie[] = [];
+  const cookies: CadCookie[] = [];
   const mainDomain = extractMainDomain(hostname);
 
   if (hostname.startsWith('file:')) {
@@ -736,7 +736,7 @@ export const prepareCleanupDomains = (
 /**
  * Puts the domain in the right format for browser.cookies.remove()
  */
-export const prepareCookieDomain = (cookie: browser.cookies.Cookie): string => {
+export const prepareCookieDomain = (cookie: CadCookie): string => {
   let cookieDomain = cookie.domain.trim();
   if (cookieDomain.length === 0 && cookie.path.trim().length !== 0) {
     // No Domain - presuming local file (file:// protocol)

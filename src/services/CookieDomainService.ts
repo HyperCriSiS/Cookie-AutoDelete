@@ -22,7 +22,7 @@ import {
 export const getAllCookiesForDomainIncludingPartitions = async (
   state: State,
   tab: browser.tabs.Tab,
-): Promise<browser.cookies.Cookie[] | undefined> => {
+): Promise<CadCookie[] | undefined> => {
   if (!tab.url || tab.url === '') return;
   if (tab.url.startsWith('about:') || tab.url.startsWith('chrome:')) return;
 
@@ -42,7 +42,7 @@ export const getAllCookiesForDomainIncludingPartitions = async (
     return;
   }
 
-  const cookies: browser.cookies.Cookie[] = [];
+  const cookies: CadCookie[] = [];
   const mainDomain = extractMainDomain(hostname);
 
   if (hostname.startsWith('file:')) {
