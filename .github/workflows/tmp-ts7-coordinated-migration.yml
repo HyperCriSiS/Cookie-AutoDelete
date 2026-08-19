@@ -190,12 +190,16 @@ jobs:
         run: npm test -- --runInBand
       - name: ESLint
         run: npm run lint
-      - name: Prettier changed files
+      - name: Format migrated files
+        run: npx prettier --write package.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/typings/Cleanup.d.ts src/services/Libs.ts src/services/CleanupService.ts src/background.ts src/ui/common_components/ActivityTable.tsx __tests__/services/Libs.spec.ts __tests__/services/CleanupService.spec.ts tools/jest-typescript-transformer.cjs
+      - name: Prettier check
         run: npx prettier --check package.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/typings/Cleanup.d.ts src/services/Libs.ts src/services/CleanupService.ts src/background.ts src/ui/common_components/ActivityTable.tsx __tests__/services/Libs.spec.ts __tests__/services/CleanupService.spec.ts tools/jest-typescript-transformer.cjs
       - name: Firefox build
         run: npm run dev:firefox
       - name: Chromium build
         run: npm run dev:chromium
+      - name: Package validation
+        run: npm run build
       - name: Commit validated migration
         shell: bash
         run: |
