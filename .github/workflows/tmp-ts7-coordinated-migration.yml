@@ -9,9 +9,12 @@ on:
       - 'src/ui/common_components/IconButton.tsx'
       - 'src/typings/Enums.ts'
       - 'src/typings/Global.d.ts'
+      - 'src/typings/Cleanup.d.ts'
       - 'src/services/Libs.ts'
+      - 'src/services/CleanupService.ts'
       - 'src/background.ts'
       - '__tests__/services/Libs.spec.ts'
+      - '__tests__/services/CleanupService.spec.ts'
 
 permissions:
   contents: write
@@ -59,12 +62,25 @@ jobs:
           let enums = fs.readFileSync('src/typings/Enums.ts', 'utf8');
           if (!enums.includes('export enum EventListenerAction')) {
             enums += "\nexport enum EventListenerAction {\n  ADD = 'ADD',\n  REMOVE = 'REMOVE',\n}\n";
-            fs.writeFileSync('src/typings/Enums.ts', enums);
           }
+          if (!enums.includes('export enum ReasonKeep')) {
+            enums += "\nexport enum ReasonKeep {\n  OpenTabs = 'reasonKeepOpenTab',\n  MatchedExpression = 'reasonKeep',\n}\n";
+          }
+          fs.writeFileSync('src/typings/Enums.ts', enums);
 
           let globals = fs.readFileSync('src/typings/Global.d.ts', 'utf8');
           globals = globals.replace(/\ndeclare const enum EventListenerAction \{\n  ADD = 'ADD',\n  REMOVE = 'REMOVE',\n\}\n/, '\n');
           fs.writeFileSync('src/typings/Global.d.ts', globals);
+
+          let cleanupTypes = fs.readFileSync('src/typings/Cleanup.d.ts', 'utf8');
+          cleanupTypes = cleanupTypes.replace(/\ndeclare const enum ReasonKeep \{\n  OpenTabs = 'reasonKeepOpenTab',\n  MatchedExpression = 'reasonKeep',\n\}\n/, '\n');
+          if (!cleanupTypes.includes("type ReasonKeep = import('./Enums').ReasonKeep;")) {
+            cleanupTypes = cleanupTypes.replace(
+              "type ReasonClean = import('./Enums').ReasonClean;",
+              "type ReasonKeep = import('./Enums').ReasonKeep;\ntype ReasonClean = import('./Enums').ReasonClean;",
+            );
+          }
+          fs.writeFileSync('src/typings/Cleanup.d.ts', cleanupTypes);
 
           let libs = fs.readFileSync('src/services/Libs.ts', 'utf8');
           libs = libs.replace(
@@ -79,6 +95,20 @@ jobs:
             "import { browserName, SiteDataType, SettingID, ListType, EventListenerAction } from '../../src/typings/Enums';",
           );
           fs.writeFileSync('__tests__/services/Libs.spec.ts', libsSpec);
+
+          let cleanupService = fs.readFileSync('src/services/CleanupService.ts', 'utf8');
+          cleanupService = cleanupService.replace(
+            "import { browserName, SiteDataType, SettingID, ListType, ReasonClean, OpenTabStatus } from '../typings/Enums';",
+            "import { browserName, SiteDataType, SettingID, ListType, ReasonClean, ReasonKeep, OpenTabStatus } from '../typings/Enums';",
+          );
+          fs.writeFileSync('src/services/CleanupService.ts', cleanupService);
+
+          let cleanupSpec = fs.readFileSync('__tests__/services/CleanupService.spec.ts', 'utf8');
+          cleanupSpec = cleanupSpec.replace(
+            "import { browserName, SiteDataType, SettingID, ListType, ReasonClean, OpenTabStatus } from '../../src/typings/Enums';",
+            "import { browserName, SiteDataType, SettingID, ListType, ReasonClean, ReasonKeep, OpenTabStatus } from '../../src/typings/Enums';",
+          );
+          fs.writeFileSync('__tests__/services/CleanupService.spec.ts', cleanupSpec);
 
           let background = fs.readFileSync('src/background.ts', 'utf8');
           background = background.replace(
@@ -152,7 +182,7 @@ jobs:
       - name: ESLint
         run: npm run lint
       - name: Prettier changed files
-        run: npx prettier --check package.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/services/Libs.ts src/background.ts __tests__/services/Libs.spec.ts tools/jest-typescript-transformer.cjs
+        run: npx prettier --check package.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/typings/Cleanup.d.ts src/services/Libs.ts src/services/CleanupService.ts src/background.ts __tests__/services/Libs.spec.ts __tests__/services/CleanupService.spec.ts tools/jest-typescript-transformer.cjs
       - name: Firefox build
         run: npm run dev:firefox
       - name: Chromium build
@@ -164,6 +194,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/tmp-ts7-coordinated-migration.yml
-          git add package.json package-lock.json tsconfig.json jest.config.js tools/jest-typescript-transformer.cjs src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/services/Libs.ts src/background.ts __tests__/services/Libs.spec.ts
+          git add package.json package-lock.json tsconfig.json jest.config.js tools/jest-typescript-transformer.cjs src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/typings/Cleanup.d.ts src/services/Libs.ts src/services/CleanupService.ts src/background.ts __tests__/services/Libs.spec.ts __tests__/services/CleanupService.spec.ts
           git commit -m "chore: migrate toolchain to TypeScript 7"
           git push origin HEAD:modernization-p0
