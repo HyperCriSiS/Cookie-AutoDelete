@@ -34,7 +34,8 @@ jobs:
           const fs = require('fs');
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           delete pkg.devDependencies['ts-jest'];
-          pkg.devDependencies['typescript'] = '7.0.2';
+          pkg.devDependencies['@typescript/native'] = 'npm:typescript@7.0.2';
+          pkg.devDependencies['typescript'] = 'npm:@typescript/typescript6@6.0.2';
           pkg.devDependencies = Object.fromEntries(Object.entries(pkg.devDependencies).sort(([a],[b]) => a.localeCompare(b)));
           fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
 
@@ -143,7 +144,7 @@ jobs:
 
           npm install --package-lock-only --ignore-scripts --legacy-peer-deps
           npm ci --legacy-peer-deps
-          npm ls @types/firefox-webext-browser typescript @types/node @types/jest || true
+          npm ls @types/firefox-webext-browser @typescript/native typescript @types/node @types/jest || true
       - name: TypeScript 7 typecheck
         run: npx tsc --noEmit
       - name: Jest suite
