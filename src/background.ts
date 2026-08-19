@@ -10,7 +10,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { browserName, SettingID } from './typings/Enums';
+import { browserName, SettingID, EventListenerAction } from './typings/Enums';
 import { Store } from 'redux';
 import { cookieCleanup, validateSettings } from './redux/Actions';
 import createStore from './redux/Store';

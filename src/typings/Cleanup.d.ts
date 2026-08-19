@@ -32,11 +32,7 @@ interface CleanupPropertiesInternal extends CleanupProperties {
   openTabDomains: { [k: string]: string[] };
 }
 
-declare const enum ReasonKeep {
-  OpenTabs = 'reasonKeepOpenTab',
-  MatchedExpression = 'reasonKeep',
-}
-
+type ReasonKeep = import('./Enums').ReasonKeep;
 type ReasonClean = import('./Enums').ReasonClean;
 
 type OpenTabStatus = import('./Enums').OpenTabStatus;

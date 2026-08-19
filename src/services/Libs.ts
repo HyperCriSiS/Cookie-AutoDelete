@@ -11,7 +11,13 @@
  * SOFTWARE.
  */
 
-import { browserName, SiteDataType, SettingID, ListType } from '../typings/Enums';
+import {
+  browserName,
+  SiteDataType,
+  SettingID,
+  ListType,
+  EventListenerAction,
+} from '../typings/Enums';
 import ipaddr from 'ipaddr.js';
 import { generateId } from './IdService';
 

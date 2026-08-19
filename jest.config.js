@@ -21,7 +21,7 @@ module.exports = {
   collectCoverage: true,
 
   // An array of glob patterns indicating a set of files for which coverage information should be collected
-  collectCoverageFrom: ['src/**/*.{ts,tsx}'],
+  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts'],
 
   // The directory where Jest should output its coverage files
   coverageDirectory: 'coverage',
@@ -54,13 +54,6 @@ module.exports = {
   // A path to a module which exports an async function that is triggered once after all test suites
   // globalTeardown: null,
 
-  // A set of global variables that need to be available in all test environments
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json',
-    },
-  },
-
   // An array of directory names to be searched recursively up from the requiring module's location
   // moduleDirectories: [
   //   "node_modules"
@@ -79,9 +72,6 @@ module.exports = {
 
   // An enum that specifies notification mode. Requires { notify: true }
   // notifyMode: "always",
-
-  // A preset that is used as a base for Jest's configuration
-  preset: 'ts-jest',
 
   // Run tests from one or more projects
   // projects: null,
@@ -159,7 +149,7 @@ module.exports = {
 
   // A map from regular expressions to paths to transformers
   transform: {
-    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.tsx?$': '<rootDir>/tools/jest-typescript-transformer.cjs',
   },
 
   // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation

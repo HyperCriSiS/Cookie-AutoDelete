@@ -84,9 +84,4 @@ type CADLogItem = Readonly<{
   x?: any;
 }>;
 
-declare const enum EventListenerAction {
-  ADD = 'ADD',
-  REMOVE = 'REMOVE',
-}
-
 type JestSpyObject = { [s: string]: jest.SpyInstance };

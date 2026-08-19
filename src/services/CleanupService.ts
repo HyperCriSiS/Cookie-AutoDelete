@@ -11,7 +11,15 @@
  * SOFTWARE.
  */
 
-import { browserName, SiteDataType, SettingID, ListType, ReasonClean, OpenTabStatus } from '../typings/Enums';
+import {
+  browserName,
+  SiteDataType,
+  SettingID,
+  ListType,
+  ReasonClean,
+  ReasonKeep,
+  OpenTabStatus,
+} from '../typings/Enums';
 import {
   getStorageTypeSupport,
   usesBrowsingDataOrigins,
@@ -611,10 +619,7 @@ export const otherBrowsingDataCleanup = async (
   const debug = getSetting(state, SettingID.DEBUG_MODE) as boolean;
   const browsingDataResult: ActivityLog['browsingDataCleanup'] = {};
   const storageSupport = getStorageTypeSupport(state.cache);
-  if (
-    getSetting(state, SettingID.CLEANUP_CACHE) &&
-    storageSupport.cache
-  ) {
+  if (getSetting(state, SettingID.CLEANUP_CACHE) && storageSupport.cache) {
     browsingDataResult[SiteDataType.CACHE] = await cleanSiteData(
       state,
       SiteDataType.CACHE,

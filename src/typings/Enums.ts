@@ -89,3 +89,13 @@ export enum OpenTabStatus {
   TabsWasNotIgnored = 'reasonTabsWereNotIgnored',
   TabsWereIgnored = 'reasonTabsWereIgnored',
 }
+
+export enum EventListenerAction {
+  ADD = 'ADD',
+  REMOVE = 'REMOVE',
+}
+
+export enum ReasonKeep {
+  OpenTabs = 'reasonKeepOpenTab',
+  MatchedExpression = 'reasonKeep',
+}
