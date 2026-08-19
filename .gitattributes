@@ -1,3 +1,10 @@
+# BEGIN MANAGED LINE ENDINGS
+# Einheitliche Zeilenenden fuer plattformuebergreifende Entwicklung.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+# END MANAGED LINE ENDINGS
+
 *.*ignore text eol=lf
 *.acl text eol=lf
 *.cfg text eol=lf
