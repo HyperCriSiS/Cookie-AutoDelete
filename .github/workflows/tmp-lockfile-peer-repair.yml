@@ -1,0 +1,72 @@
+name: Temporary lockfile peer repair
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: modernization-p0
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+      - name: Restore missing Bootstrap peer lock entry
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'package-lock.json';
+          const lock = JSON.parse(fs.readFileSync(path, 'utf8'));
+
+          if (lock.lockfileVersion !== 2) {
+            throw new Error(`Unexpected package-lock version: ${lock.lockfileVersion}`);
+          }
+          if (!lock.packages?.['node_modules/bootstrap']?.peerDependencies?.['popper.js']) {
+            throw new Error('Bootstrap no longer declares the expected popper.js peer dependency.');
+          }
+
+          lock.packages['node_modules/popper.js'] = {
+            version: '1.16.1',
+            resolved: 'https://registry.npmjs.org/popper.js/-/popper.js-1.16.1.tgz',
+            integrity: 'sha512-Wb4p1J4zyFTbM+u6WuO4XstYx4Ky9Cewe4DWrel7B0w6VVICvPwdOpotjzcf6eD8TsckVnIMNONQyPIUFOUbCQ==',
+            deprecated: 'You can find the new Popper v2 at @popperjs/core, this package is dedicated to the legacy v1',
+            peer: true,
+            funding: {
+              type: 'opencollective',
+              url: 'https://opencollective.com/popperjs'
+            }
+          };
+          lock.dependencies['popper.js'] = {
+            version: '1.16.1',
+            resolved: 'https://registry.npmjs.org/popper.js/-/popper.js-1.16.1.tgz',
+            integrity: 'sha512-Wb4p1J4zyFTbM+u6WuO4XstYx4Ky9Cewe4DWrel7B0w6VVICvPwdOpotjzcf6eD8TsckVnIMNONQyPIUFOUbCQ==',
+            peer: true
+          };
+
+          fs.writeFileSync(path, `${JSON.stringify(lock, null, 2)}\n`);
+          NODE
+      - name: Verify locked install
+        run: npm ci --prefer-offline --no-fund
+      - name: Verify TypeScript 7
+        run: npm run typecheck
+      - name: Verify tests
+        run: npm test -- --runInBand
+      - name: Verify lint
+        run: npm run lint
+      - name: Verify production builds
+        run: npm run build
+      - name: Commit repaired lockfile and remove one-shot workflow
+        run: |
+          rm .github/workflows/tmp-lockfile-peer-repair.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json .github/workflows/tmp-lockfile-peer-repair.yml
+          git commit -m 'fix: restore Bootstrap peer dependency lock entry'
+          git push origin HEAD:modernization-p0
