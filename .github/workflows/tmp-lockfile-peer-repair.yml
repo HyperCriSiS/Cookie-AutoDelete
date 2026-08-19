@@ -1,7 +1,9 @@
 name: Temporary lockfile peer repair
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - modernization-p0
 
 permissions:
   contents: write
