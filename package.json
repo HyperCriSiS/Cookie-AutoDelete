@@ -71,7 +71,8 @@
     "manifest:chromium": "node ./tools/generateManifest.js chromium",
     "manifest:firefox": "node ./tools/generateManifest.js firefox",
     "test": "jest --coverage",
-    "test-all": "npm run test && npm run lint"
+    "test-all": "npm run test && npm run lint",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",

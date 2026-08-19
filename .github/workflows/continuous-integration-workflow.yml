@@ -71,6 +71,8 @@ jobs:
             ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-
       - name: Install locked dependencies
         run: npm ci --prefer-offline --no-fund
+      - name: Run TypeScript 7 typecheck
+        run: npm run typecheck
       - name: Run Tests
         run: npm run test -- --verbose
       - name: Run Lint
