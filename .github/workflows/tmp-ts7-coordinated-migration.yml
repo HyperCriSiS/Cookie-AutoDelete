@@ -7,6 +7,7 @@ on:
       - '.github/workflows/tmp-ts7-coordinated-migration.yml'
       - 'src/redux/Actions.ts'
       - 'src/ui/common_components/IconButton.tsx'
+      - 'src/ui/common_components/ActivityTable.tsx'
       - 'src/typings/Enums.ts'
       - 'src/typings/Global.d.ts'
       - 'src/typings/Cleanup.d.ts'
@@ -110,6 +111,13 @@ jobs:
           );
           fs.writeFileSync('__tests__/services/CleanupService.spec.ts', cleanupSpec);
 
+          let activityTable = fs.readFileSync('src/ui/common_components/ActivityTable.tsx', 'utf8');
+          activityTable = activityTable.replace(
+            "import { FilterOptions, ListType, ReasonClean, SettingID, SiteDataType } from '../../typings/Enums';",
+            "import { FilterOptions, ListType, ReasonClean, ReasonKeep, SettingID, SiteDataType } from '../../typings/Enums';",
+          );
+          fs.writeFileSync('src/ui/common_components/ActivityTable.tsx', activityTable);
+
           let background = fs.readFileSync('src/background.ts', 'utf8');
           background = background.replace(
             "import { browserName, SettingID } from './typings/Enums';",
@@ -182,7 +190,7 @@ jobs:
       - name: ESLint
         run: npm run lint
       - name: Prettier changed files
-        run: npx prettier --check package.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/typings/Cleanup.d.ts src/services/Libs.ts src/services/CleanupService.ts src/background.ts __tests__/services/Libs.spec.ts __tests__/services/CleanupService.spec.ts tools/jest-typescript-transformer.cjs
+        run: npx prettier --check package.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/typings/Cleanup.d.ts src/services/Libs.ts src/services/CleanupService.ts src/background.ts src/ui/common_components/ActivityTable.tsx __tests__/services/Libs.spec.ts __tests__/services/CleanupService.spec.ts tools/jest-typescript-transformer.cjs
       - name: Firefox build
         run: npm run dev:firefox
       - name: Chromium build
@@ -194,6 +202,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/tmp-ts7-coordinated-migration.yml
-          git add package.json package-lock.json tsconfig.json jest.config.js tools/jest-typescript-transformer.cjs src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/typings/Cleanup.d.ts src/services/Libs.ts src/services/CleanupService.ts src/background.ts __tests__/services/Libs.spec.ts __tests__/services/CleanupService.spec.ts
+          git add package.json package-lock.json tsconfig.json jest.config.js tools/jest-typescript-transformer.cjs src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/typings/Cleanup.d.ts src/services/Libs.ts src/services/CleanupService.ts src/background.ts src/ui/common_components/ActivityTable.tsx __tests__/services/Libs.spec.ts __tests__/services/CleanupService.spec.ts
           git commit -m "chore: migrate toolchain to TypeScript 7"
           git push origin HEAD:modernization-p0
