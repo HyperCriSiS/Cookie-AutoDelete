@@ -10,6 +10,7 @@ on:
       - 'src/typings/Enums.ts'
       - 'src/typings/Global.d.ts'
       - 'src/services/Libs.ts'
+      - 'src/background.ts'
       - '__tests__/services/Libs.spec.ts'
 
 permissions:
@@ -48,7 +49,7 @@ jobs:
           jest = jest.replace(/  \/\/ A set of global variables[\s\S]*?  },\n\n  \/\/ An array of directory names/, '  // An array of directory names');
           jest = jest.replace(/  \/\/ A preset that is used as a base for Jest's configuration\n  preset: 'ts-jest',\n\n/, '');
           const transformPattern = "    '^.+\\\\.tsx?$': 'ts-jest',";
-          const transformer = "    '^.+\\\\.tsx?$': '<rootDir>/.tmp-ts7-jest-transformer.cjs',";
+          const transformer = "    '^.+\\\\.tsx?$': '<rootDir>/tools/jest-typescript-transformer.cjs',";
           if (!jest.includes(transformPattern)) throw new Error('ts-jest transform pattern not found');
           jest = jest.replace(transformPattern, () => transformer);
           if (jest.includes('ts-jest')) throw new Error('ts-jest configuration remained in jest.config.js');
@@ -77,9 +78,16 @@ jobs:
             "import { browserName, SiteDataType, SettingID, ListType, EventListenerAction } from '../../src/typings/Enums';",
           );
           fs.writeFileSync('__tests__/services/Libs.spec.ts', libsSpec);
+
+          let background = fs.readFileSync('src/background.ts', 'utf8');
+          background = background.replace(
+            "import { browserName, SettingID } from './typings/Enums';",
+            "import { browserName, SettingID, EventListenerAction } from './typings/Enums';",
+          );
+          fs.writeFileSync('src/background.ts', background);
           NODE
 
-          cat > .tmp-ts7-jest-transformer.cjs <<'EOF'
+          cat > tools/jest-typescript-transformer.cjs <<'EOF'
           const ts = require('typescript');
 
           module.exports = {
@@ -143,7 +151,7 @@ jobs:
       - name: ESLint
         run: npm run lint
       - name: Prettier changed files
-        run: npx prettier --check package.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/services/Libs.ts __tests__/services/Libs.spec.ts .tmp-ts7-jest-transformer.cjs
+        run: npx prettier --check package.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/services/Libs.ts src/background.ts __tests__/services/Libs.spec.ts tools/jest-typescript-transformer.cjs
       - name: Firefox build
         run: npm run dev:firefox
       - name: Chromium build
@@ -154,6 +162,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json tsconfig.json jest.config.js src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/services/Libs.ts __tests__/services/Libs.spec.ts
+          git rm .github/workflows/tmp-ts7-coordinated-migration.yml
+          git add package.json package-lock.json tsconfig.json jest.config.js tools/jest-typescript-transformer.cjs src/typings/BrowserRuntime.d.ts src/typings/Enums.ts src/typings/Global.d.ts src/services/Libs.ts src/background.ts __tests__/services/Libs.spec.ts
           git commit -m "chore: migrate toolchain to TypeScript 7"
           git push origin HEAD:modernization-p0
