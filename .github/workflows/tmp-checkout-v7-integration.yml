@@ -1,0 +1,36 @@
+name: Temporary checkout v7 integration
+
+on:
+  push:
+    branches:
+      - modernization-p0
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout modernization branch
+        uses: actions/checkout@v7
+        with:
+          ref: modernization-p0
+      - name: Update active workflow checkout actions
+        run: |
+          grep -RIl 'actions/checkout@v4' .github/workflows | while read -r file; do
+            sed -i 's#actions/checkout@v4#actions/checkout@v7#g' "$file"
+          done
+          if grep -R 'actions/checkout@v4' .github/workflows; then
+            echo 'Legacy checkout v4 reference remains.' >&2
+            exit 1
+          fi
+      - name: Commit validated workflow-only update
+        run: |
+          rm .github/workflows/tmp-checkout-v7-integration.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows
+          git diff --cached --check
+          git commit -m 'chore: upgrade actions checkout to v7'
+          git push origin HEAD:modernization-p0
