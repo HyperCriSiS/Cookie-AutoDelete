@@ -53,6 +53,7 @@ jobs:
           let jest = fs.readFileSync('jest.config.js', 'utf8');
           jest = jest.replace(/  \/\/ A set of global variables[\s\S]*?  },\n\n  \/\/ An array of directory names/, '  // An array of directory names');
           jest = jest.replace(/  \/\/ A preset that is used as a base for Jest's configuration\n  preset: 'ts-jest',\n\n/, '');
+          jest = jest.replace("collectCoverageFrom: ['src/**/*.{ts,tsx}']", "collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts']");
           const transformPattern = "    '^.+\\\\.tsx?$': 'ts-jest',";
           const transformer = "    '^.+\\\\.tsx?$': '<rootDir>/tools/jest-typescript-transformer.cjs',";
           if (!jest.includes(transformPattern)) throw new Error('ts-jest transform pattern not found');
@@ -147,15 +148,15 @@ jobs:
           EOF
 
           cat > src/typings/BrowserRuntime.d.ts <<'EOF'
-          /// <reference path="../../node_modules/@types/firefox-webext-browser/index.d.ts" />
+          /// <reference types="firefox-webext-browser" />
 
           /**
            * TypeScript 7 with bundler module resolution keeps the Firefox WebExtension
            * declaration namespaces but does not expose a global runtime `browser` value.
            *
            * Keep the maintained Firefox declarations as the source of truth and derive
-           * the runtime surface CAD uses from those namespaces. The explicit reference
-           * prevents module-resolution changes from silently dropping the ambient base.
+           * the runtime surface CAD uses from those namespaces. The explicit type
+           * reference prevents module-resolution changes from dropping the ambient base.
            */
           type CadBrowserRuntime = {
             tabs: typeof browser.tabs;
