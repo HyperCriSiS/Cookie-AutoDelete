@@ -12,7 +12,7 @@ Active modernization work is on `modernization-p0`, tracked by draft PR #1 into 
 
 Regular functional CI has been green on validated modernization heads (`Initial Checks`, `Tests, Builds, Coverage`, CodeQL and JavaScript/TypeScript/Actions analysis where reported). The regular CI now includes an explicit TypeScript 7 `npm run typecheck` gate in addition to tests, lint and build. The separate `github-advanced-security` agent can fail before repository analysis because the GitHub-hosted agent requests an unsupported model; this is classified as an external GitHub service/configuration problem rather than a functional repository defect.
 
-There are currently no repository issues and no fork releases. Remaining Dependabot updates require compatibility review rather than automatic merging.
+There are currently no repository issues and no fork releases. Superseded Dependabot PRs are closed after their validated changes are integrated directly; remaining Dependabot updates require compatibility review rather than automatic merging.
 
 ## Phase 0 — Manifest V3 modernization foundation
 
@@ -73,6 +73,10 @@ There are currently no repository issues and no fork releases. Remaining Dependa
 - [ ] Review remaining open Dependabot updates individually and integrate only those proven compatible.
   - [x] Integrate `github/codeql-action` v4 from Dependabot PR #22 after confirming its isolated PR checks are green; apply the same change directly to `modernization-p0` rather than merging the stale-base Dependabot branch.
   - [x] Integrate `actions/checkout` v7 independently from stale-base Dependabot PR #20 across all six active workflow references. Final branch state `2f891142` is green in regular CI: push `32310456365`, `pull_request_target` `32310458651`, and pull request `32310460633`; the temporary integration workflow was removed.
+  - [x] Integrate `peter-evans/slash-command-dispatch` v5 independently from Dependabot PR #19. Commit `adc875af` is green in regular CI: push `32316163722`, `pull_request_target` `32316165646`, and pull request `32316166615`.
+  - [x] Integrate `peter-evans/create-or-update-comment` v5 independently from Dependabot PR #23 after verifying the existing workflow inputs remain supported. Commit `231a5f5b` is green in regular CI: push `32317215811`, `pull_request_target` `32317217033`, and pull request `32317219531`.
+  - [x] Close superseded Dependabot PRs #7, #19, #20, #22 and #23 after their compatible changes were either incorporated through the coordinated migration or applied directly to `modernization-p0`.
+  - [ ] Review Codecov Action v7 (Dependabot PR #24); its current v7 schema retains the repository's used coverage/override inputs, but integration and branch CI validation are still pending.
 - [ ] Re-check generated Firefox and Chromium package contents after all remaining dependency/toolchain migrations.
 
 ## Phase 4 — release readiness
