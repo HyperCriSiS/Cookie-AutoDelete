@@ -72,6 +72,7 @@ There are currently no repository issues and no fork releases. Remaining Dependa
   - [x] Restore the missing Bootstrap 4 peer lock entry `popper.js@1.16.1` from the existing upstream lock metadata so ordinary `npm ci` is reproducible again; one-shot validation run `32309151986` passed locked install, TS7 typecheck, tests, lint and production build, then removed its temporary repair workflow.
 - [ ] Review remaining open Dependabot updates individually and integrate only those proven compatible.
   - [x] Integrate `github/codeql-action` v4 from Dependabot PR #22 after confirming its isolated PR checks are green; apply the same change directly to `modernization-p0` rather than merging the stale-base Dependabot branch.
+  - [x] Integrate `actions/checkout` v7 independently from stale-base Dependabot PR #20 across all six active workflow references. Final branch state `2f891142` is green in regular CI: push `32310456365`, `pull_request_target` `32310458651`, and pull request `32310460633`; the temporary integration workflow was removed.
 - [ ] Re-check generated Firefox and Chromium package contents after all remaining dependency/toolchain migrations.
 
 ## Phase 4 — release readiness
