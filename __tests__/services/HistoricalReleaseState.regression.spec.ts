@@ -64,35 +64,42 @@ describe.each(fixtures)(
     ])(
       'hydrates and upgrades without losing persisted user data in %s',
       (_browserLabel, detectedBrowser) => {
-        const legacyState = JSON.parse(
+        const releaseState = JSON.parse(
           JSON.stringify(fixture.state),
         ) as State;
 
-        // Overlay representative user data on the exact historical release
-        // schema. These keys exist in every fixture version in this directory.
-        legacyState.settings[SettingID.CLEAN_DELAY] = {
-          ...legacyState.settings[SettingID.CLEAN_DELAY],
-          value: 73,
+        // Overlay representative user data immutably on the exact historical
+        // release schema. These keys exist in every fixture version here.
+        const legacySettings: MapToSettingObject = {
+          ...releaseState.settings,
+          [SettingID.CLEAN_DELAY]: {
+            ...releaseState.settings[SettingID.CLEAN_DELAY],
+            value: 73,
+          },
+          [SettingID.NOTIFY_AUTO]: {
+            ...releaseState.settings[SettingID.NOTIFY_AUTO],
+            value: false,
+          },
+          [SettingID.STAT_LOGGING]: {
+            ...releaseState.settings[SettingID.STAT_LOGGING],
+            value: false,
+          },
         };
-        legacyState.settings[SettingID.NOTIFY_AUTO] = {
-          ...legacyState.settings[SettingID.NOTIFY_AUTO],
-          value: false,
-        };
-        legacyState.settings[SettingID.STAT_LOGGING] = {
-          ...legacyState.settings[SettingID.STAT_LOGGING],
-          value: false,
-        };
-        legacyState.cookieDeletedCounterTotal = 41;
-        legacyState.cookieDeletedCounterSession = 7;
-        legacyState.lists = {
-          default: [
-            {
-              expression: `upgrade-${fixture.metadata.version}.example`,
-              id: `legacy-${fixture.metadata.version}`,
-              listType: ListType.WHITE,
-              storeId: 'default',
-            },
-          ],
+        const legacyState: State = {
+          ...releaseState,
+          cookieDeletedCounterTotal: 41,
+          cookieDeletedCounterSession: 7,
+          lists: {
+            default: [
+              {
+                expression: `upgrade-${fixture.metadata.version}.example`,
+                id: `legacy-${fixture.metadata.version}`,
+                listType: ListType.WHITE,
+                storeId: 'default',
+              },
+            ],
+          },
+          settings: legacySettings,
         };
 
         const originalLegacySettings = JSON.parse(
