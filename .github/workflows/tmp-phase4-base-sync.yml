@@ -25,10 +25,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin 3.X.X-Branch
           git checkout origin/3.X.X-Branch -- package.json package-lock.json
-          if git diff --quiet -- package.json package-lock.json; then
+          if git diff --cached --quiet -- package.json package-lock.json; then
             echo "Package graph already matches current base."
             exit 0
           fi
-          git add package.json package-lock.json
-          git commit -m "chore: stage base package graph for sync"
+          git commit -m "chore: stage base package graph for sync" -- package.json package-lock.json
           git push origin HEAD:modernization-phase4-base-sync
