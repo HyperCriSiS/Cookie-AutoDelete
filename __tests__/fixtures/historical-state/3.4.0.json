@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "kind": "upstream-release-initial-state",
+    "version": "3.4.0",
+    "tag": "v3.4.0",
+    "upstreamCommit": "d7a758ae95e9e3c05e354ff1296aebaa3954b711",
+    "sourcePath": "src/redux/State.ts",
+    "sourceBlobSha": "ec464b5c643363014d097ec2e514b817ab588433",
+    "note": "Exact initialState schema derived from the tagged upstream release; not a real user profile export."
+  },
+  "state": {
+    "lists": {},
+    "cookieDeletedCounterTotal": 0,
+    "cookieDeletedCounterSession": 0,
+    "settings": {
+      "activeMode": {"name": "activeMode", "value": false},
+      "cleanCookiesFromOpenTabsOnStartup": {"name": "cleanCookiesFromOpenTabsOnStartup", "value": false},
+      "contextMenus": {"name": "contextMenus", "value": true},
+      "contextualIdentities": {"name": "contextualIdentities", "value": false},
+      "debugMode": {"name": "debugMode", "value": false},
+      "delayBeforeClean": {"name": "delayBeforeClean", "value": 15},
+      "discardedCleanup": {"name": "discardedCleanup", "value": false},
+      "domainChangeCleanup": {"name": "domainChangeCleanup", "value": false},
+      "enableGreyListCleanup": {"name": "enableGreyListCleanup", "value": true},
+      "enableNewVersionPopup": {"name": "enableNewVersionPopup", "value": false},
+      "greyCleanLocalstorage": {"name": "greyCleanLocalstorage", "value": false},
+      "keepDefaultIcon": {"name": "keepDefaultIcon", "value": false},
+      "localstorageCleanup": {"name": "localstorageCleanup", "value": false},
+      "notificationOnScreen": {"name": "notificationOnScreen", "value": 3},
+      "showNotificationAfterCleanup": {"name": "showNotificationAfterCleanup", "value": true},
+      "showNumOfCookiesInIcon": {"name": "showNumOfCookiesInIcon", "value": true},
+      "sizePopup": {"name": "sizePopup", "value": 16},
+      "sizeSetting": {"name": "sizeSetting", "value": 16},
+      "statLogging": {"name": "statLogging", "value": true},
+      "whiteCleanLocalstorage": {"name": "whiteCleanLocalstorage", "value": false}
+    },
+    "activityLog": [],
+    "cache": {}
+  }
+}
