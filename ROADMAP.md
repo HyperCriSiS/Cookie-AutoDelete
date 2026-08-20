@@ -84,9 +84,9 @@ There are currently no repository issues and no fork releases. All Dependabot PR
 ## Phase 4 — release readiness
 
 - [x] Produce Firefox and Chromium release-candidate packages from the same validated source state. PR CI now retains the installable `*Chrome.zip` and `*Firefox.xpi` plus `SHA256SUMS.txt` in a dedicated `release-candidate-packages` artifact. Commit `a8af649e` is green in regular CI: push `32322777150`, `pull_request_target` `32322778298`, and pull request `32322779658`; RC artifact `9390334806` is tied to that exact head SHA.
-- [ ] Perform representative manual browser smoke tests in addition to automated CI.
-- [ ] Confirm existing user settings/data survive a real release-candidate upgrade path in both target browser families.
-- [ ] Confirm popup/options, cleanup triggers, allowlist/greylist and restart behavior in packaged builds rather than source/unit tests alone.
+- [ ] Perform representative manual browser smoke tests in addition to automated CI. The exact cross-browser procedure and result matrix are defined in `RC_TEST_CHECKLIST.md`; execution remains a manual release gate.
+- [ ] Confirm existing user settings/data survive a real release-candidate upgrade path in both target browser families. `RC_TEST_CHECKLIST.md` defines the non-destructive real-profile/export procedure; suitable historical data is still required.
+- [ ] Confirm popup/options, cleanup triggers, allowlist/greylist and restart behavior in packaged builds rather than source/unit tests alone. These packaged-runtime checks are enumerated in `RC_TEST_CHECKLIST.md` and must be recorded for both browser families.
 - [ ] Merge `modernization-p0` into `3.X.X-Branch` only after migration/runtime checks and release-candidate validation are green.
 - [ ] Create a tagged fork release only after the integrated branch has passed the release checklist.
 - [ ] Consider an upstream proposal only after the fork branch is stable and the modernization scope is documented.
@@ -99,4 +99,4 @@ There are currently no repository issues and no fork releases. All Dependabot PR
 
 ## Completion status
 
-**Not fully completed.** Manifest V3 foundations, functional CI stabilization, the automated migration/runtime compatibility pass, Archiver 8 / Redux 5 modernization, maintained Firefox WebExtension typings and the coordinated TypeScript 7 migration are complete and verified. TypeScript 7 is now protected by the regular CI typecheck, `ts-jest` and temporary TS7 probes are removed, and the repaired dependency lock again supports reproducible `npm ci`. Phase 3 is complete: dependency/toolchain modernization and the generated-package content audit are both permanently enforced and green. Phase 4 now retains same-source installable Firefox/Chromium RC packages with SHA-256 checksums in PR CI. Real historical-profile upgrade validation and manual packaged-browser checks remain open.
+**Not fully completed.** Manifest V3 foundations, functional CI stabilization, the automated migration/runtime compatibility pass, Archiver 8 / Redux 5 modernization, maintained Firefox WebExtension typings and the coordinated TypeScript 7 migration are complete and verified. TypeScript 7 is now protected by the regular CI typecheck, `ts-jest` and temporary TS7 probes are removed, and the repaired dependency lock again supports reproducible `npm ci`. Phase 3 is complete: dependency/toolchain modernization and the generated-package content audit are both permanently enforced and green. Phase 4 now retains same-source installable Firefox/Chromium RC packages with SHA-256 checksums in PR CI, and `RC_TEST_CHECKLIST.md` defines the remaining manual/runtime validation gates. Real historical-profile upgrade validation and manual packaged-browser checks remain open.
