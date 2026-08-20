@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  stage-package-graph:
+  restore-package-graph:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sync branch
@@ -17,17 +17,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Stage current base package graph
+      - name: Restore validated modernization package graph
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin 3.X.X-Branch
-          git checkout origin/3.X.X-Branch -- package.json package-lock.json
+          git checkout e8efcd6296def14a34cbbb1316c6e34c3546a075 -- package.json package-lock.json
           if git diff --cached --quiet -- package.json package-lock.json; then
-            echo "Package graph already matches current base."
+            echo "Modernization package graph already restored."
             exit 0
           fi
-          git commit -m "chore: stage base package graph for sync" -- package.json package-lock.json
+          git commit -m "chore: restore modernization package graph after base sync" -- package.json package-lock.json
           git push origin HEAD:modernization-phase4-base-sync
