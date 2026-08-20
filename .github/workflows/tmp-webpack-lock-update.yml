@@ -7,22 +7,18 @@ on:
 
 jobs:
   update-lockfile:
-    if: github.event.head_commit.message == 'chore: generate Webpack 5.109.2 lockfile'
+    if: >-
+      github.event.head_commit.message == 'chore: fix Webpack lockfile generation'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v7
       - name: Update Webpack lockfile with npm 8
         run: npx --yes npm@8.19.4 install --save-dev 'webpack@^5.109.2' --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Commit generated package metadata
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          if git diff --cached --quiet; then
-            echo "No package metadata changes generated."
-            exit 0
-          fi
-          git commit -m "chore: update Webpack to 5.109.2"
-          git push
+      - name: Upload generated package metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: webpack-5.109.2-package-metadata
+          path: |
+            package.json
+            package-lock.json
+          if-no-files-found: error
