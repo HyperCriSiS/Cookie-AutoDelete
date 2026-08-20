@@ -17,6 +17,8 @@ Record the exact candidate before testing:
 
 Use the Firefox XPI and Chromium ZIP from the **same** `release-candidate-packages` artifact. Verify the packaged files against the included `SHA256SUMS.txt` before loading them.
 
+Before starting the final manual matrix, confirm PR #1 is mergeable with the current `3.X.X-Branch` base and that the candidate was generated **after** the most recent base synchronization/conflict resolution. If the base changes or the PR becomes non-mergeable, resolve/synchronize first, rerun CI, and record the replacement candidate instead of testing a stale artifact.
+
 ## 1. Package integrity and installation
 
 ### Firefox
@@ -140,5 +142,6 @@ Do **not** merge `modernization-p0` into `3.X.X-Branch` or create a tagged fork 
 
 1. all applicable manual Firefox and Chromium checks above pass,
 2. at least one representative real historical upgrade path per browser family is validated when suitable historical data is available,
-3. the exact candidate SHA remains green in regular CI, and
-4. any discovered regression is fixed and the affected checks are repeated on the replacement candidate.
+3. PR #1 is mergeable with the current `3.X.X-Branch` base and the tested candidate was generated after the latest required base synchronization,
+4. the exact candidate SHA remains green in regular CI, and
+5. any discovered regression is fixed and the affected checks are repeated on the replacement candidate.
