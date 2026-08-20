@@ -12,10 +12,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { generateManifest } = require('./generateManifest');
-const { validateBuildStage } = require('./validateBuildStage');
+const { listFiles, validateBuildStage } = require('./validateBuildStage');
 
 const BUILDS = 'builds';
 const EXT = 'extension';
@@ -102,6 +103,42 @@ const prepareStage = (target) => {
   return stageDir;
 };
 
+const normalizeArchiveEntry = (name) =>
+  name.replaceAll('\\', '/').replace(/^\.\//, '');
+
+const validateArchiveEntries = (sourceDir, archivedFiles, outputPath) => {
+  const expectedFiles = listFiles(sourceDir);
+  const actualFiles = [...archivedFiles].map(normalizeArchiveEntry).sort();
+
+  const missing = expectedFiles.filter((file) => !actualFiles.includes(file));
+  const unexpected = actualFiles.filter((file) => !expectedFiles.includes(file));
+
+  if (missing.length || unexpected.length) {
+    throw new Error(
+      `Build archive validation failed for ${path.basename(outputPath)}: ` +
+        `missing=[${missing.join(',')}] unexpected=[${unexpected.join(',')}]`,
+    );
+  }
+
+  if (actualFiles.length !== expectedFiles.length) {
+    throw new Error(
+      `Build archive validation failed for ${path.basename(outputPath)}: ` +
+        `expected ${expectedFiles.length} files but archived ${actualFiles.length}`,
+    );
+  }
+
+  const outputSize = fs.statSync(outputPath).size;
+  if (outputSize <= 0) {
+    throw new Error(
+      `Build archive validation failed for ${path.basename(outputPath)}: archive is empty`,
+    );
+  }
+
+  console.log(
+    `Validated ${path.basename(outputPath)} archive contents (${actualFiles.length} files).`,
+  );
+};
+
 const archiveDirectory = async (sourceDir, filename) => {
   // Archiver 8 is ESM-only and exposes format-specific archive classes instead
   // of the legacy callable CommonJS export. Dynamic import keeps this existing
@@ -112,14 +149,23 @@ const archiveDirectory = async (sourceDir, filename) => {
     const outputPath = path.join(BUILDDIR, `${filename}.zip`);
     const output = fs.createWriteStream(outputPath);
     const archive = new ZipArchive({ zlib: { level: 9 } });
+    const archivedFiles = [];
 
     output.on('close', () => {
-      console.log(`${archive.pointer()} total bytes`);
-      console.log(`Created ${outputPath}`);
-      resolve(outputPath);
+      try {
+        validateArchiveEntries(sourceDir, archivedFiles, outputPath);
+        console.log(`${archive.pointer()} total bytes`);
+        console.log(`Created ${outputPath}`);
+        resolve(outputPath);
+      } catch (error) {
+        reject(error);
+      }
     });
     output.on('error', reject);
 
+    archive.on('entry', (entry) => {
+      if (entry.type === 'file') archivedFiles.push(entry.name);
+    });
     archive.on('warning', (error) => {
       if (error.code === 'ENOENT') {
         console.warn('ARCHIVER WARNING %s: %s', error.code, error.message);
@@ -135,6 +181,20 @@ const archiveDirectory = async (sourceDir, filename) => {
   });
 };
 
+const fileSha256 = (filePath) =>
+  crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+
+const validateFirefoxXpiCopy = (zipPath, xpiPath) => {
+  const zipSize = fs.statSync(zipPath).size;
+  const xpiSize = fs.statSync(xpiPath).size;
+  if (zipSize !== xpiSize || fileSha256(zipPath) !== fileSha256(xpiPath)) {
+    throw new Error(
+      'Build archive validation failed: Firefox ZIP and XPI are not byte-identical',
+    );
+  }
+  console.log('Validated Firefox ZIP/XPI byte identity.');
+};
+
 const buildTarget = async (target, filename) => {
   console.log(`\nBuilding unsigned extension for ${target}...`);
   const stageDir = prepareStage(target);
@@ -144,6 +204,7 @@ const buildTarget = async (target, filename) => {
     if (target === 'firefox') {
       const xpiPath = path.join(BUILDDIR, `${filename}.xpi`);
       fs.copyFileSync(zipPath, xpiPath);
+      validateFirefoxXpiCopy(zipPath, xpiPath);
       console.log(`Created ${xpiPath}`);
     }
   } finally {

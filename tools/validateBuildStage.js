@@ -151,7 +151,7 @@ const validateBuildStage = (
   console.log(`Validated ${target} build stage (${files.length} files).`);
 };
 
-module.exports = { validateBuildStage };
+module.exports = { listFiles, validateBuildStage };
 
 if (require.main === module) {
   const [, , target, stageDir, sourceDir] = process.argv;
