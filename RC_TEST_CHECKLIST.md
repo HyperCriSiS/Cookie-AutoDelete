@@ -6,16 +6,19 @@ This checklist is the manual release-readiness gate for the Manifest V3 moderniz
 
 Record the exact candidate before testing:
 
-- Commit SHA:
-- CI pull-request run ID:
-- `release-candidate-packages` artifact ID:
+- Commit SHA: `fc70abfefa5a0792eac1fd6663a2909cb80fc7c0`
+- Base SHA (`3.X.X-Branch`): `81b259c131fa6c0570a8253b852991f2b482be88`
+- CI pull-request run ID: `32328755047`
+- `release-candidate-packages` artifact ID: `9392296156`
 - Operating system:
 - Firefox version / edition:
 - Chromium/Chrome version:
 - Tester:
 - Date:
 
-Use the Firefox XPI and Chromium ZIP from the **same** `release-candidate-packages` artifact. Verify the packaged files against the included `SHA256SUMS.txt` before loading them.
+Use the Firefox XPI and Chromium ZIP from the **same** `release-candidate-packages` artifact. For the current candidate these are `Cookie-AutoDelete_Dev_20260820_033541_fc70abf_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260820_033541_fc70abf_Chrome.zip`. Verify both packaged files against the included `SHA256SUMS.txt` before loading them.
+
+Automated validation for this exact candidate already passed archive/stage parity (60 Firefox files, 61 Chromium files), Firefox ZIP/XPI byte identity, TypeScript 7 typecheck, 37/37 Jest suites (577/577 tests), lint and production build. The GitHub wrapper artifact digest is `sha256:935bd491a8c53ddc75ab4b88e276b04605bb04d8f8af5061856882ac84f18985`; this wrapper digest is not a substitute for verifying the two package checksums inside `SHA256SUMS.txt`.
 
 Before starting the final manual matrix, confirm PR #1 is mergeable with the current `3.X.X-Branch` base and that the candidate was generated **after** the most recent base synchronization/conflict resolution. If the base changes or the PR becomes non-mergeable, resolve/synchronize first, rerun CI, and record the replacement candidate instead of testing a stale artifact.
 
