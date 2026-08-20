@@ -27,6 +27,7 @@ jobs:
         id: checkci
         env:
           GH_API: ${{ github.event.repository.commits_url }}
+          GH_TOKEN: ${{ github.token }}
           GH_GH: ${{ toJson(github) }}
           GH_SHA: ${{ github.event.after }}
           PR_FIRSTSHA: ${{ github.event.pull_request.head.sha }}
@@ -45,21 +46,41 @@ jobs:
           echo "GH_REF    : $GH_REF"
           echo "Branch    : $REF"
           GH_SHA=$([[ $GH_SHA ]] && echo $GH_SHA || echo $PR_FIRSTSHA)
-          echo "gitSHA=$GH_SHA" >> $GITHUB_OUTPUT
+          echo "gitSHA=$GH_SHA" >> "$GITHUB_OUTPUT"
           echo "Commit SHA: $GH_SHA"
           echo "PR Head SHA: $PR_FIRSTSHA"
           SKIP_A=$([[ "$REF" == l10n_* ]] && echo true || echo false)
           echo "Starts With l10n_ :  $SKIP_A"
           GH_API=${GH_API/'{/sha}'/}
           echo "API: $GH_API"
-          CM=$(curl -s $GH_API/$GH_SHA | jq -r '.commit.message')
+
+          RESPONSE_FILE=$(mktemp)
+          HTTP_STATUS=$(
+            curl --silent --show-error --location \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              --output "$RESPONSE_FILE" \
+              --write-out "%{http_code}" \
+              "$GH_API/$GH_SHA" || true
+          )
+
+          CM=""
+          if [[ "$HTTP_STATUS" == "200" ]] && \
+            jq -e '.commit.message | type == "string"' "$RESPONSE_FILE" > /dev/null 2>&1; then
+            CM=$(jq -r '.commit.message' "$RESPONSE_FILE")
+          else
+            echo "::warning::Could not read commit message from GitHub API (HTTP ${HTTP_STATUS:-unknown}); CI will run instead of failing."
+          fi
+          rm -f "$RESPONSE_FILE"
+
           echo "Commit Message: $CM"
           EXP_SKIP="\[ci skip]"
           SKIP_B=$([[ "$CM" =~ $EXP_SKIP ]] && echo true || echo false)
           echo "Skip via Commit: $SKIP_B"
           RES=$([[ $SKIP_A == true || $SKIP_B == true ]] && echo true || echo false)
           echo "Skip CI:  $RES"
-          echo "result=$RES" >> $GITHUB_OUTPUT
+          echo "result=$RES" >> "$GITHUB_OUTPUT"
   all_jobs:
     name: Tests, Builds, Coverage
     runs-on: ubuntu-latest
