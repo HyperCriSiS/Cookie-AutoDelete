@@ -1,4 +1,4 @@
-name: Temporary Jest 30 compatibility validation
+name: Temporary Jest 30 test compatibility validation
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   validate:
-    if: "${{ github.event.head_commit.message == 'chore: validate Jest 30 with current jest-when' }}"
+    if: "${{ github.event.head_commit.message == 'chore: validate Jest 30 test compatibility' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -46,6 +46,24 @@ jobs:
             },
           };
           EOF
+      - name: Replace obsolete jest-when mock cleanup calls
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          path = Path('__tests__/services/Libs.spec.ts')
+          text = path.read_text()
+          replacements = {
+              'global.browser.i18n.getMessage.clearMocks();': 'global.browser.i18n.getMessage.mockReset();',
+              'global.browser.runtime.getManifest.clearMocks();': 'global.browser.runtime.getManifest.mockReset();',
+              'global.browser.runtime.getURL.clearMocks();': 'global.browser.runtime.getURL.mockReset();',
+          }
+          for old, new in replacements.items():
+              count = text.count(old)
+              if count != 2:
+                  raise SystemExit(f'Expected exactly 2 occurrences of {old!r}, found {count}')
+              text = text.replace(old, new)
+          path.write_text(text)
+          PY
       - name: Install candidate dependency graph
         run: npx --yes npm@8.19.4 ci --ignore-scripts --no-audit --no-fund
       - name: Run test suite
@@ -67,6 +85,6 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json package-lock.json tools/jest-typescript-transformer.cjs
+          git add package.json package-lock.json tools/jest-typescript-transformer.cjs __tests__/services/Libs.spec.ts
           git commit -m 'test: migrate Jest toolchain to 30'
           git push origin HEAD:modernization-p0
