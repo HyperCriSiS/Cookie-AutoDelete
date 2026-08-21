@@ -6,6 +6,9 @@ on:
       - 'v[0-9].[0-9]+.[0-9]+-alpha*'
       - 'v[0-9].[0-9]+.[0-9]+-beta*'
 
+permissions:
+  contents: write
+
 jobs:
   all_jobs:
     name: Tests, Builds, Coverage, Release Uploads
@@ -13,12 +16,22 @@ jobs:
     steps:
       - name: Checkout Commit
         uses: actions/checkout@v7
-      - name: Use Node.js 18.x
+      - name: Use Node.js from .nvmrc
+        id: node
         uses: actions/setup-node@v7
         with:
-          node-version: '18.x'
-      - name: Install Dependencies (npm ci)
-        run: npm ci --no-fund
+          node-version-file: '.nvmrc'
+      - name: Cache npm download cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-
+      - name: Install locked dependencies
+        run: npm ci --prefer-offline --no-fund
+      - name: Run TypeScript 7 typecheck
+        run: npm run typecheck
       - name: Run Tests
         run: npm run test -- --verbose
       - name: Run Lint
@@ -28,7 +41,11 @@ jobs:
       - name: Run Build
         run: npm run build
         env:
-          GITSHA: ${{ github.event.after }}
+          GITSHA: ${{ github.sha }}
+      - name: Create package checksums
+        run: |
+          cd builds
+          sha256sum *Chrome.zip *Firefox.xpi > SHA256SUMS.txt
       - name: Codecov.io Coverage upload
         uses: codecov/codecov-action@v7
         with:
@@ -41,7 +58,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: GitHub Releases
         id: github_releases
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -49,6 +66,7 @@ jobs:
           files: |
             builds/Cookie-AutoDelete_*_Chrome.zip
             builds/Cookie-AutoDelete_*_Firefox.xpi
-          body: This is an automatically generated test build.  See commits for changes.
+            builds/SHA256SUMS.txt
+          body: This is an automatically generated test build. See commits for changes.
           draft: true
           prerelease: true

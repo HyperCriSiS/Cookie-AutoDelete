@@ -16,11 +16,21 @@ jobs:
       - name: Checkout Commit
         uses: actions/checkout@v7
       - name: Use Node.js from .nvmrc
+        id: node
         uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
-      - name: Install Dependencies (npm ci)
-        run: npm ci --no-fund
+      - name: Cache npm download cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-
+      - name: Install locked dependencies
+        run: npm ci --prefer-offline --no-fund
+      - name: Run TypeScript 7 typecheck
+        run: npm run typecheck
       - name: Run Tests
         run: npm run test -- --verbose
       - name: Run Lint
@@ -33,6 +43,12 @@ jobs:
           npm run build
           node ./tools/generateManifest.js firefox builds/firefox-manifest.json
           echo "ffxpi=$(ls builds/*Firefox.xpi)" >> "$GITHUB_OUTPUT"
+        env:
+          GITSHA: ${{ github.sha }}
+      - name: Create package checksums
+        run: |
+          cd builds
+          sha256sum *Chrome.zip *Firefox.xpi > SHA256SUMS.txt
       - name: Archive Production Build Artifacts
         if: success()
         uses: actions/upload-artifact@v7
@@ -54,6 +70,7 @@ jobs:
           files: |
             builds/Cookie-AutoDelete_*_Chrome.zip
             builds/Cookie-AutoDelete_*_Firefox.xpi
+            builds/SHA256SUMS.txt
           body: This is an auto-generated tagged release - Change log will be manually inserted soon! Latest versions have been submitted to the relevant browser extension store for review.
           prerelease: ${{ endsWith(github.ref, 'alpha') || endsWith(github.ref, 'beta') }}
           draft: true
