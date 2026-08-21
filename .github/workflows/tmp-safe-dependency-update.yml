@@ -1,4 +1,4 @@
-name: Temporary Jest 30 test compatibility validation
+name: Temporary Jest 30 isolated validation
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   validate:
-    if: "${{ github.event.head_commit.message == 'chore: validate Jest 30 test compatibility' }}"
+    if: "${{ github.event.head_commit.message == 'chore: validate isolated Jest 30 tests' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -23,7 +23,7 @@ jobs:
       - name: Stage Jest 30 dependency family
         run: |
           npx --yes npm@8.19.4 install --save-dev 'jest@^30.4.2' 'jest-when@^4.0.3' --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Adapt custom TypeScript transformer for Jest 30
+      - name: Adapt Jest 30 compatibility points
         run: |
           cat > tools/jest-typescript-transformer.cjs <<'EOF'
           const ts = require('typescript');
@@ -46,12 +46,11 @@ jobs:
             },
           };
           EOF
-      - name: Replace obsolete jest-when mock cleanup calls
-        run: |
           python <<'PY'
           from pathlib import Path
-          path = Path('__tests__/services/Libs.spec.ts')
-          text = path.read_text()
+
+          libs = Path('__tests__/services/Libs.spec.ts')
+          text = libs.read_text()
           replacements = {
               'global.browser.i18n.getMessage.clearMocks();': 'global.browser.i18n.getMessage.mockReset();',
               'global.browser.runtime.getManifest.clearMocks();': 'global.browser.runtime.getManifest.mockReset();',
@@ -62,11 +61,19 @@ jobs:
               if count != 2:
                   raise SystemExit(f'Expected exactly 2 occurrences of {old!r}, found {count}')
               text = text.replace(old, new)
-          path.write_text(text)
+          libs.write_text(text)
+
+          tabs = Path('__tests__/services/TabEvents.spec.ts')
+          text = tabs.read_text()
+          old = "when(spyTabEvents.getAllCookieActions)\n        .calledWith()\n        .mockResolvedValue(undefined as any);"
+          new = "when(spyTabEvents.getAllCookieActions)\n        .calledWith(expect.any(Object))\n        .mockResolvedValue(undefined as any);"
+          if text.count(old) != 1:
+              raise SystemExit('Expected exactly one onTabUpdate getAllCookieActions stub')
+          tabs.write_text(text.replace(old, new))
           PY
       - name: Install candidate dependency graph
         run: npx --yes npm@8.19.4 ci --ignore-scripts --no-audit --no-fund
-      - name: Run test suite
+      - name: Run full test suite
         run: npm test -- --runInBand
       - name: Run TS7 typecheck
         run: npm run typecheck
@@ -85,6 +92,6 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json package-lock.json tools/jest-typescript-transformer.cjs __tests__/services/Libs.spec.ts
+          git add package.json package-lock.json tools/jest-typescript-transformer.cjs __tests__/services/Libs.spec.ts __tests__/services/TabEvents.spec.ts
           git commit -m 'test: migrate Jest toolchain to 30'
           git push origin HEAD:modernization-p0
