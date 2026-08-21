@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   validate:
-    if: "${{ github.event.head_commit.message == 'chore: validate complete Jest 30 toolchain' }}"
+    if: "${{ github.event.head_commit.message == 'chore: validate available Jest 30 environment' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -22,7 +22,7 @@ jobs:
           cache: npm
       - name: Stage Jest 30 dependency family
         run: |
-          npx --yes npm@8.19.4 install --save-dev 'jest@^30.4.2' 'jest-environment-jsdom@^30.4.2' 'jest-when@^4.0.3' --package-lock-only --ignore-scripts --no-audit --no-fund
+          npx --yes npm@8.19.4 install --save-dev 'jest@^30.4.2' 'jest-environment-jsdom@^30.4.1' 'jest-when@^4.0.3' --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Adapt Jest 30 compatibility points
         run: |
           cat > tools/jest-typescript-transformer.cjs <<'EOF'
