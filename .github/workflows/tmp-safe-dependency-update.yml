@@ -1,4 +1,4 @@
-name: Temporary dependency audit
+name: Temporary safe audit fixes
 
 on:
   push:
@@ -6,34 +6,38 @@ on:
       - modernization-p0
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  audit:
-    if: "${{ github.event.head_commit.message == 'chore: inspect remaining dependency vulnerabilities' }}"
+  update:
+    if: "${{ github.event.head_commit.message == 'chore: apply remaining safe audit fixes' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: modernization-p0
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
-      - name: Inspect npm audit graph
+      - name: Apply semver-safe audit updates
+        run: |
+          npx --yes npm@8.19.4 update ajv jest-when cross-spawn semver word-wrap micromatch braces expect --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Audit resulting lockfile
         run: |
           npx --yes npm@8.19.4 audit --package-lock-only --json > dependency-audit.json || true
-          node <<'NODE'
-          const a = require('./dependency-audit.json');
-          console.log('VULNERABILITY_TOTALS', JSON.stringify(a.metadata?.vulnerabilities || {}));
-          for (const [name, v] of Object.entries(a.vulnerabilities || {}).sort(([a],[b]) => a.localeCompare(b))) {
-            console.log('VULN', JSON.stringify({
-              name,
-              severity: v.severity,
-              direct: v.isDirect,
-              via: (v.via || []).map(x => typeof x === 'string' ? x : {name:x.name, severity:x.severity, range:x.range, url:x.url}),
-              effects: v.effects,
-              range: v.range,
-              nodes: v.nodes,
-              fixAvailable: v.fixAvailable,
-            }));
-          }
-          NODE
+          npx --yes npm@8.19.4 audit --package-lock-only --omit=dev --json > runtime-audit.json || true
+          node -e "const a=require('./dependency-audit.json'); console.log('FULL_AUDIT', JSON.stringify(a.metadata?.vulnerabilities || {}));"
+          node -e "const a=require('./runtime-audit.json'); console.log('RUNTIME_AUDIT', JSON.stringify(a.metadata?.vulnerabilities || {}));"
+          node -e "const a=require('./dependency-audit.json'); for (const [n,v] of Object.entries(a.vulnerabilities||{}).sort(([a],[b])=>a.localeCompare(b))) console.log('REMAINING',n,v.severity,JSON.stringify(v.fixAvailable));"
+      - name: Commit package files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo 'No package changes to commit.'
+            exit 0
+          fi
+          git commit -m 'chore: apply semver-safe audit fixes'
+          git push origin HEAD:modernization-p0
