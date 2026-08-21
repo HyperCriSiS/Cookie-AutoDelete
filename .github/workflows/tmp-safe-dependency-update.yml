@@ -1,0 +1,45 @@
+name: Temporary safe dependency update
+
+on:
+  push:
+    branches:
+      - modernization-p0
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: "${{ github.event.head_commit.message == 'chore: stage safe dependency updates' }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: modernization-p0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Update direct dependencies
+        run: |
+          npx --yes npm@8.19.4 install --save 'webextension-polyfill@^0.12.0' --package-lock-only --ignore-scripts --no-audit --no-fund
+          npx --yes npm@8.19.4 install --save-dev 'ts-loader@^9.6.2' --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Refresh security-sensitive transitive dependencies
+        run: |
+          npx --yes npm@8.19.4 update @babel/core @babel/runtime @babel/traverse brace-expansion flatted form-data js-yaml json5 lodash minimatch picomatch serialize-javascript tough-cookie uuid ws @tootallnate/once --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Record dependency graph
+        run: |
+          npx --yes npm@8.19.4 audit --package-lock-only --json > dependency-audit.json || true
+          node -e "const a=require('./dependency-audit.json'); console.log(JSON.stringify(a.metadata?.vulnerabilities || {}, null, 2))"
+          node -e "const p=require('./package-lock.json'); for (const n of ['ts-loader','webextension-polyfill','@babel/core','brace-expansion','picomatch','uuid','@tootallnate/once']) { const hits=Object.entries(p.packages||{}).filter(([k,v])=>k.endsWith('/node_modules/'+n)||k==='node_modules/'+n).map(([k,v])=>k+'='+v.version); console.log(n+': '+hits.join(', ')); }"
+      - name: Commit package files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo 'No package changes to commit.'
+            exit 0
+          fi
+          git commit -m 'chore: update safe dependencies'
+          git push origin HEAD:modernization-p0
