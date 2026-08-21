@@ -1,0 +1,44 @@
+name: Temporary roadmap status wording
+
+on:
+  push:
+    branches:
+      - modernization-p0
+    paths:
+      - .github/workflows/tmp-fix-roadmap-status.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: modernization-p0
+      - name: Correct current PR status wording
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p = Path('ROADMAP.md')
+          t = p.read_text()
+          old = "PR #1 is currently mergeable/clean against `3.X.X-Branch` base `81b259c1`. The separate `github-advanced-security` agent still fails before repository analysis because the GitHub-hosted agent requests an unsupported model; this remains classified as an external GitHub service/configuration problem rather than a functional repository defect."
+          new = "PR #1 still targets current `3.X.X-Branch` base `81b259c1`; GitHub currently reports `mergeable_state: unstable` solely because the separate `github-advanced-security` AI check fails, while regular CI, CodeQL and JavaScript/TypeScript/Actions analysis are green. That agent fails before repository analysis because the GitHub-hosted agent requests an unsupported model; this remains classified as an external GitHub service/configuration problem rather than a functional repository defect and is not a base-drift signal."
+          if t.count(old) != 1:
+              raise SystemExit(f'current-status phrase count: {t.count(old)}')
+          t = t.replace(old, new, 1)
+          old = "- There is currently no base-drift blocker: PR #1 is clean/mergeable against `3.X.X-Branch` base `81b259c1`, and pinned replacement RC source `53209f36` was generated after the latest candidate-affecting dependency/toolchain/workflow changes. Documentation-only commits after that source do not invalidate artifact `9431860563`; any base change or candidate-affecting runtime/source, manifest, build/packaging, dependency or toolchain change requires a replacement candidate and repetition of the affected gates."
+          new = "- There is currently no base-drift blocker: PR #1 still targets `3.X.X-Branch` base `81b259c1`, and pinned replacement RC source `53209f36` was generated after the latest candidate-affecting dependency/toolchain/workflow changes. GitHub's current `mergeable_state: unstable` is caused by the known failing external `github-advanced-security` AI check, not by merge conflicts; all regular CI/code-analysis checks are green. Documentation-only commits after the candidate source do not invalidate artifact `9431860563`; any base change or candidate-affecting runtime/source, manifest, build/packaging, dependency or toolchain change requires a replacement candidate and repetition of the affected gates."
+          if t.count(old) != 1:
+              raise SystemExit(f'blocker phrase count: {t.count(old)}')
+          p.write_text(t.replace(old, new, 1))
+          PY
+      - name: Commit corrected wording
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ROADMAP.md
+          git diff --cached --check
+          git commit -m 'docs: clarify external unstable PR status'
+          git push origin HEAD:modernization-p0
