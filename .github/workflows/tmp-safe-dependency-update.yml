@@ -1,4 +1,4 @@
-name: Temporary Jest 30 migration validation
+name: Temporary Jest 30 compatibility validation
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   validate:
-    if: "${{ github.event.head_commit.message == 'chore: validate Jest 30 migration' }}"
+    if: "${{ github.event.head_commit.message == 'chore: validate Jest 30 with current jest-when' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -20,9 +20,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - name: Stage Jest 30 dependency update
+      - name: Stage Jest 30 dependency family
         run: |
-          npx --yes npm@8.19.4 install --save-dev 'jest@^30.4.2' 'jest-when@^3.7.0' --package-lock-only --ignore-scripts --no-audit --no-fund
+          npx --yes npm@8.19.4 install --save-dev 'jest@^30.4.2' 'jest-when@^4.0.3' --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Adapt custom TypeScript transformer for Jest 30
         run: |
           cat > tools/jest-typescript-transformer.cjs <<'EOF'
@@ -68,5 +68,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add package.json package-lock.json tools/jest-typescript-transformer.cjs
-          git commit -m 'test: migrate Jest to 30'
+          git commit -m 'test: migrate Jest toolchain to 30'
           git push origin HEAD:modernization-p0
