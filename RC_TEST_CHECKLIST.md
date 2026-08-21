@@ -6,19 +6,19 @@ This checklist is the manual release-readiness gate for the Manifest V3 moderniz
 
 Record the exact candidate before testing:
 
-- Commit SHA: `fc70abfefa5a0792eac1fd6663a2909cb80fc7c0`
+- Commit SHA: `53209f360b52b7e6a3f4025cc07c910b24c0151f`
 - Base SHA (`3.X.X-Branch`): `81b259c131fa6c0570a8253b852991f2b482be88`
-- CI pull-request run ID: `32328755047`
-- `release-candidate-packages` artifact ID: `9392296156`
+- CI pull-request run ID: `32439378775`
+- `release-candidate-packages` artifact ID: `9431860563`
 - Operating system:
 - Firefox version / edition:
 - Chromium/Chrome version:
 - Tester:
 - Date:
 
-Use the Firefox XPI and Chromium ZIP from the **same** `release-candidate-packages` artifact. For the current candidate these are `Cookie-AutoDelete_Dev_20260820_033541_fc70abf_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260820_033541_fc70abf_Chrome.zip`. Verify both packaged files against the included `SHA256SUMS.txt` before loading them.
+Use the Firefox XPI and Chromium ZIP from the **same** `release-candidate-packages` artifact. For the current candidate these are `Cookie-AutoDelete_Dev_20260821_021858_53209f3_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260821_021858_53209f3_Chrome.zip`. Verify both packaged files against the included `SHA256SUMS.txt` before loading them.
 
-Automated validation for this exact candidate already passed archive/stage parity (60 Firefox files, 61 Chromium files), Firefox ZIP/XPI byte identity, TypeScript 7 typecheck, 37/37 Jest suites (577/577 tests), lint and production build. The GitHub wrapper artifact digest is `sha256:935bd491a8c53ddc75ab4b88e276b04605bb04d8f8af5061856882ac84f18985`; this wrapper digest is not a substitute for verifying the two package checksums inside `SHA256SUMS.txt`.
+Automated validation for this exact candidate already passed archive/stage parity (60 Firefox files, 61 Chromium files), Firefox ZIP/XPI byte identity, TypeScript 7 typecheck, 37/37 Jest suites (577/577 tests), lint and production build. The dependency/test-toolchain state includes Jest 30, `webextension-polyfill 0.12.0` and `ts-loader 9.6.2`; the validated dependency migration reached zero findings in both full `npm audit` and `npm audit --omit=dev`. The GitHub wrapper artifact digest is `sha256:891232f8281af65ede7cb80e1da7fe1911d11b55eea67a614408dcf01f29cc41`; this wrapper digest is not a substitute for verifying the two package checksums inside `SHA256SUMS.txt`.
 
 Before starting the final manual matrix, confirm PR #1 is mergeable with the current `3.X.X-Branch` base and that the candidate was generated **after** the most recent base synchronization/conflict resolution. If the base changes or the PR becomes non-mergeable, resolve/synchronize first, rerun CI, and record the replacement candidate instead of testing a stale artifact.
 
