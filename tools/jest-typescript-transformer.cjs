@@ -2,7 +2,7 @@ const ts = require('typescript');
 
 module.exports = {
   process(sourceText, sourcePath) {
-    return ts.transpileModule(sourceText, {
+    const result = ts.transpileModule(sourceText, {
       fileName: sourcePath,
       compilerOptions: {
         allowSyntheticDefaultImports: true,
@@ -12,6 +12,8 @@ module.exports = {
         sourceMap: true,
         target: ts.ScriptTarget.ES2017,
       },
-    }).outputText;
+    });
+
+    return { code: result.outputText };
   },
 };

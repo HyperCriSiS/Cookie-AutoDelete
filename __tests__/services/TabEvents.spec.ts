@@ -314,7 +314,7 @@ describe('TabEvents', () => {
   describe('onTabUpdate', () => {
     beforeAll(() => {
       when(spyTabEvents.getAllCookieActions)
-        .calledWith()
+        .calledWith(expect.any(Object))
         .mockResolvedValue(undefined as any);
     });
     afterAll(() => {
