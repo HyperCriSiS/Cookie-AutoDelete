@@ -53,3 +53,8 @@ extension/global_files/bootstrap.bundle.min.js*
 extension/global_files/bootstrap.min.css*
 extension/global_files/browser-polyfill.min.js*
 extension/global_files/jquery.slim.min.*
+
+# Real-browser E2E runtime output
+tests/e2e/node_modules/
+tests/e2e/results/*.json
+tests/e2e/results/*.png
