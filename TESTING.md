@@ -84,10 +84,12 @@ Automated Chromium scenarios include:
 - browser HTTP-cache removal;
 - whitelist creation through the real expression UI and retention behavior;
 - greylist creation through the real expression UI and normal-close retention behavior;
-- persistent-profile browser restart, including whitelist retention and greylist startup cleanup;
+- persistent-profile Chromium process relaunch, including whitelist and settings retention;
 - actual MV3 runtime reload with persisted settings/list restoration and loss of worker-global transient state.
 
 The test uses the packaged build produced by CI and therefore exercises manifest generation, extension startup, browser APIs, persistence, and cleanup together.
+
+The Chromium harness launches the unpacked package with `--load-extension` on each browser process. This is suitable for proving persisted profile/settings/list data survives a real process relaunch, but it does **not** faithfully prove `browser.runtime.onStartup` behavior of an extension that was already installed before browser startup. Greylist startup cleanup therefore remains a residual manual browser-startup gate rather than an automated E2E assertion until the harness can install the candidate persistently without re-sideloading it on launch.
 
 ### Firefox
 
@@ -178,6 +180,7 @@ The manual release checklist is intentionally small. It should not repeat E2E be
 - final visual sanity of toolbar popup/options in packaged builds;
 - browser permission/install UX where browser chrome itself is the subject of the test;
 - Firefox full-browser-startup behavior while CI uses a temporary unsigned XPI;
+- Chromium full-browser-startup greylist cleanup while CI must re-sideload the unpacked candidate with `--load-extension` on each process launch;
 - genuine historical profile/export upgrade data until a suitable reproducible fixture exists;
 - platform-specific surfaces not represented by the desktop Linux browser jobs, such as Firefox Android, when they are part of a release claim.
 

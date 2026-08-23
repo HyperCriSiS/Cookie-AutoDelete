@@ -50,8 +50,7 @@ The following behavior is no longer a manual checkbox matrix. It must be green i
 
 ### Chromium-specific packaged-runtime gates
 
-- [ ] Persistent browser-profile restart retains whitelisted site data.
-- [ ] Persistent browser-profile restart applies configured greylist startup cleanup.
+- [ ] Persistent browser-profile relaunch retains whitelisted site data and persisted extension settings.
 - [ ] MV3 runtime reload replaces worker-global transient state while restoring persisted extension state.
 
 ### Firefox-specific packaged-runtime gates
@@ -90,6 +89,7 @@ Do **not** manually repeat cookie/IndexedDB/LocalStorage/service-worker/domain-c
 - [ ] Load the exact E2E-tested packaged Chromium build in a disposable Chromium-family profile using the supported local developer workflow.
 - [ ] Visually confirm toolbar popup/options rendering and basic interaction.
 - [ ] Confirm browser permission/install UX has no unexpected new permission surface.
+- [ ] Perform one full Chromium browser restart with the candidate already loaded through the normal local extension workflow and confirm configured greylist startup cleanup runs as expected.
 - [ ] Record Chromium family/version, OS, and any extension/service-worker error not represented by CI.
 
 ## Genuine historical-profile / settings-export upgrade validation
@@ -117,14 +117,14 @@ If no suitable genuine historical export/profile is available, leave this gate o
 | Browser family | Browser/version | OS | Automated E2E | Package checksum | Visual/permission smoke | Full startup check | Historical-data upgrade | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Firefox | pending | pending | pending | pending | pending | pending | pending | |
-| Chromium | pending | pending | pending | pending | pending | automated | pending | |
+| Chromium | pending | pending | pending | pending | pending | pending | pending | |
 
 ## Release decision
 
 - [ ] Fast CI, package validation, Chromium E2E, and Firefox E2E are green for one exact candidate SHA.
 - [ ] `release-candidate-packages` was emitted only after those browser gates and contains the exact browser-tested bytes.
 - [ ] Minimal visual/permission smoke is green in both browser families.
-- [ ] Firefox residual full-browser-startup smoke is green.
+- [ ] Firefox and Chromium residual full-browser-startup smoke is green.
 - [ ] Genuine historical-profile/export upgrade testing is green for Firefox and Chromium, or an explicit project decision documents why representative data for one family is unobtainable and what compensating evidence exists.
 - [ ] PR #1 is mergeable against the current `3.X.X-Branch` base with no unresolved code conflicts.
 - [ ] Any candidate-affecting change after the pinned SHA has triggered a replacement candidate and revalidation.

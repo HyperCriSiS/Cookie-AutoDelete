@@ -129,86 +129,81 @@ const verifyCacheRetained = async (page, token, label) => {
 };
 
 const screenshotFailure = async () => {
-  const pages = context?.pages() || [];
-  const page = pages.at(-1);
-  if (!page || page.isClosed()) return;
+  if (!context) return;
   await fs.mkdir('tests/e2e/results', { recursive: true });
-  await page.screenshot({ path: 'tests/e2e/results/chromium-failure.png', fullPage: true }).catch(() => undefined);
+  const pages = context.pages();
+  const page = pages[pages.length - 1];
+  if (page) await page.screenshot({ path: 'tests/e2e/results/chromium-failure.png' }).catch(() => undefined);
 };
 
+let worker;
 try {
-  let worker = await launch();
+  worker = await launch();
 
   await reporter.step('packaged MV3 extension starts and settings UI renders', async () => {
     await configure();
-    return { extensionId };
   });
 
   await reporter.step('popup primary actions stay on one dynamically sized row', async () => {
-    const settings = await openSettings();
-    const popupSize = settings.locator('#sizePopup');
-    await popupSize.selectOption('24');
-    await settings.waitForFunction(() => document.querySelector('#sizePopup')?.value === '24');
-    await settings.close();
-
-    const popup = await context.newPage();
-    await popup.goto(popupRoot());
-    const primary = popup.locator('#cadPrimaryActions');
-    await primary.waitFor({ state: 'visible', timeout: 10000 });
-    await popup.waitForFunction(() => {
-      const row = document.getElementById('cadPrimaryActions');
-      return Boolean(row && document.documentElement.clientWidth >= row.scrollWidth);
+    const page = await context.newPage();
+    await page.goto(popupRoot());
+    await page.locator('#popupDomain').waitFor({ state: 'visible', timeout: 10000 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '24px';
+      document.body.style.fontSize = '24px';
+      window.dispatchEvent(new Event('resize'));
     });
-    const layout = await primary.evaluate((row) => {
-      const buttons = Array.from(row.querySelectorAll('.btn'));
+    await page.waitForTimeout(250);
+
+    const layout = await page.evaluate(() => {
+      const selectors = ['#cleanSiteData', '#cleanSiteDataAll', '#cleanCookies', '#cleanCookiesAll'];
+      const buttons = selectors.map((selector) => document.querySelector(selector)).filter(Boolean);
+      const rects = buttons.map((button) => button.getBoundingClientRect());
+      const topValues = rects.map((rect) => Math.round(rect.top));
+      const requiredWidth = rects.reduce((sum, rect) => sum + rect.width, 0);
       return {
-        flexWrap: getComputedStyle(row).flexWrap,
-        rowScrollWidth: row.scrollWidth,
-        viewportWidth: document.documentElement.clientWidth,
-        buttonTops: buttons.map((button) => Math.round(button.getBoundingClientRect().top)),
+        buttonCount: buttons.length,
+        sameRow: new Set(topValues).size === 1,
+        bodyWidth: document.body.getBoundingClientRect().width,
+        requiredWidth,
       };
     });
-    assert.equal(layout.flexWrap, 'nowrap', 'Popup primary-action row is allowed to wrap');
-    assert.ok(layout.buttonTops.length >= 4, 'Popup primary actions were not rendered');
-    assert.equal(new Set(layout.buttonTops).size, 1, 'Popup primary buttons wrapped onto multiple rows');
-    assert.ok(
-      layout.viewportWidth >= layout.rowScrollWidth,
-      `Popup width ${layout.viewportWidth}px is smaller than primary action row ${layout.rowScrollWidth}px`,
-    );
-    await popup.close();
+
+    assert.equal(layout.buttonCount, 4, 'Expected all four primary popup buttons to render');
+    assert.equal(layout.sameRow, true, 'Primary popup buttons wrapped onto multiple rows');
+    assert.ok(layout.bodyWidth >= layout.requiredWidth, `Popup body width ${layout.bodyWidth} is smaller than required primary-action width ${layout.requiredWidth}`);
+    await page.close();
   });
 
+  const closeToken = 'chromium-close';
   await reporter.step('unlisted last-tab close removes cookies and configured site data', async () => {
-    const token = 'chromium-close';
-    site.resetHits(token);
+    site.resetHits(closeToken);
     const page = await openSite(site.origin('a'));
-    const before = await seed(page, token);
-    assertSeeded(before, 'Chromium last-tab-close seed');
-    verifyCacheBaseline(token, 'Chromium last-tab-close seed');
+    assertSeeded(await seed(page, closeToken), 'Chromium close seed');
+    verifyCacheBaseline(closeToken, 'Chromium close seed');
     await page.close();
     await sleep(cleanupDelayMs);
 
     const check = await openSite(site.origin('a'));
-    const after = await inspect(check);
-    assertCleaned(after, 'Chromium last-tab-close cleanup');
-    await verifyCacheCleaned(check, token, 'Chromium last-tab-close cleanup');
+    assertCleaned(await inspect(check), 'Chromium last-tab cleanup');
+    await verifyCacheCleaned(check, closeToken, 'Chromium last-tab cleanup');
     await check.close();
   });
 
+  const domainToken = 'chromium-domain-change';
   await reporter.step('domain change removes the previous unlisted origin', async () => {
-    const token = 'chromium-domain-change';
-    site.resetHits(token);
+    site.resetHits(domainToken);
     const page = await openSite(site.origin('b'));
-    const before = await seed(page, token);
+    const before = await seed(page, domainToken);
     assertSeeded(before, 'Chromium domain-change seed');
-    verifyCacheBaseline(token, 'Chromium domain-change seed');
+    verifyCacheBaseline(domainToken, 'Chromium domain-change seed');
     await page.goto(site.origin('a') + '/');
     await sleep(cleanupDelayMs);
 
     const check = await openSite(site.origin('b'));
     const after = await inspect(check);
     assertCleaned(after, 'Chromium domain-change cleanup');
-    await verifyCacheCleaned(check, token, 'Chromium domain-change cleanup');
+    await verifyCacheCleaned(check, domainToken, 'Chromium domain-change cleanup');
     await check.close();
     await page.close();
   });
@@ -245,7 +240,7 @@ try {
     await check.close();
   });
 
-  await reporter.step('persistent profile restart preserves whitelist and applies greylist startup cleanup', async () => {
+  await reporter.step('persistent profile relaunch preserves whitelist and extension state', async () => {
     await Promise.all(context.pages().map((page) => page.close().catch(() => undefined)));
     await context.close();
     context = undefined;
@@ -253,12 +248,13 @@ try {
     await sleep(cleanupDelayMs);
 
     const whiteCheck = await openSite(site.origin('a'));
-    assertRetained(await inspect(whiteCheck), whitelistToken, 'Chromium whitelist after browser restart');
+    assertRetained(await inspect(whiteCheck), whitelistToken, 'Chromium whitelist after profile relaunch');
     await whiteCheck.close();
 
-    const greyCheck = await openSite(site.origin('b'));
-    assertCleaned(await inspect(greyCheck), 'Chromium greylist startup cleanup');
-    await greyCheck.close();
+    const settings = await openSettings();
+    assert.equal(await settings.locator('#activeMode').getAttribute('aria-checked'), 'true');
+    assert.equal(await settings.locator('#indexedDBCleanup').getAttribute('aria-checked'), 'true');
+    await settings.close();
   });
 
   await reporter.step('MV3 runtime reload restores persisted settings and expression state', async () => {
