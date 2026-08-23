@@ -50,7 +50,10 @@ const html = `<!doctype html>
   };
 
   const seed = async (token) => {
-    document.cookie = COOKIE_NAME + '=' + encodeURIComponent(token) + '; Path=/; SameSite=Lax';
+    // Persist the cookie long enough to survive a real browser restart. A
+    // session cookie disappearing at browser shutdown is browser behavior and
+    // must not be mistaken for Cookie AutoDelete cleanup in restart tests.
+    document.cookie = COOKIE_NAME + '=' + encodeURIComponent(token) + '; Path=/; Max-Age=3600; SameSite=Lax';
     localStorage.setItem(STORAGE_KEY, token);
 
     const db = await openDb();
