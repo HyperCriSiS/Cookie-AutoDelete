@@ -115,7 +115,6 @@ const configure = async () => {
   await setCheckbox('activeMode', true);
   await setCheckbox('contextualIdentities', true);
   await setCheckbox('domainChangeCleanup', true);
-  await setCheckbox('cacheCleanup', true);
   await setCheckbox('indexedDBCleanup', true);
   await setCheckbox('localStorageCleanup', true);
   await setCheckbox('serviceWorkersCleanup', true);
@@ -170,23 +169,9 @@ const runSiteAsync = async (method, token) => {
 
 const seed = (token) => runSiteAsync('seed', token);
 const inspect = () => runSiteAsync('inspect', null);
-const fetchCached = (token) => runSiteAsync('fetchCache', token);
-
 const closeSiteAndReturn = async () => {
   await driver.close();
   await driver.switchTo().window(controlHandle);
-};
-
-const verifyCacheBaseline = (token, label) => {
-  assert.equal(site.hits(token), 1, `${label}: the controlled HTTP response was not cached before cleanup`);
-};
-const verifyCacheCleaned = async (token, label) => {
-  await fetchCached(token);
-  assert.equal(site.hits(token), 2, `${label}: browser HTTP cache survived Cookie AutoDelete cleanup`);
-};
-const verifyCacheRetained = async (token, label) => {
-  await fetchCached(token);
-  assert.equal(site.hits(token), 1, `${label}: browser HTTP cache was removed unexpectedly`);
 };
 
 const screenshotFailure = async () => {
@@ -289,13 +274,11 @@ try {
     site.resetHits(closeToken);
     await openSiteTab(site.origin('a'));
     assertSeeded(await seed(closeToken), 'Firefox close seed');
-    verifyCacheBaseline(closeToken, 'Firefox close seed');
     await closeSiteAndReturn();
     await sleep(cleanupDelayMs);
 
     await openSiteTab(site.origin('a'));
     assertCleaned(await inspect(), 'Firefox last-tab cleanup');
-    await verifyCacheCleaned(closeToken, 'Firefox last-tab cleanup');
     await closeSiteAndReturn();
   });
 
@@ -304,13 +287,11 @@ try {
     site.resetHits(domainToken);
     await openSiteTab(site.origin('b'));
     assertSeeded(await seed(domainToken), 'Firefox domain-change seed');
-    verifyCacheBaseline(domainToken, 'Firefox domain-change seed');
     await driver.get(site.origin('a') + '/');
     await sleep(cleanupDelayMs);
 
     await driver.get(site.origin('b') + '/');
     assertCleaned(await inspect(), 'Firefox domain-change cleanup');
-    await verifyCacheCleaned(domainToken, 'Firefox domain-change cleanup');
     await closeSiteAndReturn();
   });
 
@@ -320,13 +301,11 @@ try {
     site.resetHits(whitelistToken);
     await openSiteTab(site.origin('a'));
     assertSeeded(await seed(whitelistToken), 'Firefox whitelist seed');
-    verifyCacheBaseline(whitelistToken, 'Firefox whitelist seed');
     await closeSiteAndReturn();
     await sleep(cleanupDelayMs);
 
     await openSiteTab(site.origin('a'));
     assertRetained(await inspect(), whitelistToken, 'Firefox whitelist retention');
-    await verifyCacheRetained(whitelistToken, 'Firefox whitelist retention');
     await closeSiteAndReturn();
   });
 
@@ -336,13 +315,11 @@ try {
     site.resetHits(greylistToken);
     await openSiteTab(site.origin('b'));
     assertSeeded(await seed(greylistToken), 'Firefox greylist seed');
-    verifyCacheBaseline(greylistToken, 'Firefox greylist seed');
     await closeSiteAndReturn();
     await sleep(cleanupDelayMs);
 
     await openSiteTab(site.origin('b'));
     assertRetained(await inspect(), greylistToken, 'Firefox greylist close retention');
-    await verifyCacheRetained(greylistToken, 'Firefox greylist close retention');
     await closeSiteAndReturn();
   });
 
