@@ -67,6 +67,16 @@ A whole-extension runtime reload is not used as a background-lifecycle proxy in 
 - [x] `Release Candidate Packages` ran after both browser E2E jobs on the exact technical RC source.
 - [x] Artifact publication succeeded with one Chromium package, one Firefox package and `SHA256SUMS.txt` configured as required inputs.
 - [ ] Verify the downloaded Firefox and Chromium package files against `SHA256SUMS.txt` before residual manual testing.
+
+Reproducible local verification for the pinned candidate:
+
+```bash
+gh run download 32644238045 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-7fc3dd1
+cd cad-rc-7fc3dd1
+sha256sum -c SHA256SUMS.txt
+```
+
+The command must report `OK` for both `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Chrome.zip`. Do not substitute the GitHub artifact-wrapper digest for these inner package checksums. Artifact `9494441111` was reconfirmed as available and unexpired on 2026-08-23.
 - [x] PR #1 still targets recorded base `3e061b7f77175e536ff664788f3e6692ac6540e8`; no newer base has been observed during RC qualification.
 
 ## Minimal manual packaged smoke
