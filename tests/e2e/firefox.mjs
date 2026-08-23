@@ -209,26 +209,9 @@ try {
 
   await reporter.step('packaged Firefox extension starts and settings UI renders', async () => {
     await configure();
-    await driver.get('about:blank');
   });
 
-  await reporter.step('Firefox contextual-identities capability is available to the packaged extension', async () => {
-    await openSettings();
-    const result = await driver.executeAsyncScript(
-      `const done = arguments[arguments.length - 1];
-       browser.contextualIdentities.create({ name: 'CAD E2E', color: 'blue', icon: 'fingerprint' })
-         .then(async (container) => {
-           await browser.contextualIdentities.remove(container.cookieStoreId);
-           done({ ok: true, storeId: container.cookieStoreId });
-         })
-         .catch((error) => done({ ok: false, error: String(error) }));`,
-    );
-    assert.equal(result.ok, true, `Firefox contextualIdentities API failed: ${result.error || 'unknown error'}`);
-    await driver.get('about:blank');
-  });
-
-  await reporter.step('Temporary Containers share one %tmp expression UI scope', async () => {
-    await openSettings();
+  await reporter.step('Firefox contextual identities and Temporary Containers share one %tmp expression UI scope', async () => {
     const created = await driver.executeAsyncScript(
       `const done = arguments[arguments.length - 1];
        Promise.all([
@@ -238,9 +221,18 @@ try {
          .then((containers) => done({ ok: true, ids: containers.map((container) => container.cookieStoreId) }))
          .catch((error) => done({ ok: false, error: String(error) }));`,
     );
-    assert.equal(created.ok, true, `Firefox Temporary Container creation failed: ${created.error || 'unknown error'}`);
+    assert.equal(created.ok, true, `Firefox contextualIdentities/Temporary Container creation failed: ${created.error || 'unknown error'}`);
 
-    await openExtensionTab('tabExpressionList', 'formText');
+    // Expressions queries contextual identities when its settings page mounts.
+    // Refresh the already loaded extension page so it sees the identities that
+    // were just created without another privileged moz-extension navigation.
+    await driver.navigate().refresh();
+    const expressionTab = await waitForElement('tabExpressionList');
+    await driver.wait(until.elementIsVisible(expressionTab), 10000);
+    await expressionTab.click();
+    const formText = await waitForElement('formText');
+    await driver.wait(until.elementIsVisible(formText), 10000);
+
     const navLinks = await driver.findElements(By.css('ul.nav-tabs a.nav-link'));
     const labels = await Promise.all(navLinks.map((link) => link.getText()));
     assert.equal(labels.filter((label) => label === '%tmp').length, 1, `Expected one shared %tmp tab, got: ${labels.join(', ')}`);
