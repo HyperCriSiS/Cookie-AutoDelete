@@ -255,13 +255,21 @@ try {
     await driver.wait(async () => (await input.getAttribute('value')) === '', 10000);
     assert.ok((await driver.findElement(By.css('body')).getText()).includes('tmp-e2e.invalid'), 'Shared %tmp rule was not stored in the visible group');
 
-    const stored = await driver.executeAsyncScript(
+    const persistedState = await driver.executeAsyncScript(
       `const done = arguments[arguments.length - 1];
-       browser.storage.local.get('expressionStore').then((value) => done(value.expressionStore || {}));`,
+       browser.storage.local.get('state')
+         .then((value) => done(value.state ? JSON.parse(value.state) : {}))
+         .catch((error) => done({ __error: String(error) }));`,
     );
-    assert.ok(stored['%tmp'], 'Shared %tmp expression store was not persisted');
+    assert.equal(persistedState.__error, undefined, `Unable to read persisted CAD state: ${persistedState.__error || ''}`);
+    const storedLists = persistedState.lists || {};
+    assert.ok(storedLists['%tmp'], 'Shared %tmp expression list was not persisted in CAD state');
+    assert.ok(
+      storedLists['%tmp'].some((expression) => expression.expression === 'tmp-e2e.invalid'),
+      'Shared %tmp expression was missing from persisted CAD state',
+    );
     for (const id of created.ids) {
-      assert.equal(stored[id], undefined, `Concrete Temporary Container store ${id} leaked into persistence`);
+      assert.equal(storedLists[id], undefined, `Concrete Temporary Container store ${id} leaked into persistence`);
     }
 
     const removed = await driver.executeAsyncScript(
