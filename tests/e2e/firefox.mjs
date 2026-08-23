@@ -205,6 +205,59 @@ try {
     await driver.get('about:blank');
   });
 
+  await reporter.step('Temporary Containers share one %tmp expression UI scope', async () => {
+    await openSettings();
+    const created = await driver.executeAsyncScript(
+      `const done = arguments[arguments.length - 1];
+       Promise.all([
+         browser.contextualIdentities.create({ name: '%tmp-e2e-one', color: 'blue', icon: 'fingerprint' }),
+         browser.contextualIdentities.create({ name: '%tmp-e2e-two', color: 'green', icon: 'briefcase' }),
+       ])
+         .then((containers) => done({ ok: true, ids: containers.map((container) => container.cookieStoreId) }))
+         .catch((error) => done({ ok: false, error: String(error) }));`,
+    );
+    assert.equal(created.ok, true, `Firefox Temporary Container creation failed: ${created.error || 'unknown error'}`);
+
+    await openExtensionTab('tabExpressionList', 'formText');
+    const navLinks = await driver.findElements(By.css('ul.nav-tabs a.nav-link'));
+    const labels = await Promise.all(navLinks.map((link) => link.getText()));
+    assert.equal(labels.filter((label) => label === '%tmp').length, 1, `Expected one shared %tmp tab, got: ${labels.join(', ')}`);
+    assert.equal(labels.includes('%tmp-e2e-one'), false, 'First Temporary Container leaked into the expression tab list');
+    assert.equal(labels.includes('%tmp-e2e-two'), false, 'Second Temporary Container leaked into the expression tab list');
+
+    let temporaryTab;
+    for (const link of navLinks) {
+      if ((await link.getText()) === '%tmp') {
+        temporaryTab = link;
+        break;
+      }
+    }
+    assert.ok(temporaryTab, 'Shared %tmp expression tab was not found');
+    await temporaryTab.click();
+    const input = await waitForElement('formText');
+    await input.clear();
+    await input.sendKeys('tmp-e2e.invalid', Key.ENTER);
+    await driver.wait(async () => (await input.getAttribute('value')) === '', 10000);
+    assert.ok((await driver.findElement(By.css('body')).getText()).includes('tmp-e2e.invalid'), 'Shared %tmp rule was not stored in the visible group');
+
+    const removed = await driver.executeAsyncScript(
+      `const ids = arguments[0];
+       const done = arguments[arguments.length - 1];
+       Promise.all(ids.map((id) => browser.contextualIdentities.remove(id)))
+         .then(() => done({ ok: true }))
+         .catch((error) => done({ ok: false, error: String(error) }));`,
+      created.ids,
+    );
+    assert.equal(removed.ok, true, `Firefox Temporary Container cleanup failed: ${removed.error || 'unknown error'}`);
+
+    await openExtensionTab('tabExpressionList', 'formText');
+    const remainingLabels = await Promise.all(
+      (await driver.findElements(By.css('ul.nav-tabs a.nav-link'))).map((link) => link.getText()),
+    );
+    assert.equal(remainingLabels.filter((label) => label === '%tmp').length, 1, 'Shared %tmp rule scope disappeared when individual Temporary Containers were removed');
+    await driver.get('about:blank');
+  });
+
   await reporter.step('unlisted last-tab close removes cookies and configured site data', async () => {
     const token = 'firefox-close';
     site.resetHits(token);
