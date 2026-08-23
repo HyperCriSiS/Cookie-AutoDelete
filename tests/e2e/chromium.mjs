@@ -1,0 +1,261 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { chromium } from 'playwright';
+import {
+  assertCleaned,
+  assertRetained,
+  assertSeeded,
+  createReporter,
+  sleep,
+} from './lib/assertions.mjs';
+import { startTestSite } from './lib/test-site.mjs';
+
+const extensionDir = path.resolve(process.argv[2] || process.env.CAD_E2E_EXTENSION_DIR || '');
+if (!extensionDir || !(await fs.stat(path.join(extensionDir, 'manifest.json')).catch(() => false))) {
+  throw new Error('Usage: node tests/e2e/chromium.mjs <unpacked Chromium extension directory>');
+}
+
+const cleanupDelayMs = 2600;
+const reporter = createReporter('chromium');
+const userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cad-e2e-chromium-'));
+const site = await startTestSite();
+let context;
+let extensionId;
+let browserVersion = 'unknown';
+
+const launch = async () => {
+  context = await chromium.launchPersistentContext(userDataDir, {
+    channel: 'chromium',
+    headless: true,
+    args: [
+      `--disable-extensions-except=${extensionDir}`,
+      `--load-extension=${extensionDir}`,
+    ],
+  });
+  const browser = context.browser();
+  if (browser) browserVersion = browser.version();
+  let [worker] = context.serviceWorkers();
+  if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 15000 });
+  extensionId = worker.url().split('/')[2];
+  assert.ok(extensionId, 'Unable to determine Chromium extension id from the MV3 service worker');
+  return worker;
+};
+
+const extensionUrl = (hash) => `chrome-extension://${extensionId}/settings/settings.html${hash}`;
+
+const setCheckbox = async (page, id, wanted) => {
+  const box = page.locator(`#${id}`);
+  await box.waitFor({ state: 'visible', timeout: 10000 });
+  const checked = (await box.getAttribute('aria-checked')) === 'true';
+  if (checked !== wanted) {
+    await box.click();
+    await page.waitForFunction(
+      ({ selector, value }) => document.querySelector(selector)?.getAttribute('aria-checked') === String(value),
+      { selector: `#${id}`, value: wanted },
+    );
+  }
+};
+
+const openSettings = async () => {
+  const page = await context.newPage();
+  await page.goto(extensionUrl('#tabSettings'));
+  await page.locator('#activeMode').waitFor({ state: 'visible', timeout: 10000 });
+  return page;
+};
+
+const configure = async () => {
+  const page = await openSettings();
+  await setCheckbox(page, 'activeMode', true);
+  await setCheckbox(page, 'domainChangeCleanup', true);
+  await setCheckbox(page, 'cacheCleanup', true);
+  await setCheckbox(page, 'indexedDBCleanup', true);
+  await setCheckbox(page, 'localStorageCleanup', true);
+  await setCheckbox(page, 'serviceWorkersCleanup', true);
+  await setCheckbox(page, 'showNotificationAfterCleanup', false);
+  await setCheckbox(page, 'manualNotifications', false);
+  const delay = page.locator('#delayBeforeClean');
+  await delay.fill('1');
+  await page.waitForFunction(() => document.querySelector('#delayBeforeClean')?.value === '1');
+  await sleep(300);
+  await page.close();
+};
+
+const addExpression = async (host, grey = false) => {
+  const page = await context.newPage();
+  await page.goto(extensionUrl('#tabExpressionList'));
+  const input = page.locator('#formText');
+  await input.waitFor({ state: 'visible', timeout: 10000 });
+  await input.fill(host);
+  await input.press(grey ? 'Shift+Enter' : 'Enter');
+  await page.waitForFunction(() => document.querySelector('#formText')?.value === '');
+  assert.ok((await page.locator('body').textContent()).includes(host), `${host} was not rendered in the expression list`);
+  await page.close();
+};
+
+const openSite = async (origin) => {
+  const page = await context.newPage();
+  await page.goto(origin + '/');
+  await page.waitForFunction(() => typeof window.cadE2E?.inspect === 'function');
+  return page;
+};
+
+const seed = async (page, token) => page.evaluate((value) => window.cadE2E.seed(value), token);
+const inspect = async (page) => page.evaluate(() => window.cadE2E.inspect());
+const fetchCached = async (page, token) => page.evaluate((value) => window.cadE2E.fetchCache(value), token);
+
+const verifyCacheBaseline = (token, label) => {
+  assert.equal(site.hits(token), 1, `${label}: the controlled HTTP response was not cached before cleanup`);
+};
+
+const verifyCacheCleaned = async (page, token, label) => {
+  await fetchCached(page, token);
+  assert.equal(site.hits(token), 2, `${label}: browser HTTP cache survived Cookie AutoDelete cleanup`);
+};
+
+const verifyCacheRetained = async (page, token, label) => {
+  await fetchCached(page, token);
+  assert.equal(site.hits(token), 1, `${label}: browser HTTP cache was removed unexpectedly`);
+};
+
+const screenshotFailure = async () => {
+  const pages = context?.pages() || [];
+  const page = pages.at(-1);
+  if (!page || page.isClosed()) return;
+  await fs.mkdir('tests/e2e/results', { recursive: true });
+  await page.screenshot({ path: 'tests/e2e/results/chromium-failure.png', fullPage: true }).catch(() => undefined);
+};
+
+try {
+  let worker = await launch();
+
+  await reporter.step('packaged MV3 extension starts and settings UI renders', async () => {
+    await configure();
+    return { extensionId };
+  });
+
+  await reporter.step('unlisted last-tab close removes cookies and configured site data', async () => {
+    const token = 'chromium-close';
+    site.resetHits(token);
+    const page = await openSite(site.origin('a'));
+    const before = await seed(page, token);
+    assertSeeded(before, 'Chromium last-tab-close seed');
+    verifyCacheBaseline(token, 'Chromium last-tab-close seed');
+    await page.close();
+    await sleep(cleanupDelayMs);
+
+    const check = await openSite(site.origin('a'));
+    const after = await inspect(check);
+    assertCleaned(after, 'Chromium last-tab-close cleanup');
+    await verifyCacheCleaned(check, token, 'Chromium last-tab-close cleanup');
+    await check.close();
+  });
+
+  await reporter.step('domain change removes the previous unlisted origin', async () => {
+    const token = 'chromium-domain-change';
+    site.resetHits(token);
+    const page = await openSite(site.origin('b'));
+    const before = await seed(page, token);
+    assertSeeded(before, 'Chromium domain-change seed');
+    verifyCacheBaseline(token, 'Chromium domain-change seed');
+    await page.goto(site.origin('a') + '/');
+    await sleep(cleanupDelayMs);
+
+    const check = await openSite(site.origin('b'));
+    const after = await inspect(check);
+    assertCleaned(after, 'Chromium domain-change cleanup');
+    await verifyCacheCleaned(check, token, 'Chromium domain-change cleanup');
+    await check.close();
+    await page.close();
+  });
+
+  const whitelistToken = 'chromium-whitelist';
+  await reporter.step('whitelist created through real options UI retains site data', async () => {
+    await addExpression('127.0.0.1', false);
+    site.resetHits(whitelistToken);
+    const page = await openSite(site.origin('a'));
+    assertSeeded(await seed(page, whitelistToken), 'Chromium whitelist seed');
+    verifyCacheBaseline(whitelistToken, 'Chromium whitelist seed');
+    await page.close();
+    await sleep(cleanupDelayMs);
+
+    const check = await openSite(site.origin('a'));
+    assertRetained(await inspect(check), whitelistToken, 'Chromium whitelist retention');
+    await verifyCacheRetained(check, whitelistToken, 'Chromium whitelist retention');
+    await check.close();
+  });
+
+  const greylistToken = 'chromium-greylist';
+  await reporter.step('greylist created through real options UI retains data on normal tab close', async () => {
+    await addExpression('127.0.0.2', true);
+    site.resetHits(greylistToken);
+    const page = await openSite(site.origin('b'));
+    assertSeeded(await seed(page, greylistToken), 'Chromium greylist seed');
+    verifyCacheBaseline(greylistToken, 'Chromium greylist seed');
+    await page.close();
+    await sleep(cleanupDelayMs);
+
+    const check = await openSite(site.origin('b'));
+    assertRetained(await inspect(check), greylistToken, 'Chromium greylist close retention');
+    await verifyCacheRetained(check, greylistToken, 'Chromium greylist close retention');
+    await check.close();
+  });
+
+  await reporter.step('persistent profile restart preserves whitelist and applies greylist startup cleanup', async () => {
+    await Promise.all(context.pages().map((page) => page.close().catch(() => undefined)));
+    await context.close();
+    context = undefined;
+    worker = await launch();
+    await sleep(cleanupDelayMs);
+
+    const whiteCheck = await openSite(site.origin('a'));
+    assertRetained(await inspect(whiteCheck), whitelistToken, 'Chromium whitelist after browser restart');
+    await whiteCheck.close();
+
+    const greyCheck = await openSite(site.origin('b'));
+    assertCleaned(await inspect(greyCheck), 'Chromium greylist startup cleanup');
+    await greyCheck.close();
+  });
+
+  await reporter.step('MV3 runtime reload restores persisted settings and expression state', async () => {
+    await worker.evaluate(() => {
+      globalThis.__cadE2ETransient = 'must-not-survive';
+      chrome.runtime.reload();
+    }).catch((error) => {
+      if (!String(error).includes('Target page, context or browser has been closed')) throw error;
+    });
+    await sleep(1800);
+    const workers = context.serviceWorkers();
+    if (workers.length === 0) {
+      worker = await context.waitForEvent('serviceworker', { timeout: 15000 });
+    } else {
+      worker = workers[0];
+    }
+    const transient = await worker.evaluate(() => globalThis.__cadE2ETransient ?? null);
+    assert.equal(transient, null, 'MV3 worker-global transient state survived runtime reload unexpectedly');
+
+    const settings = await openSettings();
+    assert.equal(await settings.locator('#activeMode').getAttribute('aria-checked'), 'true');
+    assert.equal(await settings.locator('#indexedDBCleanup').getAttribute('aria-checked'), 'true');
+    await settings.close();
+
+    const expressions = await context.newPage();
+    await expressions.goto(extensionUrl('#tabExpressionList'));
+    await expressions.locator('#formText').waitFor({ state: 'visible' });
+    const body = await expressions.locator('body').textContent();
+    assert.ok(body.includes('127.0.0.1'), 'Whitelist entry was lost across MV3 runtime reload');
+    assert.ok(body.includes('127.0.0.2'), 'Greylist entry was lost across MV3 runtime reload');
+    await expressions.close();
+  });
+
+  await reporter.write({ browserVersion, extensionId, status: 'pass' });
+} catch (error) {
+  await screenshotFailure();
+  await reporter.write({ browserVersion, extensionId, status: 'fail' });
+  throw error;
+} finally {
+  await context?.close().catch(() => undefined);
+  await site.close().catch(() => undefined);
+  await fs.rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+}
