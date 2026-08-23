@@ -8,27 +8,28 @@ Do not merge PR #1 or create a tagged release until every required gate below is
 
 Former candidate `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `9432252522` is **superseded**.
 
-A replacement candidate is pinned only when one exact PR head passes:
+### Pinned technical release candidate
 
-- `Tests, Builds, Coverage`
-- `Browser E2E — Chromium`
-- `Browser E2E — Firefox`
-- downstream `Release Candidate Packages`
-
-The RC job republishes the same package bytes tested by the browser jobs. Candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base changes require a new RC.
-
-### Replacement candidate record
-
-- Commit SHA: pending
-- Base SHA (`3.X.X-Branch`): `3e061b7f77175e536ff664788f3e6692ac6540e8` unless base advances
-- CI pull-request run ID: pending
-- `release-candidate-packages` artifact ID: pending
-- Artifact digest: pending
-- Firefox package: pending
-- Chromium package: pending
-- Chromium E2E: pending
-- Firefox E2E: pending
+- Technical RC source: `7fc3dd14bc2c82464ccaf24ebada6493dff76b0c`
+- Base SHA (`3.X.X-Branch`): `3e061b7f77175e536ff664788f3e6692ac6540e8`
+- CI pull-request run: `32644238045`
+- `release-candidate-packages` artifact: `9494441111`
+- Artifact wrapper digest: `sha256:b482c9a7d9a90bca727d84275001c95de9def717aab3aa865a1baa7ddfdae4b8`
+- Firefox package: `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Firefox.xpi`
+- Chromium package: `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Chrome.zip`
+- Firefox convenience artifact: `9494441599`
+- Chromium convenience artifact: `9494442021`
+- Firefox E2E results artifact: `9494435062`
+- Chromium E2E results artifact: `9494438468`
+- Chromium E2E: ✅
+- Firefox E2E: ✅
+- Fast CI/build/package validation: ✅
+- CodeQL / Actions / JavaScript-TypeScript analysis: ✅
 - Genuine historical-profile/export result: pending suitable data
+
+`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `7fc3dd14…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
+
+The separate `github-advanced-security` AI-agent check still fails before repository analysis because its requested hosted model is unavailable. It remains non-blocking while repository-owned CI/CodeQL are green.
 
 ## Automated packaged-runtime gates
 
@@ -36,26 +37,26 @@ These are CI gates, **not manual retest instructions**.
 
 ### Shared Firefox + Chromium
 
-- [ ] Packaged extension starts in a real browser and the real options UI works.
-- [ ] Configured automatic last-tab cleanup removes cookie, LocalStorage, IndexedDB and website Service Worker data for an unlisted site.
-- [ ] Domain change cleans the previous unlisted origin.
-- [ ] Whitelist created through the real expression UI retains protected data.
-- [ ] Greylist created through the real expression UI retains data on normal tab close.
-- [ ] Production persistence contains the settings and expression lists created through real browser/UI interactions.
+- [x] Packaged extension starts in a real browser and the real options UI works.
+- [x] Configured automatic last-tab cleanup removes cookie, LocalStorage, IndexedDB and website Service Worker data for an unlisted site.
+- [x] Domain change cleans the previous unlisted origin.
+- [x] Whitelist created through the real expression UI retains protected data.
+- [x] Greylist created through the real expression UI retains data on normal tab close.
+- [x] Production persistence contains the settings and expression lists created through real browser/UI interactions.
 
 ### Chromium-specific
 
-- [ ] Dynamic popup primary controls remain on one row with enlarged text.
-- [ ] Selective browser HTTP-cache cleanup works for unlisted last-tab/domain-change cleanup.
-- [ ] Protected white-/greylisted sites retain their controlled HTTP-cache entry according to policy.
-- [ ] Persistent-profile process relaunch preserves persisted settings/lists and protected site data.
-- [ ] Real process relaunch removes worker-global transient state while persistent extension state returns.
+- [x] Dynamic popup primary controls remain on one row with enlarged text.
+- [x] Selective browser HTTP-cache cleanup works for unlisted last-tab/domain-change cleanup.
+- [x] Protected white-/greylisted sites retain their controlled HTTP-cache entry according to policy.
+- [x] Persistent-profile process relaunch preserves persisted settings/lists and protected site data.
+- [x] Real process relaunch removes worker-global transient state while persistent extension state returns.
 
 ### Firefox-specific
 
-- [ ] Packaged XPI exposes contextual identities.
-- [ ] Multiple `%tmp*` identities produce exactly one visible/persisted `%tmp` expression scope.
-- [ ] No concrete temporary-container store IDs leak into persisted CAD state.
+- [x] Packaged XPI exposes contextual identities.
+- [x] Multiple `%tmp*` identities produce exactly one visible/persisted `%tmp` expression scope.
+- [x] No concrete temporary-container store IDs leak into persisted CAD state.
 
 Firefox selective HTTP-cache cleanup is **not** a release gate while Firefox cannot reliably evict normal-tab partitioned cache by hostname. CAD must not replace that limitation with a destructive full-browser-cache clear. Chromium remains the packaged-runtime selective-cache gate.
 
@@ -63,14 +64,10 @@ A whole-extension runtime reload is not used as a background-lifecycle proxy in 
 
 ## Package provenance
 
-After automated jobs are green:
-
-- [ ] `Release Candidate Packages` ran after both browser E2E jobs on the same PR head.
-- [ ] Artifact contains exactly one `*Chrome.zip`, one `*Firefox.xpi`, and `SHA256SUMS.txt`.
-- [ ] Both packages match `SHA256SUMS.txt`.
-- [ ] PR #1 still targets the recorded current `3.X.X-Branch` base without merge conflict/base drift.
-
-The external `github-advanced-security` AI-agent failure is non-blocking only while it still aborts before repository analysis and repository-owned CI/CodeQL are green.
+- [x] `Release Candidate Packages` ran after both browser E2E jobs on the exact technical RC source.
+- [x] Artifact publication succeeded with one Chromium package, one Firefox package and `SHA256SUMS.txt` configured as required inputs.
+- [ ] Verify the downloaded Firefox and Chromium package files against `SHA256SUMS.txt` before residual manual testing.
+- [x] PR #1 still targets recorded base `3e061b7f77175e536ff664788f3e6692ac6540e8`; no newer base has been observed during RC qualification.
 
 ## Minimal manual packaged smoke
 
@@ -114,17 +111,18 @@ If suitable genuine data is unavailable, leave the gate open unless an explicit 
 
 | Browser | Version / OS | Automated E2E | SHA256 | Visual/permission | Full startup | Historical upgrade | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Firefox | pending | pending | pending | pending | pending | pending | |
-| Chromium | pending | pending | pending | pending | pending | pending | |
+| Firefox | pending | GitHub Actions ✅ | pending | pending | pending | pending | packaged XPI E2E green |
+| Chromium | pending | GitHub Actions ✅ | pending | pending | pending | pending | packaged ZIP E2E green |
 
 ## Release decision
 
-- [ ] Fast CI, package validation, Chromium E2E and Firefox E2E are green for one exact candidate SHA.
-- [ ] Same-source `release-candidate-packages` provenance/checksums are confirmed.
+- [x] Fast CI, package validation, Chromium E2E and Firefox E2E are green for one exact technical candidate SHA.
+- [x] Same-source `release-candidate-packages` provenance is confirmed.
+- [ ] Downloaded package SHA256 verification is confirmed.
 - [ ] Minimal visual/permission smoke is green in both browser families.
 - [ ] Residual full-browser-startup checks are green.
 - [ ] Genuine historical upgrade evidence is green, or an explicit compensating-evidence decision exists.
-- [ ] PR #1 is mergeable against the current base with no unresolved conflicts.
+- [ ] PR #1 is mergeable against the current base with no unresolved conflicts/blocking functional checks.
 - [ ] No candidate-affecting change occurred after the pinned SHA without replacement validation.
 - [ ] Only then merge `modernization-p0` into `3.X.X-Branch`.
 - [ ] Validate the integrated branch before creating a tagged fork release.
