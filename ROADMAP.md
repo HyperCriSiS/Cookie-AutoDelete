@@ -8,24 +8,33 @@ Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension wh
 
 ## Current status
 
-**Status: in progress / draft — automated RC qualification**
+**Status: in progress / draft — technical RC qualified, residual release gates open**
 
 - Development/integration branch: `modernization-p0`
 - Draft PR: #1 → `3.X.X-Branch`
-- Current validated base lineage: `3e061b7f77175e536ff664788f3e6692ac6540e8` unless the base advances again
+- Validated base: `3e061b7f77175e536ff664788f3e6692ac6540e8`
+- Pinned technical RC source: `7fc3dd14bc2c82464ccaf24ebada6493dff76b0c`
+- Qualified pull-request CI run: `32644238045`
+- `release-candidate-packages` artifact: `9494441111`
+- Artifact wrapper digest: `sha256:b482c9a7d9a90bca727d84275001c95de9def717aab3aa865a1baa7ddfdae4b8`
+- Firefox package: `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Firefox.xpi`
+- Chromium package: `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Chrome.zip`
 - Former RC `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `9432252522`: **superseded**
-- Current replacement RC: **not yet pinned**
-- Only draft modernization PR #1 is currently open.
-- The separate GitHub Advanced Security AI-agent check can fail before repository analysis because its hosted model is unavailable. Repository-owned CI and CodeQL remain the functional/security gates; this external failure is not treated as a code defect when it aborts before analysis.
+- Only draft modernization PR #1 is currently intended to remain open.
 
-A replacement RC may be pinned only when one exact PR head passes all of:
+For the exact technical RC source, all repository-owned automated qualification gates are green:
 
-1. `Tests, Builds, Coverage`
-2. `Browser E2E — Chromium`
-3. `Browser E2E — Firefox`
-4. downstream `Release Candidate Packages`
+- `Tests, Builds, Coverage` ✅
+- `Browser E2E — Firefox` ✅
+- `Browser E2E — Chromium` ✅
+- `Release Candidate Packages` ✅
+- CodeQL ✅
+- Actions analysis ✅
+- JavaScript/TypeScript analysis ✅
 
-The RC job republishes the same package bytes consumed by the two browser-E2E jobs. Candidate-affecting source/runtime, manifest, dependency, build/packaging, test-infrastructure, or base changes require a new candidate.
+The separate GitHub Advanced Security AI-agent check can still fail before repository analysis because its hosted model is unavailable. This remains external to repository functionality while the repository-owned security/CI checks above are green.
+
+Documentation-only commits after `7fc3dd14…` do not change the tested package bytes and therefore do not invalidate this technical RC. Any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure or base change requires a replacement candidate.
 
 ## Engineering principles
 
@@ -52,6 +61,8 @@ The RC job republishes the same package bytes consumed by the two browser-E2E jo
 - [x] Align cleanup success-path tests with browser-confirmed removals.
 - [x] Keep repository-owned CodeQL / JavaScript-TypeScript / Actions analysis green.
 - [x] Harden `pull_request_target` prechecks against transient/non-JSON GitHub API responses.
+- [x] Avoid duplicate full Push + PR browser matrices on feature/development branches.
+- [x] Ignore Markdown-only changes for expensive browser CI and cancel superseded PR runs automatically.
 
 ## Phase 2 — migration and behavioral compatibility
 
@@ -105,18 +116,19 @@ Each coordinated migration must independently rerun locked install/audit, typech
 
 ## Phase 4 — release readiness
 
-### Completed release infrastructure ✅
+### Release/test infrastructure ✅
 
 - [x] Keep the modernization branch synchronized with the hardened `3.X.X-Branch` base without replacing validated modernization code with stale dependency/workflow state.
 - [x] Generate Firefox and Chromium packages from the same source state and attach SHA-256 checksums.
-- [x] Supersede all older RC artifacts after later candidate-affecting changes; old artifacts remain historical evidence only.
+- [x] Supersede older RC artifacts after candidate-affecting changes; old artifacts remain historical evidence only.
 - [x] Move repeatable packaged-runtime behavior into deterministic real-browser E2E using a controlled local test site.
 - [x] Make `Release Candidate Packages` downstream of both real-browser E2E jobs so only already-tested package bytes can become a candidate.
 - [x] Separate fast unit/regression coverage, real-browser E2E, genuine historical-upgrade validation and minimal manual smoke in `TESTING.md` / `RC_TEST_CHECKLIST.md`.
+- [x] Remove duplicate full browser CI on both push and pull-request events for the same development commit.
 
-### Chromium real-browser E2E ✅ on the current test architecture
+### Chromium real-browser E2E ✅
 
-The packaged Chromium build now verifies:
+The packaged Chromium build verifies:
 
 - [x] MV3 extension startup and real options UI.
 - [x] Dynamic popup sizing / primary controls remain on one row.
@@ -128,20 +140,23 @@ The packaged Chromium build now verifies:
 - [x] Persistent-profile Chromium process relaunch.
 - [x] Persisted settings/lists survive the process relaunch while worker-global transient state does not.
 
-A whole-extension `chrome.runtime.reload()` is intentionally **not** used as an MV3 service-worker lifecycle proxy: reloading the entire unpacked extension is not equivalent to ordinary MV3 worker suspension/restart and conflicts with the `--load-extension` harness. The deterministic worker-module restart regression plus real process-relaunch state boundary cover the relevant persistence contract.
+A whole-extension `chrome.runtime.reload()` is intentionally **not** used as an MV3 service-worker lifecycle proxy: reloading the entire unpacked extension is not equivalent to ordinary MV3 worker suspension/restart and conflicts with the `--load-extension` harness. Deterministic worker-module restart regression plus real process-relaunch state boundaries cover the relevant persistence contract.
 
-### Firefox real-browser E2E — qualification in progress ⏳
+### Firefox real-browser E2E ✅
 
-Already proven in the packaged XPI:
+The packaged Firefox XPI verifies:
 
 - [x] Extension startup and real options UI.
 - [x] Firefox contextual-identities capability.
-- [x] Two independent `%tmp*` containers collapse into exactly one visible/persisted `%tmp` expression scope.
+- [x] Multiple `%tmp*` containers collapse into exactly one visible/persisted `%tmp` expression scope.
 - [x] No concrete temporary-container store IDs leak into persisted CAD state.
+- [x] Unlisted last-tab cleanup.
+- [x] Domain-change cleanup.
+- [x] Cookie, LocalStorage, IndexedDB and website Service Worker removal.
+- [x] Whitelist and greylist creation through the real expression UI plus policy retention behavior.
+- [x] Production `storage.local.state` contains settings and expression lists created through real browser/UI interactions.
 
-Current qualification work:
-
-- [ ] Re-run the remaining Firefox cleanup/domain/list/runtime matrix after correcting the HTTP-cache platform boundary described below.
+Firefox MV3 uses `background.scripts` here. A whole-extension `browser.runtime.reload()` is not used as a normal background-lifecycle proxy because it reloads the temporary extension itself and destabilizes Marionette. State hydration/recreation remains protected by deterministic regressions; the normally-installed browser-startup path remains a residual manual gate.
 
 ### Firefox selective HTTP-cache platform boundary ✅ classified
 
@@ -150,11 +165,13 @@ Current qualification work:
 - [x] Keep selective HTTP-cache behavior a mandatory packaged-runtime gate on Chromium.
 - [x] Exclude Firefox selective HTTP-cache from the CAD pass/fail release matrix until Firefox provides/reliably implements an appropriate per-site API; re-evaluate when browser behavior changes.
 
-### Replacement RC qualification ⏳
+### Replacement technical RC qualification ✅
 
-- [ ] Obtain one exact current PR head with fast CI, Chromium E2E and Firefox E2E all green.
-- [ ] Confirm downstream `Release Candidate Packages` succeeds for that exact head and republishes the exact browser-tested bytes.
-- [ ] Record candidate SHA, current base SHA, PR run ID, artifact ID/digest and package filenames in `RC_TEST_CHECKLIST.md` and PR #1.
+- [x] Exact source `7fc3dd14bc2c82464ccaf24ebada6493dff76b0c` passes fast CI, Chromium E2E and Firefox E2E.
+- [x] Downstream `Release Candidate Packages` succeeds in PR run `32644238045`.
+- [x] Technical RC artifact `9494441111` is pinned with wrapper digest `sha256:b482c9a7d9a90bca727d84275001c95de9def717aab3aa865a1baa7ddfdae4b8`.
+- [x] Browser-specific artifacts/results are recorded in `RC_TEST_CHECKLIST.md`.
+- [ ] Verify downloaded package files against the included `SHA256SUMS.txt` before residual manual testing.
 
 ### Residual manual/historical release gates ⏳
 
@@ -163,23 +180,23 @@ Current qualification work:
 - [ ] Full Firefox browser-startup cleanup with a normally installed candidate; CI currently uses a temporary unsigned XPI that Firefox removes at restart.
 - [ ] Full Chromium greylist startup cleanup with an already installed/loaded candidate; CI process relaunch must re-sideload the unpacked extension with `--load-extension`.
 - [ ] Genuine historical-profile/settings-export upgrade validation for both target browser families, or an explicit project decision documenting unavailable representative data and compensating evidence.
-- [ ] Confirm PR #1 is mergeable against the then-current `3.X.X-Branch` base with no unresolved code conflict/base drift.
+- [ ] Reconfirm PR #1 is mergeable against the then-current `3.X.X-Branch` base with no unresolved code conflict/base drift after residual testing.
 
 ### Merge / release ⛔ until all required gates pass
 
-- [ ] Merge `modernization-p0` into `3.X.X-Branch` only after automated RC qualification plus residual manual/historical gates are green.
+- [ ] Merge `modernization-p0` into `3.X.X-Branch` only after technical RC qualification plus residual manual/historical gates are green.
 - [ ] Validate the integrated branch.
 - [ ] Create a tagged fork release only after integrated-branch validation.
 - [ ] Consider an upstream proposal only after the fork branch is stable and modernization scope is documented.
 
 ## Current blockers / dependencies
 
-1. **Firefox E2E qualification:** rerun the remaining packaged-XPI matrix after excluding the browser's unreliable hostname-scoped partitioned HTTP-cache behavior from the CAD pass/fail gate.
-2. **No genuine historical user data fixture:** real-world Firefox/Chromium upgrade validation remains open.
-3. **Full browser-startup semantics:** the current temporary-XPI and unpacked-`--load-extension` CI install models cannot faithfully reproduce every normally-installed startup path; these are deliberately small manual residual gates.
+1. **Residual manual smoke:** visual/permission sanity and normally-installed full-startup paths in Firefox/Chromium.
+2. **No genuine historical user-data fixture:** real-world Firefox/Chromium upgrade validation remains open unless a documented compensating-evidence decision is made.
+3. **Downloaded-package checksum verification:** verify the exact RC package files against `SHA256SUMS.txt` before manual use.
 4. **Firefox selective HTTP cache:** browser-platform limitation; CAD must not substitute a destructive global cache clear.
 5. **External GHAS AI agent:** may fail before repository analysis because of unavailable hosted model; non-blocking only while repository-owned CI/CodeQL are green.
 
 ## Completion status
 
-**Not complete.** Phases 0, 1 and 3 are complete; Phase 2 is complete except for genuine historical-user-data validation. Phase 4 has deterministic real-browser infrastructure, grouped `%tmp` behavior, dynamic popup sizing and a green Chromium packaged-runtime matrix. The active automated task is finishing the Firefox packaged-XPI matrix and producing a new same-source tested RC. Manual full-startup/visual checks and genuine historical upgrades remain release blockers. PR #1 stays draft; merge and tagging remain prohibited until those gates are resolved.
+**Not complete.** Phases 0, 1 and 3 are complete; Phase 2 is complete except for genuine historical-user-data validation. Phase 4 now has a fully green same-source real-browser technical RC (`7fc3dd14…`, artifact `9494441111`) covering the packaged Firefox and Chromium matrices, grouped `%tmp` behavior, dynamic popup sizing and optimized CI orchestration. Remaining release blockers are limited to package checksum verification, minimal visual/permission smoke, genuine normally-installed startup paths and historical-profile/export validation. PR #1 remains draft; merge and tagging remain prohibited until those gates are resolved.
