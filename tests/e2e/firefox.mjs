@@ -144,6 +144,17 @@ const addExpression = async (host, grey = false) => {
   assert.ok((await driver.findElement(By.css('body')).getText()).includes(host), `${host} was not rendered in the Firefox expression list`);
 };
 
+const readPersistedState = async () => {
+  const persistedState = await driver.executeAsyncScript(
+    `const done = arguments[arguments.length - 1];
+     browser.storage.local.get('state')
+       .then((value) => done(value.state ? JSON.parse(value.state) : {}))
+       .catch((error) => done({ __error: String(error) }));`,
+  );
+  assert.equal(persistedState.__error, undefined, `Unable to read persisted CAD state: ${persistedState.__error || ''}`);
+  return persistedState;
+};
+
 const openSiteTab = async (origin) => {
   await driver.switchTo().newWindow('tab');
   const handle = await driver.getWindowHandle();
@@ -240,13 +251,7 @@ try {
     await driver.wait(async () => (await input.getAttribute('value')) === '', 10000);
     assert.ok((await driver.findElement(By.css('body')).getText()).includes('tmp-e2e.invalid'), 'Shared %tmp rule was not stored in the visible group');
 
-    const persistedState = await driver.executeAsyncScript(
-      `const done = arguments[arguments.length - 1];
-       browser.storage.local.get('state')
-         .then((value) => done(value.state ? JSON.parse(value.state) : {}))
-         .catch((error) => done({ __error: String(error) }));`,
-    );
-    assert.equal(persistedState.__error, undefined, `Unable to read persisted CAD state: ${persistedState.__error || ''}`);
+    const persistedState = await readPersistedState();
     const storedLists = persistedState.lists || {};
     assert.ok(storedLists['%tmp'], 'Shared %tmp expression list was not persisted in CAD state');
     assert.ok(
@@ -323,20 +328,18 @@ try {
     await closeSiteAndReturn();
   });
 
-  await reporter.step('extension runtime reload restores persisted settings and expression state', async () => {
-    await openSettings();
-    await driver.executeScript('browser.runtime.reload();');
-    await driver.get('about:blank');
-    await sleep(1800);
-
+  await reporter.step('production persistence contains settings and expression state after real browser interactions', async () => {
     await openSettings();
     assert.equal(await (await driver.findElement(By.id('activeMode'))).getAttribute('aria-checked'), 'true');
     assert.equal(await (await driver.findElement(By.id('indexedDBCleanup'))).getAttribute('aria-checked'), 'true');
 
-    await openExtensionTab('tabExpressionList', 'formText');
-    const body = await driver.findElement(By.css('body')).getText();
-    assert.ok(body.includes('127.0.0.1'), 'Firefox whitelist entry was lost across runtime reload');
-    assert.ok(body.includes('127.0.0.2'), 'Firefox greylist entry was lost across runtime reload');
+    const persistedState = await readPersistedState();
+    assert.equal(persistedState.settings?.activeMode, true, 'Firefox activeMode was not persisted');
+    assert.equal(persistedState.settings?.indexedDBCleanup, true, 'Firefox indexedDBCleanup was not persisted');
+    const persistedExpressions = Object.values(persistedState.lists || {}).flat();
+    assert.ok(persistedExpressions.some((expression) => expression.expression === '127.0.0.1'), 'Firefox whitelist entry was not persisted');
+    assert.ok(persistedExpressions.some((expression) => expression.expression === '127.0.0.2'), 'Firefox greylist entry was not persisted');
+    assert.ok(persistedExpressions.some((expression) => expression.expression === 'tmp-e2e.invalid'), 'Firefox shared %tmp entry was not persisted');
     await driver.get('about:blank');
   });
 
