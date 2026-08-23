@@ -84,12 +84,13 @@ Automated Chromium scenarios include:
 - browser HTTP-cache removal;
 - whitelist creation through the real expression UI and retention behavior;
 - greylist creation through the real expression UI and normal-close retention behavior;
-- persistent-profile Chromium process relaunch, including whitelist and settings retention;
-- actual MV3 runtime reload with persisted settings/list restoration and loss of worker-global transient state.
+- persistent-profile Chromium process relaunch, including whitelist/settings/list retention and proof that worker-global transient state does not survive the new browser process.
 
 The test uses the packaged build produced by CI and therefore exercises manifest generation, extension startup, browser APIs, persistence, and cleanup together.
 
 The Chromium harness launches the unpacked package with `--load-extension` on each browser process. This is suitable for proving persisted profile/settings/list data survives a real process relaunch, but it does **not** faithfully prove `browser.runtime.onStartup` behavior of an extension that was already installed before browser startup. Greylist startup cleanup therefore remains a residual manual browser-startup gate rather than an automated E2E assertion until the harness can install the candidate persistently without re-sideloading it on launch.
+
+A whole-extension `chrome.runtime.reload()` is deliberately **not** used as an MV3 service-worker lifecycle gate. With an unpacked `--load-extension` candidate Chromium can temporarily or permanently block the extension URL after that call, and reloading the entire extension is not equivalent to ordinary MV3 worker suspension/restart. Worker-state boundaries are instead covered by the real process-relaunch assertion above plus the deterministic service-worker module-restart regression in the Jest layer.
 
 ### Firefox
 
@@ -102,12 +103,15 @@ Automated Firefox scenarios include:
 - Firefox contextual-identities API availability from the packaged extension;
 - unlisted last-tab-close cleanup;
 - domain-change cleanup;
-- cookie, LocalStorage, IndexedDB, website Service Worker, and browser HTTP-cache assertions;
+- cookie, LocalStorage, IndexedDB, and website Service Worker assertions;
 - whitelist creation/retention;
 - greylist creation/normal-close retention;
+- grouped Firefox Temporary Container behavior (`%tmp*` → one persisted `%tmp` expression scope);
 - extension runtime reload and persisted settings/list restoration.
 
 A full Firefox **browser restart with the same unsigned temporary XPI already installed at startup** is not equivalent to a normal installed release: Firefox removes temporary add-ons on browser restart. Until the CI environment uses an appropriate signed/unbranded test package, the Firefox full-browser-startup greylist path remains a small residual manual gate. Its core policy logic continues to be covered by Jest regression tests.
+
+Firefox HTTP-cache cleanup is intentionally excluded from the pass/fail E2E matrix. Current Firefox `browsingData.remove({ hostnames }, { cache: true })` behavior does not reliably remove normal-tab partitioned HTTP-cache entries; using an unscoped full-cache clear as a fallback would violate Cookie AutoDelete's per-site allowlist/greylist semantics. Chromium therefore remains the real-browser gate for selective HTTP-cache cleanup, while Firefox continues to test the site-data types its hostname-scoped API can reliably remove. This limitation should be re-evaluated when Firefox's selective cache-removal behavior changes.
 
 ## CI flow
 
