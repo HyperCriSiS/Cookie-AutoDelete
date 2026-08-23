@@ -1,51 +1,43 @@
 # Cookie AutoDelete testing architecture
 
-This document is the source of truth for how Cookie AutoDelete is tested. Release decisions should reference the layers below rather than duplicating long browser test instructions in release checklists.
+This file defines **how** Cookie AutoDelete is tested. `ROADMAP.md` tracks project progress; `RC_TEST_CHECKLIST.md` contains only the residual release gates.
 
-## Goals
+## Test layers
 
-The test strategy must prove both application logic and real browser behavior without depending on external websites, real accounts, or mutable third-party services.
+1. **Static / build** — locked install, TypeScript, lint, production builds, manifest/archive validation.
+2. **Unit + regression** — fast Jest coverage for reducers/services, migration rules and browser-lifecycle logic using controlled WebExtension mocks.
+3. **Real-browser E2E** — the actual packaged Firefox XPI / Chromium ZIP runs in real desktop browsers against a local deterministic test site.
+4. **Historical upgrade** — release-derived schema fixtures in CI plus genuine archived user profiles/exports when available.
+5. **Minimal manual smoke** — only browser chrome, permission/install UX, full-startup paths the CI install model cannot faithfully reproduce, and visual sanity.
 
-The layers are intentionally separated:
+Do not treat a unit test as proof that a browser really removed site data. Conversely, do not force a browser E2E test to simulate a lifecycle that its temporary/sideloaded install model cannot represent faithfully.
 
-1. **Static checks** — TypeScript, lint, manifest/build validation.
-2. **Unit and regression tests** — fast Jest coverage using mocked WebExtension APIs.
-3. **Real-browser E2E** — the packaged Firefox/Chromium extension loaded into real browsers against a controlled local website.
-4. **Historical upgrade validation** — synthetic/release-derived migrations in Jest plus genuine archived user data when available.
-5. **Minimal manual smoke** — only browser chrome, permission/install UX, visual sanity, and gaps that cannot be reproduced safely in CI.
+## Controlled E2E site
 
-A green unit suite is not accepted as proof that a browser actually removed IndexedDB, LocalStorage, cookies, cache, or a website Service Worker. Those behaviors belong to the real-browser layer.
-
-## Controlled E2E website
-
-`tests/e2e/lib/test-site.mjs` starts a local HTTP server and exposes two independent loopback origins:
+`tests/e2e/lib/test-site.mjs` starts two isolated loopback origins:
 
 - `http://127.0.0.1`
 - `http://127.0.0.2`
 
-No login, cloud service, dummy account, API key, or external website is required. Both origins are entirely owned by the test process and deliberately create data that Cookie AutoDelete is expected to remove or retain.
+No external websites, accounts, passwords, API keys or cloud services are used.
 
-Each origin can create and inspect:
+The fixture can create/inspect:
 
-- a deterministic test cookie;
-- LocalStorage;
-- IndexedDB;
-- a website Service Worker registration;
-- a cacheable HTTP response used to verify browser HTTP-cache cleanup.
+- cookie
+- LocalStorage
+- IndexedDB
+- website Service Worker registration
+- cacheable HTTP response for browser HTTP-cache assertions
 
-The server records cache endpoint hits, so the test first proves the response is actually cached and can then prove a cleanup caused a new network request. This tests Cookie AutoDelete's current **browser HTTP cache** option; it must not be confused with the Cache Storage API, which is a distinct data type and is not currently exposed by Cookie AutoDelete.
+Port 80 is intentional. CAD cleanup is hostname-oriented; using the normal HTTP origin avoids introducing a test-only non-default port that production cleanup cannot reconstruct from cookie hostnames.
 
-The CI test site intentionally uses HTTP port 80. Chromium `browsingData.origins` is origin-scoped, while Cookie AutoDelete currently derives cleanup targets from cookie hostnames and therefore has no originating non-default port available. Using the normal HTTP origin keeps the E2E fixture representative of the extension's current cleanup model rather than weakening assertions for a test-only port.
+## Unit / regression layer
 
-## Unit and regression layer
+`__tests__/` remains the fast logic layer. Targeted `*.regression.spec.*` files are retained when they document a concrete previous failure mode; apparent overlap alone is not a reason to delete them.
 
-The existing `__tests__/` tree remains the fast logic layer. It includes core service/reducer tests and targeted regressions for defects that have previously been fixed.
+Historical state fixtures for 3.0.2, 3.4.0 and 3.6.0 protect migration logic but **do not** count as genuine historical-profile validation.
 
-Do not delete a `*.regression.spec.*` file merely because a broader `*.spec.*` file exists. Regression tests document a specific failure mode and are retained unless the behavior is removed or the assertion is demonstrably duplicated by an equally explicit test.
-
-Historical release-state fixtures under `__tests__/fixtures/historical-state/` are release-derived schema fixtures. They protect migration logic but are **not** evidence that a genuine old browser profile was upgraded successfully.
-
-Run locally:
+Local fast validation:
 
 ```bash
 npm ci
@@ -55,104 +47,110 @@ npm run lint
 npm run build
 ```
 
-`npm test` is an alias for the unit/regression layer. `npm run test-all` runs typecheck, unit/regression tests, and lint; it deliberately does not launch browsers.
+`npm test` aliases the unit/regression layer. `npm run test-all` intentionally does not launch browsers.
 
-## Real-browser E2E layer
+## Chromium packaged E2E
 
-Dependencies are isolated in `tests/e2e/package.json` so Playwright/Selenium do not become part of the extension's shipping dependency graph.
+`tests/e2e/chromium.mjs` uses Playwright Chromium with a persistent profile and loads the unpacked contents of the **packaged Chromium ZIP**.
 
-Install them with:
+It verifies:
+
+- MV3 packaged startup and real settings UI
+- dynamic popup sizing; enlarged text must not wrap the primary action row
+- unlisted last-tab cleanup
+- domain-change cleanup
+- cookie, LocalStorage, IndexedDB and website Service Worker removal
+- selective browser HTTP-cache removal
+- whitelist/greylist creation through the real expression UI and retention semantics
+- persistent-profile browser-process relaunch
+- persisted settings/lists survive that relaunch
+- worker-global transient state does **not** survive the new browser process
+
+### Chromium lifecycle boundary
+
+The CI process launches the unpacked candidate with `--load-extension` on each browser process. This is valid for persisted-profile/process-boundary testing, but it cannot faithfully reproduce `runtime.onStartup` of an extension that was already normally installed before browser startup.
+
+A whole-extension `chrome.runtime.reload()` is deliberately **not** an MV3 worker-lifecycle gate. Reloading the entire sideloaded extension is not equivalent to ordinary service-worker suspension/restart and can make the unpacked extension temporarily unavailable. Worker persistence is instead covered by:
+
+- deterministic service-worker module-restart regression tests; and
+- real Chromium process relaunch with transient-versus-persisted state assertions.
+
+Greylist cleanup on a genuine already-installed browser startup remains a small residual manual gate.
+
+## Firefox packaged E2E
+
+`tests/e2e/firefox.mjs` uses Selenium/GeckoDriver and installs the **packaged Firefox XPI** temporarily in a disposable Firefox profile. A test-only fixed WebExtension UUID makes packaged extension pages addressable from Selenium.
+
+It verifies:
+
+- packaged-XPI startup and real settings UI
+- Firefox contextual-identities capability
+- `%tmp*` Temporary Containers collapse into one visible and persisted `%tmp` expression scope
+- no concrete temporary-container store IDs leak into persisted CAD state
+- unlisted last-tab cleanup
+- domain-change cleanup
+- cookie, LocalStorage, IndexedDB and website Service Worker removal
+- whitelist/greylist creation through the real expression UI and retention semantics
+- production `storage.local.state` contains the settings and expression lists created through those real browser/UI interactions
+
+### Firefox lifecycle boundary
+
+Firefox MV3 uses `background.scripts` for this build. Calling `browser.runtime.reload()` reloads the **entire temporary extension**, not an ordinary background-script lifecycle, and destabilizes Marionette. It is therefore not used as an E2E persistence proxy.
+
+State hydration/recreation and simulated restart behavior remain protected by deterministic Jest regressions. A genuine browser restart of a normally installed candidate remains a residual manual gate because Firefox removes temporary unsigned add-ons on restart.
+
+### Firefox HTTP-cache boundary
+
+Firefox hostname-scoped `browsingData` cache removal does not currently reliably evict normal-tab partitioned HTTP-cache entries. CAD must **not** work around that by clearing the entire browser cache: doing so would erase cache belonging to unrelated or allowlisted sites and violate per-site cleanup semantics.
+
+Therefore:
+
+- selective HTTP-cache behavior remains a mandatory real-browser Chromium gate;
+- Firefox E2E does not claim selective HTTP-cache cleanup until the browser exposes/reliably implements the required per-site behavior;
+- the limitation should be re-evaluated when Firefox behavior changes.
+
+## CI flow
+
+Regular CI is ordered so an RC cannot be published before the exact packages have passed real-browser tests:
+
+1. **Tests, Builds, Coverage**
+   - locked dependency install
+   - TypeScript typecheck
+   - Jest unit/regression suite
+   - lint
+   - production Firefox + Chromium build/archive validation
+   - internal `browser-test-packages` artifact
+2. **Browser E2E — Chromium**
+   - downloads the exact Chromium package bytes from the build job
+   - runs the packaged-browser matrix
+3. **Browser E2E — Firefox**
+   - downloads the exact Firefox XPI from the build job
+   - runs the packaged-browser matrix
+4. **Release Candidate Packages** (PR only)
+   - requires both browser jobs + fast CI to be green
+   - republishes the same already-tested package bytes
+   - adds `SHA256SUMS.txt`
+
+Both E2E jobs upload machine-readable result JSON; failure screenshots are uploaded where possible.
+
+## Local E2E
+
+Install the isolated browser-test dependencies:
 
 ```bash
 npm run test:e2e:install
 ```
 
-### Chromium
-
-`tests/e2e/chromium.mjs` uses Playwright's bundled Chromium with a persistent browser profile and loads the **unpacked contents of the packaged Chromium ZIP**. It does not test a source-only mock extension.
-
-Automated Chromium scenarios include:
-
-- MV3 packaged-extension startup and real options UI rendering;
-- configuration through the extension's actual settings controls;
-- unlisted last-tab-close cleanup;
-- domain-change cleanup;
-- cookie removal;
-- LocalStorage removal;
-- IndexedDB removal;
-- website Service Worker removal;
-- browser HTTP-cache removal;
-- whitelist creation through the real expression UI and retention behavior;
-- greylist creation through the real expression UI and normal-close retention behavior;
-- persistent-profile Chromium process relaunch, including whitelist/settings/list retention and proof that worker-global transient state does not survive the new browser process.
-
-The test uses the packaged build produced by CI and therefore exercises manifest generation, extension startup, browser APIs, persistence, and cleanup together.
-
-The Chromium harness launches the unpacked package with `--load-extension` on each browser process. This is suitable for proving persisted profile/settings/list data survives a real process relaunch, but it does **not** faithfully prove `browser.runtime.onStartup` behavior of an extension that was already installed before browser startup. Greylist startup cleanup therefore remains a residual manual browser-startup gate rather than an automated E2E assertion until the harness can install the candidate persistently without re-sideloading it on launch.
-
-A whole-extension `chrome.runtime.reload()` is deliberately **not** used as an MV3 service-worker lifecycle gate. With an unpacked `--load-extension` candidate Chromium can temporarily or permanently block the extension URL after that call, and reloading the entire extension is not equivalent to ordinary MV3 worker suspension/restart. Worker-state boundaries are instead covered by the real process-relaunch assertion above plus the deterministic service-worker module-restart regression in the Jest layer.
-
-### Firefox
-
-`tests/e2e/firefox.mjs` uses Selenium WebDriver and installs the **packaged Firefox XPI** as a temporary add-on in a disposable Firefox profile. A fixed test-only `moz-extension://` UUID is preconfigured so Selenium can address the options pages without depending on Firefox's randomly generated internal UUID.
-
-Automated Firefox scenarios include:
-
-- packaged-XPI startup and real options UI rendering;
-- configuration through the extension's actual settings controls;
-- Firefox contextual-identities API availability from the packaged extension;
-- unlisted last-tab-close cleanup;
-- domain-change cleanup;
-- cookie, LocalStorage, IndexedDB, and website Service Worker assertions;
-- whitelist creation/retention;
-- greylist creation/normal-close retention;
-- grouped Firefox Temporary Container behavior (`%tmp*` → one persisted `%tmp` expression scope);
-- extension runtime reload and persisted settings/list restoration.
-
-A full Firefox **browser restart with the same unsigned temporary XPI already installed at startup** is not equivalent to a normal installed release: Firefox removes temporary add-ons on browser restart. Until the CI environment uses an appropriate signed/unbranded test package, the Firefox full-browser-startup greylist path remains a small residual manual gate. Its core policy logic continues to be covered by Jest regression tests.
-
-Firefox HTTP-cache cleanup is intentionally excluded from the pass/fail E2E matrix. Current Firefox `browsingData.remove({ hostnames }, { cache: true })` behavior does not reliably remove normal-tab partitioned HTTP-cache entries; using an unscoped full-cache clear as a fallback would violate Cookie AutoDelete's per-site allowlist/greylist semantics. Chromium therefore remains the real-browser gate for selective HTTP-cache cleanup, while Firefox continues to test the site-data types its hostname-scoped API can reliably remove. This limitation should be re-evaluated when Firefox's selective cache-removal behavior changes.
-
-## CI flow
-
-The regular CI workflow is structured so the release artifact cannot be treated as validated before the browser E2E jobs pass:
-
-1. `Tests, Builds, Coverage`
-   - locked dependency install;
-   - TypeScript typecheck;
-   - Jest unit/regression suite;
-   - lint;
-   - production Firefox/Chromium build and archive validation;
-   - upload a short-lived internal `browser-test-packages` artifact.
-2. `Browser E2E — Chromium`
-   - downloads the exact Chromium package from `browser-test-packages`;
-   - loads it in Playwright Chromium;
-   - runs the controlled-site E2E matrix.
-3. `Browser E2E — Firefox`
-   - downloads the exact Firefox XPI from `browser-test-packages`;
-   - installs it into real Firefox with Selenium;
-   - runs the controlled-site E2E matrix.
-4. `Release Candidate Packages` (pull requests only)
-   - runs only after both real-browser jobs and the fast CI layer are green;
-   - downloads those same already-tested package bytes;
-   - generates `SHA256SUMS.txt`;
-   - publishes `release-candidate-packages` plus browser-specific artifacts.
-
-Each E2E job uploads `tests/e2e/results/` even on failure. The directory contains a machine-readable JSON result matrix and, where possible, a failure screenshot.
-
-## Running the E2E tests locally
-
-The full site-data matrix uses port 80. On Linux, grant the current Node binary permission to bind the port before starting a test:
+On Linux the controlled fixture uses port 80:
 
 ```bash
 sudo setcap 'cap_net_bind_service=+ep' "$(readlink -f "$(command -v node)")"
 ```
 
-Build the extension and prepare the browser package first. Chromium expects an unpacked directory containing the packaged `manifest.json`; Firefox expects the packaged `.xpi`.
+Then build and run:
 
 ```bash
 npm run build
-npm run test:e2e:install
 
 # Chromium: extract the generated *Chrome.zip first
 npm run test:e2e:chromium -- /path/to/unpacked/chromium-package
@@ -161,41 +159,39 @@ npm run test:e2e:chromium -- /path/to/unpacked/chromium-package
 FIREFOX_BIN=/path/to/firefox npm run test:e2e:firefox -- /path/to/Cookie-AutoDelete_Firefox.xpi
 ```
 
-GitHub Actions installs its own browser runtimes and performs the port capability setup automatically.
+GitHub Actions installs its own browser runtimes and prepares the port capability automatically.
 
-## Historical upgrade testing
+## Historical upgrade validation
 
-There are two distinct levels and they must not be conflated:
+### Automated
 
-### Automated schema migration
+Release-derived 3.0.2 / 3.4.0 / 3.6.0 persisted-state fixtures exercise the production migration path for both browser families and remain mandatory CI regressions.
 
-The release-derived 3.0.2, 3.4.0, and 3.6.0 fixtures exercise the production persisted-state migration path for both browser families. These remain mandatory CI tests.
+### Genuine user data
 
-### Genuine historical profile/export upgrade
+A real historical profile/export may expose storage encoding and settings/list combinations that schema fixtures cannot reproduce. If suitable privacy-safe archived data exists, upgrade it in a disposable profile without clearing extension storage and record the result in `RC_TEST_CHECKLIST.md`.
 
-A genuine old Cookie AutoDelete profile or settings export contains evidence that synthetic fixtures cannot reproduce, such as historical extension-storage encoding and user-created combinations of settings/lists. If representative archived data becomes available, keep a privacy-scrubbed copy as a dedicated test fixture only if redistribution is appropriate; otherwise perform the upgrade in a disposable local profile and record the result in `RC_TEST_CHECKLIST.md`.
-
-Never invent or mark this gate complete from synthetic data.
+Never mark this gate complete from synthetic fixtures alone.
 
 ## What remains manual
 
-The manual release checklist is intentionally small. It should not repeat E2E behavior already proven by CI. Manual checks are limited to:
+Manual release work is intentionally limited to:
 
-- final visual sanity of toolbar popup/options in packaged builds;
-- browser permission/install UX where browser chrome itself is the subject of the test;
-- Firefox full-browser-startup behavior while CI uses a temporary unsigned XPI;
-- Chromium full-browser-startup greylist cleanup while CI must re-sideload the unpacked candidate with `--load-extension` on each process launch;
-- genuine historical profile/export upgrade data until a suitable reproducible fixture exists;
-- platform-specific surfaces not represented by the desktop Linux browser jobs, such as Firefox Android, when they are part of a release claim.
+- visual sanity of packaged popup/options
+- browser permission/install UX
+- Firefox full browser startup with a normally installed candidate
+- Chromium greylist startup cleanup with an already installed/loaded candidate
+- genuine historical profile/export upgrades until reproducible fixtures exist
+- platform-specific release claims not represented by desktop Linux E2E, e.g. Firefox Android
 
-Any repeatable functional defect found manually should become an automated regression or E2E test before it is considered fixed.
+Any repeatable functional defect found manually should become an automated regression/E2E test before being considered fixed.
 
 ## Maintenance rules
 
-- Prefer local deterministic fixtures to public test websites.
+- Prefer deterministic local fixtures to public test sites.
 - Never store real credentials or personal browsing data in the repository.
-- Pin top-level E2E tool versions and update them deliberately.
-- A dependency/toolchain/browser-test infrastructure change invalidates an already pinned RC just like a build change does.
-- Keep fast unit tests fast; do not move all logic assertions into browsers.
-- Keep real-browser E2E focused on boundaries that mocks cannot prove.
-- A new cleanup data type must receive both capability/unit coverage and a real-browser assertion where the browser API permits it.
+- Keep E2E dependencies isolated from shipping dependencies.
+- Pin/update browser-test tooling deliberately.
+- Keep unit tests fast and browser E2E focused on boundaries mocks cannot prove.
+- A candidate-affecting source/runtime/manifest/build/dependency/test-infrastructure/base change invalidates the pinned RC.
+- A new cleanup data type needs unit/capability coverage plus a real-browser assertion where the browser API can represent it safely.
