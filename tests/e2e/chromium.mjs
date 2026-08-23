@@ -44,6 +44,7 @@ const launch = async () => {
 };
 
 const extensionRoot = () => `chrome-extension://${extensionId}/settings/settings.html`;
+const popupRoot = () => `chrome-extension://${extensionId}/popup/popup.html`;
 
 const openExtensionTab = async (tabId, readyId) => {
   const page = await context.newPage();
@@ -141,6 +142,40 @@ try {
   await reporter.step('packaged MV3 extension starts and settings UI renders', async () => {
     await configure();
     return { extensionId };
+  });
+
+  await reporter.step('popup primary actions stay on one dynamically sized row', async () => {
+    const settings = await openSettings();
+    const popupSize = settings.locator('#sizePopup');
+    await popupSize.selectOption('24');
+    await settings.waitForFunction(() => document.querySelector('#sizePopup')?.value === '24');
+    await settings.close();
+
+    const popup = await context.newPage();
+    await popup.goto(popupRoot());
+    const primary = popup.locator('#cadPrimaryActions');
+    await primary.waitFor({ state: 'visible', timeout: 10000 });
+    await popup.waitForFunction(() => {
+      const row = document.getElementById('cadPrimaryActions');
+      return Boolean(row && document.documentElement.clientWidth >= row.scrollWidth);
+    });
+    const layout = await primary.evaluate((row) => {
+      const buttons = Array.from(row.querySelectorAll('.btn'));
+      return {
+        flexWrap: getComputedStyle(row).flexWrap,
+        rowScrollWidth: row.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth,
+        buttonTops: buttons.map((button) => Math.round(button.getBoundingClientRect().top)),
+      };
+    });
+    assert.equal(layout.flexWrap, 'nowrap', 'Popup primary-action row is allowed to wrap');
+    assert.ok(layout.buttonTops.length >= 4, 'Popup primary actions were not rendered');
+    assert.equal(new Set(layout.buttonTops).size, 1, 'Popup primary buttons wrapped onto multiple rows');
+    assert.ok(
+      layout.viewportWidth >= layout.rowScrollWidth,
+      `Popup width ${layout.viewportWidth}px is smaller than primary action row ${layout.rowScrollWidth}px`,
+    );
+    await popup.close();
   });
 
   await reporter.step('unlisted last-tab close removes cookies and configured site data', async () => {
