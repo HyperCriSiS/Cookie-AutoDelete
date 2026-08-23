@@ -101,13 +101,131 @@ jobs:
         run: npm run build
         env:
           GITSHA: ${{ needs.pre_info.outputs.gitSHA }}
+      - name: Upload packages for real-browser E2E
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-test-packages
+          path: |
+            builds/*Chrome.zip
+            builds/*Firefox.xpi
+          if-no-files-found: error
+          retention-days: 3
+      - name: Archive Code Coverage Results
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage
+
+  browser_e2e_chromium:
+    name: Browser E2E — Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - pre_info
+      - all_jobs
+    if: needs.pre_info.outputs.skipCI == 'false'
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v7
+      - name: Use Node.js 24 for browser automation
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated E2E dependencies
+        run: npm run test:e2e:install
+      - name: Install Playwright Chromium and Linux dependencies
+        run: npm --prefix tests/e2e exec -- playwright install --with-deps chromium
+      - name: Allow the controlled E2E server to bind HTTP port 80
+        run: sudo setcap 'cap_net_bind_service=+ep' "$(readlink -f "$(command -v node)")"
+      - name: Download exact packaged browser candidates
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-test-packages
+          path: builds/e2e-packages
+      - name: Extract packaged Chromium candidate
+        run: |
+          CHROME_ZIP=$(find builds/e2e-packages -maxdepth 1 -name '*Chrome.zip' -print -quit)
+          test -n "$CHROME_ZIP"
+          mkdir -p builds/e2e-chromium
+          unzip -q "$CHROME_ZIP" -d builds/e2e-chromium
+      - name: Run real-browser Chromium E2E
+        run: npm run test:e2e:chromium -- builds/e2e-chromium
+      - name: Upload Chromium E2E diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-e2e-chromium-results
+          path: tests/e2e/results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  browser_e2e_firefox:
+    name: Browser E2E — Firefox
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - pre_info
+      - all_jobs
+    if: needs.pre_info.outputs.skipCI == 'false'
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v7
+      - name: Use Node.js 24 for browser automation
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated E2E dependencies
+        run: npm run test:e2e:install
+      - name: Install current Mozilla Firefox
+        run: |
+          curl --fail --location --retry 4 \
+            'https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US' \
+            --output /tmp/firefox.tar.xz
+          sudo mkdir -p /opt/cad-firefox
+          sudo tar -xJf /tmp/firefox.tar.xz -C /opt/cad-firefox --strip-components=1
+          test -x /opt/cad-firefox/firefox
+          echo 'FIREFOX_BIN=/opt/cad-firefox/firefox' >> "$GITHUB_ENV"
+      - name: Allow the controlled E2E server to bind HTTP port 80
+        run: sudo setcap 'cap_net_bind_service=+ep' "$(readlink -f "$(command -v node)")"
+      - name: Download exact packaged browser candidates
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-test-packages
+          path: builds/e2e-packages
+      - name: Run real-browser Firefox E2E
+        run: |
+          FIREFOX_XPI=$(find builds/e2e-packages -maxdepth 1 -name '*Firefox.xpi' -print -quit)
+          test -n "$FIREFOX_XPI"
+          npm run test:e2e:firefox -- "$FIREFOX_XPI"
+      - name: Upload Firefox E2E diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-e2e-firefox-results
+          path: tests/e2e/results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  release_candidate:
+    name: Release Candidate Packages
+    runs-on: ubuntu-latest
+    needs:
+      - pre_info
+      - all_jobs
+      - browser_e2e_chromium
+      - browser_e2e_firefox
+    if: github.event_name == 'pull_request' && needs.pre_info.outputs.skipCI == 'false'
+    steps:
+      - name: Download exact browser-tested packages
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-test-packages
+          path: builds
       - name: Create Release Candidate Checksums
-        if: github.event_name == 'pull_request'
         run: |
           cd builds
           sha256sum *Chrome.zip *Firefox.xpi > SHA256SUMS.txt
       - name: Upload Release Candidate Packages
-        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: release-candidate-packages
@@ -116,27 +234,24 @@ jobs:
             builds/*Firefox.xpi
             builds/SHA256SUMS.txt
           if-no-files-found: error
-      - name: Archive Code Coverage Results
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage
-          path: coverage
-      - name: Extract zip builds for individual artifact upload
-        if: github.event_name == 'pull_request'
+      - name: Extract browser packages for convenience artifacts
         id: extbuilds
         run: |
-          for i in *.zip; do echo "${i%.zip}"; done | xargs -I fn unzip fn.zip -d fn
-          echo "ffdir=$(ls -d *Firefox)" >> "$GITHUB_OUTPUT"
-          echo "crdir=$(ls -d *Chrome)" >> "$GITHUB_OUTPUT"
-        working-directory: ./builds
+          CHROME_ZIP=$(find builds -maxdepth 1 -name '*Chrome.zip' -print -quit)
+          FIREFOX_XPI=$(find builds -maxdepth 1 -name '*Firefox.xpi' -print -quit)
+          CHROME_DIR="${CHROME_ZIP%.zip}"
+          FIREFOX_DIR="${FIREFOX_XPI%.xpi}"
+          mkdir -p "$CHROME_DIR" "$FIREFOX_DIR"
+          unzip -q "$CHROME_ZIP" -d "$CHROME_DIR"
+          unzip -q "$FIREFOX_XPI" -d "$FIREFOX_DIR"
+          echo "crdir=$(basename "$CHROME_DIR")" >> "$GITHUB_OUTPUT"
+          echo "ffdir=$(basename "$FIREFOX_DIR")" >> "$GITHUB_OUTPUT"
       - name: Upload Artifact for Mozilla Firefox Build
-        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.extbuilds.outputs.ffdir }}
           path: builds/${{ steps.extbuilds.outputs.ffdir }}
-      - name: Upload Artifact for Google Chrome Build
-        if: github.event_name == 'pull_request'
+      - name: Upload Artifact for Chromium Build
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.extbuilds.outputs.crdir }}

@@ -71,9 +71,13 @@
     "manifest": "npm run manifest:chromium && npm run manifest:firefox",
     "manifest:chromium": "node ./tools/generateManifest.js chromium",
     "manifest:firefox": "node ./tools/generateManifest.js firefox",
-    "test": "jest --coverage",
-    "test-all": "npm run test && npm run lint",
-    "typecheck": "tsc --noEmit"
+    "test": "npm run test:unit",
+    "test-all": "npm run typecheck && npm run test:unit && npm run lint",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "jest --coverage",
+    "test:e2e:install": "npm install --prefix tests/e2e --no-package-lock --ignore-scripts --no-fund --no-audit",
+    "test:e2e:chromium": "node tests/e2e/chromium.mjs",
+    "test:e2e:firefox": "node tests/e2e/firefox.mjs"
   },
   "repository": {
     "type": "git",
