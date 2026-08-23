@@ -41,12 +41,24 @@ const service = new firefox.ServiceBuilder().addArguments('--allow-system-access
 const extensionRoot = `moz-extension://${extensionUuid}/settings/settings.html`;
 
 const navigateExtension = async () => {
+  // WebDriver navigation itself is content-context-only, while Firefox blocks
+  // direct content-context navigation to moz-extension:// pages. With
+  // geckodriver --allow-system-access we can ask the browser UI process to load
+  // the trusted, test-controlled extension URL with the system principal, then
+  // return to normal content-context automation for DOM assertions.
   await driver.setContext(firefox.Context.CHROME);
   try {
-    await driver.get(extensionRoot);
+    await driver.executeScript(
+      `const target = arguments[0];
+       const { Services } = ChromeUtils.importESModule('resource://gre/modules/Services.sys.mjs');
+       const principal = Services.scriptSecurityManager.getSystemPrincipal();
+       window.gBrowser.selectedBrowser.loadURI(target, { triggeringPrincipal: principal });`,
+      extensionRoot,
+    );
   } finally {
     await driver.setContext(firefox.Context.CONTENT);
   }
+  await driver.wait(async () => (await driver.getCurrentUrl()).startsWith(extensionRoot), 10000);
 };
 
 const waitForElement = async (id) => driver.wait(until.elementLocated(By.id(id)), 10000);
