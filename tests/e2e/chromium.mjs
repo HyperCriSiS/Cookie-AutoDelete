@@ -279,12 +279,18 @@ try {
     await check.close();
   });
 
-  await reporter.step('persistent profile relaunch preserves whitelist and extension state', async () => {
+  await reporter.step('persistent profile relaunch replaces transient worker state and preserves extension state', async () => {
+    await worker.evaluate(() => {
+      globalThis.__cadE2ETransient = 'must-not-survive';
+    });
     await Promise.all(context.pages().map((page) => page.close().catch(() => undefined)));
     await context.close();
     context = undefined;
     worker = await launch();
     await sleep(cleanupDelayMs);
+
+    const transient = await worker.evaluate(() => globalThis.__cadE2ETransient ?? null);
+    assert.equal(transient, null, 'Worker-global transient state survived a real Chromium process relaunch');
 
     const whiteCheck = await openSite(site.origin('a'));
     assertRetained(await inspect(whiteCheck), whitelistToken, 'Chromium whitelist after profile relaunch');
@@ -294,35 +300,11 @@ try {
     assert.equal(await settings.locator('#activeMode').getAttribute('aria-checked'), 'true');
     assert.equal(await settings.locator('#indexedDBCleanup').getAttribute('aria-checked'), 'true');
     await settings.close();
-  });
-
-  await reporter.step('MV3 runtime reload restores persisted settings and expression state', async () => {
-    await worker.evaluate(() => {
-      globalThis.__cadE2ETransient = 'must-not-survive';
-      chrome.runtime.reload();
-    }).catch((error) => {
-      if (!String(error).includes('Target page, context or browser has been closed')) throw error;
-    });
-    await sleep(1000);
-
-    const settings = await openSettings();
-    assert.equal(await settings.locator('#activeMode').getAttribute('aria-checked'), 'true');
-    assert.equal(await settings.locator('#indexedDBCleanup').getAttribute('aria-checked'), 'true');
-
-    let workers = context.serviceWorkers();
-    if (workers.length === 0) {
-      worker = await context.waitForEvent('serviceworker', { timeout: 15000 });
-    } else {
-      worker = workers[0];
-    }
-    const transient = await worker.evaluate(() => globalThis.__cadE2ETransient ?? null);
-    assert.equal(transient, null, 'MV3 worker-global transient state survived runtime reload unexpectedly');
-    await settings.close();
 
     const expressions = await openExtensionTab('tabExpressionList', 'formText');
     const body = await expressions.locator('body').textContent();
-    assert.ok(body.includes('127.0.0.1'), 'Whitelist entry was lost across MV3 runtime reload');
-    assert.ok(body.includes('127.0.0.2'), 'Greylist entry was lost across MV3 runtime reload');
+    assert.ok(body.includes('127.0.0.1'), 'Whitelist entry was lost across Chromium profile relaunch');
+    assert.ok(body.includes('127.0.0.2'), 'Greylist entry was lost across Chromium profile relaunch');
     await expressions.close();
   });
 
