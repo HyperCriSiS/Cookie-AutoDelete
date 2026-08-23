@@ -1,137 +1,130 @@
 # Cookie AutoDelete release-candidate checklist
 
-This file is the **residual release checklist**, not a duplicate browser test plan. Repeatable functional behavior belongs in automated CI and is documented in `TESTING.md`.
+This is the **residual release checklist**. Detailed automated behavior belongs in `TESTING.md`; project progress belongs in `ROADMAP.md`.
 
-Do not merge PR #1 or create a tagged fork release until the required automated gates and the genuinely manual residual checks below are green.
+Do not merge PR #1 or create a tagged release until every required gate below is satisfied.
 
 ## Candidate state
 
-The previous candidate `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `9432252522` predates the real-browser E2E architecture and is therefore superseded once the test-overhaul commit lands.
+Former candidate `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `9432252522` is **superseded**.
 
-A replacement candidate is considered pinned only when the updated CI workflow has completed all of these jobs successfully for one exact PR head:
+A replacement candidate is pinned only when one exact PR head passes:
 
 - `Tests, Builds, Coverage`
 - `Browser E2E — Chromium`
 - `Browser E2E — Firefox`
-- `Release Candidate Packages`
+- downstream `Release Candidate Packages`
 
-The `Release Candidate Packages` job is deliberately downstream of both E2E jobs and republishes the **same package bytes** they tested. If source/runtime, manifests, build/packaging, dependencies, toolchain, browser-test infrastructure, or the PR base changes afterwards, stop and pin a replacement candidate.
+The RC job republishes the same package bytes tested by the browser jobs. Candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base changes require a new RC.
 
 ### Replacement candidate record
 
-Fill this section only after the new pipeline is green:
-
 - Commit SHA: pending
-- Base SHA (`3.X.X-Branch`): `3e061b7f77175e536ff664788f3e6692ac6540e8` unless the base advances
+- Base SHA (`3.X.X-Branch`): `3e061b7f77175e536ff664788f3e6692ac6540e8` unless base advances
 - CI pull-request run ID: pending
 - `release-candidate-packages` artifact ID: pending
-- Chromium E2E result: pending
-- Firefox E2E result: pending
-- Genuine historical-profile/export result: pending suitable representative data
+- Artifact digest: pending
+- Firefox package: pending
+- Chromium package: pending
+- Chromium E2E: pending
+- Firefox E2E: pending
+- Genuine historical-profile/export result: pending suitable data
 
-## Automated release gates
+## Automated packaged-runtime gates
 
-The following behavior is no longer a manual checkbox matrix. It must be green in CI against the packaged extension, using the controlled local E2E site described in `TESTING.md`.
+These are CI gates, **not manual retest instructions**.
 
-### Shared Firefox + Chromium packaged-runtime gates
+### Shared Firefox + Chromium
 
-- [ ] Packaged extension starts successfully in a real browser.
-- [ ] Real options UI renders and accepts configuration changes.
-- [ ] Automatic cleanup activates with the configured delay.
-- [ ] Unlisted last-tab close removes the test cookie.
-- [ ] Unlisted last-tab close removes LocalStorage.
-- [ ] Unlisted last-tab close removes IndexedDB.
-- [ ] Unlisted last-tab close unregisters the website Service Worker.
+- [ ] Packaged extension starts in a real browser and the real options UI works.
+- [ ] Configured automatic last-tab cleanup removes cookie, LocalStorage, IndexedDB and website Service Worker data for an unlisted site.
 - [ ] Domain change cleans the previous unlisted origin.
-- [ ] Whitelist entry created through the real expression UI retains configured site data.
-- [ ] Greylist entry created through the real expression UI retains data on normal tab close.
-- [ ] Persisted settings and expression lists survive a real extension/background runtime reload.
+- [ ] Whitelist created through the real expression UI retains protected data.
+- [ ] Greylist created through the real expression UI retains data on normal tab close.
+- [ ] Production persistence contains the settings and expression lists created through real browser/UI interactions.
 
-### Chromium-specific packaged-runtime gates
+### Chromium-specific
 
-- [ ] Unlisted last-tab close removes the controlled browser HTTP-cache entry.
-- [ ] Domain-change cleanup removes the previous origin's controlled browser HTTP-cache entry.
-- [ ] Whitelist/greylist policy retains controlled browser HTTP-cache entries when the site is protected.
-- [ ] Persistent browser-profile relaunch retains whitelisted site data, persisted extension settings, and expression lists.
-- [ ] A real Chromium process relaunch replaces worker-global transient state while restoring persisted extension state.
+- [ ] Dynamic popup primary controls remain on one row with enlarged text.
+- [ ] Selective browser HTTP-cache cleanup works for unlisted last-tab/domain-change cleanup.
+- [ ] Protected white-/greylisted sites retain their controlled HTTP-cache entry according to policy.
+- [ ] Persistent-profile process relaunch preserves persisted settings/lists and protected site data.
+- [ ] Real process relaunch removes worker-global transient state while persistent extension state returns.
 
-### Firefox-specific packaged-runtime gates
+### Firefox-specific
 
-- [ ] Packaged Firefox XPI exposes the contextual-identities capability required for container support.
-- [ ] Multiple `%tmp*` contextual identities are represented by one persisted `%tmp` expression scope, with no concrete temporary-container stores leaked into persistence.
-- [ ] Firefox extension runtime reload preserves persisted settings and expression lists.
+- [ ] Packaged XPI exposes contextual identities.
+- [ ] Multiple `%tmp*` identities produce exactly one visible/persisted `%tmp` expression scope.
+- [ ] No concrete temporary-container store IDs leak into persisted CAD state.
 
-Firefox selective HTTP-cache cleanup is **not** a release-gate checkbox while the browser cannot reliably clear normal-tab partitioned cache by hostname. Do not replace that limitation with an unscoped full-cache clear: doing so would erase cache for unrelated/allowlisted sites and break CAD's per-site policy semantics. Chromium remains the packaged-runtime cache gate.
+Firefox selective HTTP-cache cleanup is **not** a release gate while Firefox cannot reliably evict normal-tab partitioned cache by hostname. CAD must not replace that limitation with a destructive full-browser-cache clear. Chromium remains the packaged-runtime selective-cache gate.
 
-The machine-readable result matrices and failure screenshots are uploaded as `browser-e2e-chromium-results` and `browser-e2e-firefox-results` artifacts.
+A whole-extension runtime reload is not used as a background-lifecycle proxy in either browser. Chromium worker persistence is covered by deterministic worker-restart regressions plus real process relaunch; Firefox uses `background.scripts`, with hydration/restart logic covered by regressions and the genuine installed-browser startup path retained below.
 
 ## Package provenance
 
-After all automated gates pass:
+After automated jobs are green:
 
-- [ ] Confirm `Release Candidate Packages` ran **after** both browser E2E jobs on the same PR head.
-- [ ] Confirm the artifact contains exactly one `*Chrome.zip`, one `*Firefox.xpi`, and `SHA256SUMS.txt`.
-- [ ] Verify both package files against `SHA256SUMS.txt` before any residual manual testing.
-- [ ] Confirm PR #1 still targets the recorded current `3.X.X-Branch` base with no real merge conflict/base drift.
+- [ ] `Release Candidate Packages` ran after both browser E2E jobs on the same PR head.
+- [ ] Artifact contains exactly one `*Chrome.zip`, one `*Firefox.xpi`, and `SHA256SUMS.txt`.
+- [ ] Both packages match `SHA256SUMS.txt`.
+- [ ] PR #1 still targets the recorded current `3.X.X-Branch` base without merge conflict/base drift.
 
-The known external `github-advanced-security` AI-agent failure remains non-blocking only when it still aborts before repository analysis and the repository-owned CI/CodeQL checks are green.
+The external `github-advanced-security` AI-agent failure is non-blocking only while it still aborts before repository analysis and repository-owned CI/CodeQL are green.
 
-## Minimal manual packaged-build smoke
+## Minimal manual packaged smoke
 
-Do **not** manually repeat cookie/IndexedDB/LocalStorage/service-worker/domain-change/list-policy matrices already proven by E2E unless debugging a failure.
+Do not manually repeat the data-cleanup/list matrices already proven by E2E unless diagnosing a failure.
 
 ### Firefox
 
-- [ ] Install/load the exact E2E-tested XPI in a disposable desktop Firefox profile suitable for unsigned local testing.
-- [ ] Visually confirm the toolbar popup opens, is readable, and reflects the current site without obvious rendering errors.
-- [ ] Visually confirm the options page is usable and has no obvious layout/permission regressions.
-- [ ] Confirm browser permission/install UX is reasonable, including any Firefox-specific host/file-access switches shown by browser chrome.
-- [ ] Perform one full Firefox browser restart and confirm the installed-release behavior expected for startup cleanup. This remains manual while CI must use a temporary unsigned XPI that Firefox removes on browser restart.
-- [ ] Record Firefox version, OS, and any browser-console/background error not represented by CI.
+- [ ] Install/load the exact RC XPI in a disposable profile suitable for local unsigned testing.
+- [ ] Popup visually opens, is readable and reflects the current site.
+- [ ] Options page is visually usable without obvious layout regressions.
+- [ ] Browser permission/install UX is reasonable, including Firefox host/file-access switches.
+- [ ] Perform one genuine full Firefox browser restart with a normally installed candidate and confirm expected startup cleanup/persisted state. CI temporary XPIs are removed on restart and cannot prove this path faithfully.
+- [ ] Record Firefox version, OS and unexpected browser/background errors.
 
 ### Chromium
 
-- [ ] Load the exact E2E-tested packaged Chromium build in a disposable Chromium-family profile using the supported local developer workflow.
-- [ ] Visually confirm toolbar popup/options rendering and basic interaction.
-- [ ] Confirm browser permission/install UX has no unexpected new permission surface.
-- [ ] Perform one full Chromium browser restart with the candidate already loaded through the normal local extension workflow and confirm configured greylist startup cleanup runs as expected.
-- [ ] Record Chromium family/version, OS, and any extension/service-worker error not represented by CI.
+- [ ] Load the exact RC package in a disposable Chromium-family profile using the normal local developer workflow.
+- [ ] Popup/options visual sanity is green.
+- [ ] Permission/install UX exposes no unexpected permissions.
+- [ ] Perform one full Chromium startup with the extension already loaded through the normal local workflow and confirm configured greylist startup cleanup.
+- [ ] Record Chromium family/version, OS and unexpected extension/service-worker errors.
 
-## Genuine historical-profile / settings-export upgrade validation
+## Genuine historical-profile / export upgrade
 
-Synthetic and release-derived fixtures already cover published 3.0.2, 3.4.0, and 3.6.0 persisted-state shapes in automated tests. They are valuable regression fixtures but **must not** be reported as genuine historical-profile validation.
+Release-derived 3.0.2 / 3.4.0 / 3.6.0 fixtures already protect schema migration in CI, but they **do not** satisfy this gate.
 
-For each browser family for which suitable archived user data is available:
+For representative historical data, where available:
 
-- [ ] Make a backup copy of the historical profile/export.
-- [ ] Record the old Cookie AutoDelete version if known.
-- [ ] Record representative non-default cleanup settings.
-- [ ] Record representative whitelist/greylist entries, including wildcard/subdomain and container-sensitive cases where applicable.
-- [ ] Upgrade to the exact current release candidate without manually clearing extension storage.
-- [ ] Confirm startup/migration does not perform a destructive reset.
-- [ ] Confirm existing lists remain present and semantically equivalent.
-- [ ] Confirm previously configured cleanup policy remains equivalent.
-- [ ] Confirm later-added settings receive safe defaults when absent.
-- [ ] Restart the browser and confirm migrated persisted state remains stable.
-- [ ] Export/inspect the resulting settings where possible and record dropped or silently rewritten values.
+- [ ] Back up the profile/export and record old CAD version if known.
+- [ ] Record representative non-default cleanup settings and white-/greylist entries.
+- [ ] Upgrade to the exact RC without clearing extension storage.
+- [ ] No destructive reset or silent list/settings loss occurs.
+- [ ] Existing list semantics and cleanup policy remain equivalent.
+- [ ] Later-added absent settings receive safe defaults.
+- [ ] Restart and confirm migrated state remains stable.
+- [ ] Record any dropped or rewritten value.
 
-If no suitable genuine historical export/profile is available, leave this gate open. Do not manufacture completion from synthetic fixtures.
+If suitable genuine data is unavailable, leave the gate open unless an explicit project decision documents why it is unobtainable and what compensating evidence is accepted.
 
 ## Result record
 
-| Browser family | Browser/version | OS | Automated E2E | Package checksum | Visual/permission smoke | Full startup check | Historical-data upgrade | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Firefox | pending | pending | pending | pending | pending | pending | pending | |
-| Chromium | pending | pending | pending | pending | pending | pending | pending | |
+| Browser | Version / OS | Automated E2E | SHA256 | Visual/permission | Full startup | Historical upgrade | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Firefox | pending | pending | pending | pending | pending | pending | |
+| Chromium | pending | pending | pending | pending | pending | pending | |
 
 ## Release decision
 
-- [ ] Fast CI, package validation, Chromium E2E, and Firefox E2E are green for one exact candidate SHA.
-- [ ] `release-candidate-packages` was emitted only after those browser gates and contains the exact browser-tested bytes.
+- [ ] Fast CI, package validation, Chromium E2E and Firefox E2E are green for one exact candidate SHA.
+- [ ] Same-source `release-candidate-packages` provenance/checksums are confirmed.
 - [ ] Minimal visual/permission smoke is green in both browser families.
-- [ ] Firefox and Chromium residual full-browser-startup smoke is green.
-- [ ] Genuine historical-profile/export upgrade testing is green for Firefox and Chromium, or an explicit project decision documents why representative data for one family is unobtainable and what compensating evidence exists.
-- [ ] PR #1 is mergeable against the current `3.X.X-Branch` base with no unresolved code conflicts.
-- [ ] Any candidate-affecting change after the pinned SHA has triggered a replacement candidate and revalidation.
-- [ ] Only after all required gates above: merge `modernization-p0` into `3.X.X-Branch`.
-- [ ] Only after the integrated branch is validated: create the tagged fork release.
+- [ ] Residual full-browser-startup checks are green.
+- [ ] Genuine historical upgrade evidence is green, or an explicit compensating-evidence decision exists.
+- [ ] PR #1 is mergeable against the current base with no unresolved conflicts.
+- [ ] No candidate-affecting change occurred after the pinned SHA without replacement validation.
+- [ ] Only then merge `modernization-p0` into `3.X.X-Branch`.
+- [ ] Validate the integrated branch before creating a tagged fork release.
