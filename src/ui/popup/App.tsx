@@ -23,11 +23,12 @@ import {
   extractMainDomain,
   getHostname,
   getSetting,
+  getStoreId,
   isAnIP,
-  isChrome,
   isFirefoxNotAndroid,
   localFileToRegex,
   parseCookieStoreId,
+  TEMPORARY_CONTAINER_STORE_ID,
 } from '../../services/Libs';
 import {
   getAllCookiesForDomainIncludingPartitions,
@@ -67,27 +68,52 @@ class App extends Component<PopupAppComponentProps, InitialState> {
     document.documentElement.style.fontSize = `${
       (this.props.state.settings[SettingID.SIZE_POPUP].value as number) || 16
     }px`;
-    if (isChrome(this.props.state.cache)) {
-      // Chrome requires min width otherwise the layout is messed up
-      document.documentElement.style.minWidth = `${
-        430 +
-        (((this.props.state.settings[SettingID.SIZE_POPUP].value as number) ||
-          16) -
-          10) *
-          35
-      }px`;
-    }
     const tabs = await browser.tabs.query({
       active: true,
       currentWindow: true,
     });
 
-    this.setState({
-      storeId: parseCookieStoreId(
+    const rawStoreId = parseCookieStoreId(
+      this.props.contextualIdentities,
+      tabs[0].cookieStoreId,
+    );
+    this.setState(
+      {
+        storeId: getStoreId(this.props.state, rawStoreId),
+        tab: tabs[0],
+      },
+      () => this.resizePopupToPrimaryActions(),
+    );
+  }
+
+  public componentDidUpdate() {
+    const { tab, storeId } = this.state;
+    if (tab) {
+      const rawStoreId = parseCookieStoreId(
         this.props.contextualIdentities,
-        tabs[0].cookieStoreId,
-      ),
-      tab: tabs[0],
+        tab.cookieStoreId,
+      );
+      const normalizedStoreId = getStoreId(this.props.state, rawStoreId);
+      if (normalizedStoreId !== storeId) {
+        this.setState({ storeId: normalizedStoreId });
+        return;
+      }
+    }
+    this.resizePopupToPrimaryActions();
+  }
+
+  private resizePopupToPrimaryActions() {
+    window.requestAnimationFrame(() => {
+      const primaryActions = document.getElementById('cadPrimaryActions');
+      if (!primaryActions) return;
+
+      // The action row is intentionally nowrap. Its scroll width therefore
+      // represents the natural width needed for every primary button in the
+      // current locale and popup font size.
+      const requiredWidth = Math.ceil(primaryActions.scrollWidth + 24);
+      const minimumWidth = Math.max(requiredWidth, 360);
+      document.documentElement.style.minWidth = `${minimumWidth}px`;
+      document.body.style.minWidth = `${minimumWidth}px`;
     });
   }
 
@@ -127,6 +153,11 @@ class App extends Component<PopupAppComponentProps, InitialState> {
     const { cache, settings } = state;
     const hostname = getHostname(tab.url);
     const mainDomain = extractMainDomain(hostname);
+    const containerDisplayName = contextualIdentities
+      ? storeId === TEMPORARY_CONTAINER_STORE_ID
+        ? TEMPORARY_CONTAINER_STORE_ID
+        : cache[storeId] || cache[tab.cookieStoreId || '']
+      : undefined;
     const addableHostnames = [
       hostname === mainDomain ? undefined : `*.${mainDomain}`,
       hostname,
@@ -190,7 +221,8 @@ class App extends Component<PopupAppComponentProps, InitialState> {
           </span>
         </div>
         <div
-          className="row justify-content-center p-1"
+          id="cadPrimaryActions"
+          className="row justify-content-center p-1 cad-primary-actions"
           style={{
             alignItems: 'center',
             backgroundColor: 'rgba(0, 0, 0, 0.05)',
@@ -333,9 +365,7 @@ class App extends Component<PopupAppComponentProps, InitialState> {
               }}
             >
               {`${hostname}${
-                contextualIdentities && cache[storeId] !== undefined
-                  ? ` (${cache[storeId]})`
-                  : ''
+                containerDisplayName ? ` (${containerDisplayName})` : ''
               }`}
             </span>
           </div>
