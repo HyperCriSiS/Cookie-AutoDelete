@@ -43,7 +43,22 @@ const launch = async () => {
   return worker;
 };
 
-const extensionUrl = (hash) => `chrome-extension://${extensionId}/settings/settings.html${hash}`;
+const extensionRoot = () => `chrome-extension://${extensionId}/settings/settings.html`;
+
+const openExtensionTab = async (tabId, readyId) => {
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.goto(extensionRoot());
+  const tab = page.locator(`#${tabId}`);
+  await tab.waitFor({ state: 'visible', timeout: 10000 }).catch(async (error) => {
+    const body = (await page.locator('body').textContent().catch(() => '')) || '';
+    throw new Error(`${error.message}\nExtension page: ${page.url()}\nPage errors: ${pageErrors.join(' | ') || 'none'}\nBody: ${body.slice(0, 2000)}`);
+  });
+  await tab.click();
+  if (readyId) await page.locator(`#${readyId}`).waitFor({ state: 'visible', timeout: 10000 });
+  return page;
+};
 
 const setCheckbox = async (page, id, wanted) => {
   const box = page.locator(`#${id}`);
@@ -58,12 +73,7 @@ const setCheckbox = async (page, id, wanted) => {
   }
 };
 
-const openSettings = async () => {
-  const page = await context.newPage();
-  await page.goto(extensionUrl('#tabSettings'));
-  await page.locator('#activeMode').waitFor({ state: 'visible', timeout: 10000 });
-  return page;
-};
+const openSettings = async () => openExtensionTab('tabSettings', 'activeMode');
 
 const configure = async () => {
   const page = await openSettings();
@@ -83,10 +93,8 @@ const configure = async () => {
 };
 
 const addExpression = async (host, grey = false) => {
-  const page = await context.newPage();
-  await page.goto(extensionUrl('#tabExpressionList'));
+  const page = await openExtensionTab('tabExpressionList', 'formText');
   const input = page.locator('#formText');
-  await input.waitFor({ state: 'visible', timeout: 10000 });
   await input.fill(host);
   await input.press(grey ? 'Shift+Enter' : 'Enter');
   await page.waitForFunction(() => document.querySelector('#formText')?.value === '');
@@ -240,9 +248,7 @@ try {
     assert.equal(await settings.locator('#indexedDBCleanup').getAttribute('aria-checked'), 'true');
     await settings.close();
 
-    const expressions = await context.newPage();
-    await expressions.goto(extensionUrl('#tabExpressionList'));
-    await expressions.locator('#formText').waitFor({ state: 'visible' });
+    const expressions = await openExtensionTab('tabExpressionList', 'formText');
     const body = await expressions.locator('body').textContent();
     assert.ok(body.includes('127.0.0.1'), 'Whitelist entry was lost across MV3 runtime reload');
     assert.ok(body.includes('127.0.0.2'), 'Greylist entry was lost across MV3 runtime reload');

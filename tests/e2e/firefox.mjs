@@ -37,24 +37,30 @@ options.setPreference('browser.shell.checkDefaultBrowser', false);
 options.setPreference('browser.startup.page', 0);
 options.setPreference('datareporting.policy.dataSubmissionEnabled', false);
 
-// Current Firefox/GeckoDriver deliberately blocks privileged chrome-context
-// commands unless the service opts in explicitly. We use chrome context only
-// to navigate the browser to our own installed moz-extension:// page; all DOM
-// interaction continues in normal content context afterwards.
 const service = new firefox.ServiceBuilder().addArguments('--allow-system-access');
+const extensionRoot = `moz-extension://${extensionUuid}/settings/settings.html`;
 
-const extensionUrl = (hash) => `moz-extension://${extensionUuid}/settings/settings.html${hash}`;
-
-const navigateExtension = async (url) => {
+const navigateExtension = async () => {
   await driver.setContext(firefox.Context.CHROME);
   try {
-    await driver.get(url);
+    await driver.get(extensionRoot);
   } finally {
     await driver.setContext(firefox.Context.CONTENT);
   }
 };
 
 const waitForElement = async (id) => driver.wait(until.elementLocated(By.id(id)), 10000);
+
+const openExtensionTab = async (tabId, readyId) => {
+  await navigateExtension();
+  const tab = await waitForElement(tabId);
+  await driver.wait(until.elementIsVisible(tab), 10000);
+  await tab.click();
+  if (readyId) {
+    const ready = await waitForElement(readyId);
+    await driver.wait(until.elementIsVisible(ready), 10000);
+  }
+};
 
 const setCheckbox = async (id, wanted) => {
   const element = await waitForElement(id);
@@ -65,10 +71,7 @@ const setCheckbox = async (id, wanted) => {
   }
 };
 
-const openSettings = async () => {
-  await navigateExtension(extensionUrl('#tabSettings'));
-  await waitForElement('activeMode');
-};
+const openSettings = async () => openExtensionTab('tabSettings', 'activeMode');
 
 const configure = async () => {
   await openSettings();
@@ -88,7 +91,7 @@ const configure = async () => {
 };
 
 const addExpression = async (host, grey = false) => {
-  await navigateExtension(extensionUrl('#tabExpressionList'));
+  await openExtensionTab('tabExpressionList', 'formText');
   const input = await waitForElement('formText');
   await input.clear();
   if (grey) {
@@ -257,12 +260,11 @@ try {
     await openSettings();
     await driver.executeScript('browser.runtime.reload();').catch(() => undefined);
     await sleep(1800);
-    await navigateExtension(extensionUrl('#tabSettings'));
+    await openSettings();
     assert.equal(await (await waitForElement('activeMode')).getAttribute('aria-checked'), 'true');
     assert.equal(await (await waitForElement('indexedDBCleanup')).getAttribute('aria-checked'), 'true');
 
-    await navigateExtension(extensionUrl('#tabExpressionList'));
-    await waitForElement('formText');
+    await openExtensionTab('tabExpressionList', 'formText');
     const body = await driver.findElement(By.css('body')).getText();
     assert.ok(body.includes('127.0.0.1'), 'Firefox whitelist entry was lost across extension runtime reload');
     assert.ok(body.includes('127.0.0.2'), 'Firefox greylist entry was lost across extension runtime reload');
