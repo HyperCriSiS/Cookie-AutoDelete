@@ -334,8 +334,8 @@ try {
     assert.equal(await (await driver.findElement(By.id('indexedDBCleanup'))).getAttribute('aria-checked'), 'true');
 
     const persistedState = await readPersistedState();
-    assert.equal(persistedState.settings?.activeMode, true, 'Firefox activeMode was not persisted');
-    assert.equal(persistedState.settings?.indexedDBCleanup, true, 'Firefox indexedDBCleanup was not persisted');
+    assert.equal(persistedState.settings?.activeMode?.value, true, 'Firefox activeMode was not persisted');
+    assert.equal(persistedState.settings?.indexedDBCleanup?.value, true, 'Firefox indexedDBCleanup was not persisted');
     const persistedExpressions = Object.values(persistedState.lists || {}).flat();
     assert.ok(persistedExpressions.some((expression) => expression.expression === '127.0.0.1'), 'Firefox whitelist entry was not persisted');
     assert.ok(persistedExpressions.some((expression) => expression.expression === '127.0.0.2'), 'Firefox greylist entry was not persisted');
