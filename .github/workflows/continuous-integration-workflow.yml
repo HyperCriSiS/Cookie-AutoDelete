@@ -2,13 +2,19 @@ name: CI
 
 on:
   push:
-    branches-ignore:
-      - '_archived__**'
+    branches:
+      - '3.X.X-Branch'
+    paths-ignore:
+      - '**/*.md'
   pull_request:
     branches-ignore:
       - '_archived__**'
     paths-ignore:
-      - '**/README.md'
+      - '**/*.md'
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
