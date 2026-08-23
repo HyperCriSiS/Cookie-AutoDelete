@@ -50,7 +50,6 @@ const navigateExtension = async () => {
   try {
     await driver.executeScript(
       `const target = arguments[0];
-       const { Services } = ChromeUtils.importESModule('resource://gre/modules/Services.sys.mjs');
        const principal = Services.scriptSecurityManager.getSystemPrincipal();
        window.gBrowser.selectedBrowser.loadURI(target, { triggeringPrincipal: principal });`,
       extensionRoot,
