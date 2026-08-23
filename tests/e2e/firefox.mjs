@@ -107,6 +107,7 @@ const openSettings = async () => openExtensionTab('tabSettings', 'activeMode');
 const configure = async () => {
   await openSettings();
   await setCheckbox('activeMode', true);
+  await setCheckbox('contextualIdentities', true);
   await setCheckbox('domainChangeCleanup', true);
   await setCheckbox('cacheCleanup', true);
   await setCheckbox('indexedDBCleanup', true);
