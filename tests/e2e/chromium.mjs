@@ -50,7 +50,22 @@ const openExtensionTab = async (tabId, readyId) => {
   const page = await context.newPage();
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
-  await page.goto(extensionRoot());
+
+  let loaded = false;
+  let lastNavigationError;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      await page.goto(extensionRoot());
+      loaded = true;
+      break;
+    } catch (error) {
+      lastNavigationError = error;
+      if (!String(error).includes('ERR_BLOCKED_BY_CLIENT')) throw error;
+      await page.waitForTimeout(250);
+    }
+  }
+  if (!loaded) throw lastNavigationError;
+
   const tab = page.locator(`#${tabId}`);
   await tab.waitFor({ state: 'visible', timeout: 10000 }).catch(async (error) => {
     const body = (await page.locator('body').textContent().catch(() => '')) || '';
@@ -290,10 +305,6 @@ try {
     });
     await sleep(1000);
 
-    // MV3 does not guarantee that a service worker restarts immediately after
-    // runtime.reload(). Opening the real settings UI creates the extension
-    // connection that normally wakes the worker, so observe the replacement
-    // worker only after that demand exists.
     const settings = await openSettings();
     assert.equal(await settings.locator('#activeMode').getAttribute('aria-checked'), 'true');
     assert.equal(await settings.locator('#indexedDBCleanup').getAttribute('aria-checked'), 'true');
