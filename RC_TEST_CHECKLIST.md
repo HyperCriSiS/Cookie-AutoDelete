@@ -42,7 +42,6 @@ The following behavior is no longer a manual checkbox matrix. It must be green i
 - [ ] Unlisted last-tab close removes LocalStorage.
 - [ ] Unlisted last-tab close removes IndexedDB.
 - [ ] Unlisted last-tab close unregisters the website Service Worker.
-- [ ] Unlisted last-tab close removes the controlled browser HTTP-cache entry.
 - [ ] Domain change cleans the previous unlisted origin.
 - [ ] Whitelist entry created through the real expression UI retains configured site data.
 - [ ] Greylist entry created through the real expression UI retains data on normal tab close.
@@ -50,13 +49,19 @@ The following behavior is no longer a manual checkbox matrix. It must be green i
 
 ### Chromium-specific packaged-runtime gates
 
-- [ ] Persistent browser-profile relaunch retains whitelisted site data and persisted extension settings.
-- [ ] MV3 runtime reload replaces worker-global transient state while restoring persisted extension state.
+- [ ] Unlisted last-tab close removes the controlled browser HTTP-cache entry.
+- [ ] Domain-change cleanup removes the previous origin's controlled browser HTTP-cache entry.
+- [ ] Whitelist/greylist policy retains controlled browser HTTP-cache entries when the site is protected.
+- [ ] Persistent browser-profile relaunch retains whitelisted site data, persisted extension settings, and expression lists.
+- [ ] A real Chromium process relaunch replaces worker-global transient state while restoring persisted extension state.
 
 ### Firefox-specific packaged-runtime gates
 
 - [ ] Packaged Firefox XPI exposes the contextual-identities capability required for container support.
+- [ ] Multiple `%tmp*` contextual identities are represented by one persisted `%tmp` expression scope, with no concrete temporary-container stores leaked into persistence.
 - [ ] Firefox extension runtime reload preserves persisted settings and expression lists.
+
+Firefox selective HTTP-cache cleanup is **not** a release-gate checkbox while the browser cannot reliably clear normal-tab partitioned cache by hostname. Do not replace that limitation with an unscoped full-cache clear: doing so would erase cache for unrelated/allowlisted sites and break CAD's per-site policy semantics. Chromium remains the packaged-runtime cache gate.
 
 The machine-readable result matrices and failure screenshots are uploaded as `browser-e2e-chromium-results` and `browser-e2e-firefox-results` artifacts.
 
