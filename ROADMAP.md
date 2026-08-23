@@ -2,115 +2,184 @@
 
 ## Project goal
 
-Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension while preserving existing cleanup semantics, user data, privacy behavior, Firefox-specific capabilities and Chromium compatibility. Changes must remain attributable, testable and reversible; dependency/toolchain major upgrades are integrated only after compatibility has been demonstrated.
+Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension while preserving existing cleanup semantics, user data, privacy behavior, Firefox-specific capabilities and Chromium compatibility. Changes must remain attributable, testable and reversible. Major dependency/toolchain upgrades are integrated only after compatibility has been demonstrated.
+
+`ROADMAP.md` is the project Source of Truth. Detailed automated-test architecture lives in `TESTING.md`; the deliberately small residual release checklist lives in `RC_TEST_CHECKLIST.md`.
 
 ## Current status
 
-**Status: in progress / draft**
+**Status: in progress / draft — automated RC qualification**
 
-Active modernization work is on `modernization-p0`, tracked by draft PR #1 into `3.X.X-Branch`. The branch is the integration and validation branch for the modernization effort and is not yet release-ready.
+- Development/integration branch: `modernization-p0`
+- Draft PR: #1 → `3.X.X-Branch`
+- Current validated base lineage: `3e061b7f77175e536ff664788f3e6692ac6540e8` unless the base advances again
+- Former RC `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `9432252522`: **superseded**
+- Current replacement RC: **not yet pinned**
+- Only draft modernization PR #1 is currently open.
+- The separate GitHub Advanced Security AI-agent check can fail before repository analysis because its hosted model is unavailable. Repository-owned CI and CodeQL remain the functional/security gates; this external failure is not treated as a code defect when it aborts before analysis.
 
-The former pinned candidate `b5cfd87f` / artifact `9432252522` is now superseded. The modernization branch advanced with candidate-affecting runtime/UI behavior for grouped Firefox Temporary Containers (`%tmp*` → shared `%tmp` rules), dynamic popup sizing, and a new real-browser E2E architecture. A replacement release candidate must not be pinned until the updated `Tests, Builds, Coverage`, `Browser E2E — Chromium`, `Browser E2E — Firefox`, and downstream `Release Candidate Packages` jobs are green for one exact PR head. The current base remains `3e061b7f` unless `3.X.X-Branch` advances again. Fast TypeScript/Jest/lint/build validation remains green on the new work; browser-E2E qualification is the active automated release-readiness task. The separate `github-advanced-security` AI check still fails before repository analysis because the GitHub-hosted agent requests an unsupported model; this remains classified as an external GitHub service/configuration problem rather than a functional repository defect.
+A replacement RC may be pinned only when one exact PR head passes all of:
 
-There are currently no repository issues and no fork releases. All Dependabot PRs that were open during the modernization dependency pass have now either been integrated independently from the current modernization graph or closed as superseded; only draft modernization PR #1 remains open.
+1. `Tests, Builds, Coverage`
+2. `Browser E2E — Chromium`
+3. `Browser E2E — Firefox`
+4. downstream `Release Candidate Packages`
 
-## Phase 0 — Manifest V3 modernization foundation
+The RC job republishes the same package bytes consumed by the two browser-E2E jobs. Candidate-affecting source/runtime, manifest, dependency, build/packaging, test-infrastructure, or base changes require a new candidate.
 
-- [x] Add Manifest V3 build/manifest foundations for Chromium and Firefox.
-- [x] Make background lifecycle and listener registration service-worker-safe.
-- [x] Add session-backed state persistence needed for MV3 worker restart behavior.
+## Engineering principles
+
+- Preserve existing author/contributor/license/support/donation/project-origin information unless separately reviewed.
+- Prefer deterministic local test fixtures over external test sites/accounts.
+- Do not weaken an assertion merely to make CI green; distinguish product defects, harness defects and browser-platform limitations.
+- Do not substitute broad destructive cleanup for a browser API that cannot safely perform per-site cleanup.
+- Every repeatable functional bug found manually should become a unit/regression or real-browser E2E test.
+- Keep PR #1 draft; do not merge or tag a release while any required release gate remains open.
+
+## Phase 0 — Manifest V3 foundation ✅
+
+- [x] Add Chromium and Firefox Manifest V3 build/manifest foundations.
+- [x] Make background lifecycle/listener registration service-worker-safe.
+- [x] Add session-backed transient state required for MV3 worker restarts.
 - [x] Introduce StoreBridge/UIStore synchronization for extension UI state.
-- [x] Preserve cleanup/list behavior across the initial MV3 migration.
-- [x] Fix the legacy settings migration payload shape.
-- [x] Preserve existing author, contributor, license, support, donation and project-origin information unless explicitly reviewed separately.
+- [x] Preserve cleanup/list semantics through the initial MV3 migration.
+- [x] Repair legacy settings-migration payload shape.
 
-## Phase 1 — functional stabilization and CI
+## Phase 1 — functional stabilization and CI ✅
 
-- [x] Keep Initial Checks green on validated modernization heads.
-- [x] Repair malformed/incomplete Jest assertions and cleanup-test calls introduced during P0 work.
-- [x] Align the legacy Firefox cleanup success-path test with the production contract that only browser-confirmed removals count.
-- [x] Restore a clean functional test/build matrix and keep CodeQL / JavaScript-TypeScript / Actions analysis green where reported.
-- [x] Classify the separate `github-advanced-security` failure as external GitHub infrastructure/configuration because it aborts before repository analysis.
+- [x] Restore a clean TypeScript/Jest/lint/production-build matrix.
+- [x] Repair malformed/incomplete regression assertions discovered during modernization.
+- [x] Align cleanup success-path tests with browser-confirmed removals.
+- [x] Keep repository-owned CodeQL / JavaScript-TypeScript / Actions analysis green.
+- [x] Harden `pull_request_target` prechecks against transient/non-JSON GitHub API responses.
 
 ## Phase 2 — migration and behavioral compatibility
 
-- [x] Preserve non-destructive upgrades when older persisted profiles lack settings introduced by newer versions.
-- [x] Guard staged legacy-profile upgrades while later-introduced site-data cleanup settings are still absent.
-- [x] Validate Firefox legacy-profile activation with a later-introduced cleanup setting missing without destructive cleanup.
-- [x] Validate the equivalent Chromium legacy-profile activation path without destructive cleanup.
-- [x] Normalize legacy persisted settings before later-added keys are consumed while retaining the pre-normalization snapshot for side-effect comparisons.
-- [x] Add broader synthetic regression coverage for representative older Firefox/Chromium settings structures while preserving existing custom values.
-- [x] Validate published historical Cookie AutoDelete release-state schemas from 3.0.2, 3.4.0 and 3.6.0 through the production persisted-state migration path for both Firefox and Chromium. Release-derived fixtures were added in `42ff2052` and made immutable in `f8b996a3`; regular push/PR CI is green. This supplements but does not replace the still-open real user export/profile gate below.
-- [ ] Validate upgrades from real representative historical Cookie AutoDelete Firefox and Chromium profile/settings exports without destructive resets or silent data loss.
-- [x] Verify allowlist/greylist matching semantics after StoreBridge/UIStore migration, including wildcard/subdomain, exact greylist and container-sensitive cases.
-- [x] Verify cleanup behavior on tab close, domain change and browser restart for supported policy combinations.
-- [x] Verify persisted allowlist/greylist and cleanup-policy settings survive `StatePersistence` → `parsePersistedState()` → `createStore()` restart.
-- [x] Verify session/transient tab-domain state restores across a realistic simulated MV3 service-worker module restart and still triggers the expected cleanup.
-- [x] Verify popup/options state synchronization and reconnect behavior, including generated Firefox/Chromium manifest entry points.
-- [x] Verify container/contextual-identity behavior is capability-gated and functions where the browser exposes the required APIs.
-- [x] Treat Firefox Temporary Containers whose names begin with `%tmp` as one shared logical rule scope. Concrete temporary `cookieStoreId` values are normalized/migrated to the stable `%tmp` store, the expression UI renders one `%tmp` tab, and dedicated regression coverage protects the grouping semantics.
-- [x] Make the popup primary-action row dynamically size to its actually rendered localized buttons and prevent wrapping. Chromium packaged-browser E2E explicitly exercises the row with enlarged popup text to catch clipping/wrapping regressions.
-- [x] Audit migration/runtime defects found during the compatibility pass for explicit regression coverage; add the previously missing legacy Chromium 60-second alarm-threshold regression.
+### Automated compatibility ✅
 
-## Phase 3 — dependency and build modernization
+- [x] Preserve non-destructive upgrades when older persisted profiles lack later-added settings.
+- [x] Normalize legacy persisted state safely while retaining the original snapshot where side-effect comparison requires it.
+- [x] Cover representative historical release-state schemas from 3.0.2, 3.4.0 and 3.6.0 for Firefox and Chromium through the production migration path.
+- [x] Verify allowlist/greylist matching, including wildcard/subdomain and container-sensitive behavior.
+- [x] Verify tab-close, domain-change and restart policy logic.
+- [x] Verify persisted settings/lists survive StatePersistence → hydration → store recreation.
+- [x] Verify transient tab-domain state survives a simulated MV3 worker module restart and still drives cleanup.
+- [x] Verify popup/options state synchronization and reconnect behavior.
+- [x] Capability-gate Firefox contextual-identity/container behavior.
+- [x] Add missing Chromium 60-second alarm-threshold regression.
 
-- [x] Review and synchronize dependency updates that were independently validated against the modernization branch instead of blindly merging Dependabot branches.
-- [x] Update verified GitHub Actions dependencies used by modernization workflows.
-- [x] Migrate packaging to Archiver 8 using its ESM `ZipArchive` API while preserving Firefox/Chromium packaging behavior.
-- [x] Migrate the Redux stack to Redux 5 / Redux Thunk 3 / React-Redux 8 while retaining React 17 and adapting imports/types required by the new APIs.
-- [x] Remove obsolete runtime `redux-webext` and redundant Redux type packages as part of the validated Redux migration.
-- [x] Complete the coordinated TypeScript 7 migration without blindly merging the original major-version Dependabot branch.
-  - [x] Use TypeScript 7.0.2 for the authoritative application typecheck via `@typescript/native` while retaining the official `@typescript/typescript6@6.0.2` compatibility package only for JavaScript compiler-API consumers that cannot use the TS7 native compiler API.
-  - [x] Replace legacy `moduleResolution: "node"` with `bundler` resolution and move the compiler module target to `esnext`.
-  - [x] Replace `web-ext-types@3.2.1` with maintained `@types/firefox-webext-browser@143.0.0` plus the smallest explicit local compatibility layer needed by Cookie AutoDelete; preserve Firefox-specific APIs and avoid a broad `any` browser shim.
-  - [x] Retype CAD-internal cookie paths around the cross-browser `CadCookie` shape so Chromium cookies may omit Firefox-only fields such as `firstPartyDomain`.
-  - [x] Keep the React 17 runtime while validating the React-Redux 8 / Redux 5 declaration boundary under TS7; the deliberate `skipLibCheck` boundary isolates third-party declaration incompatibilities while CAD application/test use-sites remain checked.
-  - [x] Replace ambient compile-time enum dependencies with explicit importable runtime-safe enums, including `browserName`, `SiteDataType`, `SettingID`, `ListType`, `ReasonClean`, `OpenTabStatus`, `EventListenerAction` and `ReasonKeep`.
-  - [x] Modernize Jest declarations (`@types/jest@30.0.0`, `@types/jest-when@3.5.5`) and removed matcher aliases needed by the TS7 path.
-  - [x] Remove `ts-jest` and its obsolete Jest configuration. Jest now uses the repository-local `tools/jest-typescript-transformer.cjs`, backed by the official TypeScript 6 compatibility compiler API, while `tsc --noEmit` remains the separate authoritative TS7 typecheck.
-  - [x] Commit the coordinated dependency/compiler/Jest configuration and lockfile changes. Production migration commit: `087498d1` (`chore: migrate toolchain to TypeScript 7`).
-  - [x] Validate the committed migration with TypeScript 7 typecheck, the full Jest suite (36 suites / 568 tests), ESLint, Prettier, Firefox build, Chromium build and production package validation.
-  - [x] Remove obsolete TS7 probe workflows and `.tmp-ts7-*` diagnostic artifacts after migration completion.
-  - [x] Make TS7 compatibility a permanent regular-CI gate via `npm run typecheck`.
-  - [x] Restore the missing Bootstrap 4 peer lock entry `popper.js@1.16.1` from the existing upstream lock metadata so ordinary `npm ci` is reproducible again; one-shot validation run `32309151986` passed locked install, TS7 typecheck, tests, lint and production build, then removed its temporary repair workflow.
-- [x] Review remaining open Dependabot updates individually and integrate only those proven compatible.
-  - [x] Integrate `github/codeql-action` v4 from Dependabot PR #22 after confirming its isolated PR checks are green; apply the same change directly to `modernization-p0` rather than merging the stale-base Dependabot branch.
-  - [x] Integrate `actions/checkout` v7 independently from stale-base Dependabot PR #20 across all six active workflow references. Final branch state `2f8[...]` remains part of the validated modernization history.
-  - [x] Integrate Codecov Action v7 independently from Dependabot PR #24 after confirming the repository's coverage/override inputs remain supported. Commit `e599d4a8` was exercised by one-shot validation run `32317530386`; the helper was removed in final state `ff584734`, whose regular CI is green: push `32319129811`, `pull_request_target` `32319131089`, and pull request `32319132676`.
-  - [x] Update Webpack from the current modernization dependency graph to `5.109.2` instead of merging stale-base Dependabot PR #21 and its obsolete lockfile. Final state `e5263cce` is green in regular CI: push `32319617684`, `pull_request_target` `32319619166`, and pull request `32319621248`; PR #21 is closed as superseded.
-  - [x] Resolve the remaining security dependency PRs from the current modernization lockfile instead of merging their stale dependency graph. `copy-webpack-plugin` is now `14.0.0`, with the targeted transitive fixes including `serialize-javascript 7.1.0`, `lodash 4.18.1`, `tough-cookie 4.1.4`, `form-data 3.0.5`, `ws 7.5.13`, `minimatch 3.1.5` and `js-yaml 3.15.1`. Final state `756e64ba` is green in regular CI: push `32320110348`, `pull_request_target` `32320111670`, and pull request `32320112760`; superseded PRs #13, #14 and #15 are closed with rationale recorded.
-  - [x] Integrate the later compatible dependency updates from the current modernization graph instead of merging stale-base Dependabot branches: `webextension-polyfill` is now `0.12.0` and `ts-loader` is `9.6.2`. SemVer-safe lockfile remediation was also applied before the final test-toolchain migration.
-  - [x] Complete the coordinated Jest 30 migration rather than accepting the stale grouped dependency proposal. Current test tooling uses `jest@30.4.2`, `jest-environment-jsdom@30.4.1`, `jest-when@4.0.3` and the repository-local TypeScript transformer. Compatibility work replaced obsolete `jest-when` `.clearMocks()` calls with `.mockReset()` and fixed an argument-mismatched `TabEvents` mock that leaked into real asynchronous cookie-domain code. Validation run `32437006947` passed the full suite, TS7 typecheck, lint and both production builds; the candidate dependency graph reported **zero** findings in both full `npm audit` and `npm audit --omit=dev`. Production migration commit: `5fcd4a4d`.
-  - [x] Resolve Dependabot PRs #25–#31 without unsafe wholesale merges. PRs #28 (`webextension-polyfill`), #29 (`ts-loader`) and #30 (`softprops/action-gh-release`) were superseded by independently validated modernization changes; grouped PR #31 was superseded by the targeted security/Jest/toolchain work. Bootstrap 5 (#25), React DOM 19 (#26) and `@typescript-eslint` 8 (#27) were deliberately deferred as coordinated post-RC major migrations because partial adoption would make the current Bootstrap 4 / React 17 / ESLint 7 stacks inconsistent. All seven PRs are closed with rationale recorded; only draft PR #1 remains open.
-- [x] Re-check generated Firefox and Chromium package contents after all remaining dependency/toolchain migrations. Permanent archive validation was added in `e036529b`: the build now compares the actual Archiver file entries against the validated stage contents, rejects missing/unexpected/duplicate/empty output, and verifies Firefox ZIP/XPI byte identity. Final CI on `e036529b` is green: push `32322333493`, `pull_request_target` `32322334711`, and pull request `32322336150`. The validated production archives contain 60 Firefox files and 61 Chromium files.
+### Recent behavior improvements ✅
+
+- [x] Treat Firefox Temporary Containers whose names begin with `%tmp` as one logical scope. All concrete temporary `cookieStoreId` values normalize/migrate to stable `%tmp`; the expression UI renders one `%tmp` tab and persistence contains no per-temporary-container rule stores.
+- [x] Dynamically size the popup's primary action row from the actually rendered localized controls and prevent wrapping. Real Chromium E2E exercises enlarged 24px popup text.
+
+### Real historical-data gate ⏳
+
+- [ ] Validate upgrades from genuine representative historical Firefox and Chromium profiles/settings exports without destructive reset or silent data loss. Synthetic/release-derived fixtures do **not** satisfy this gate.
+
+## Phase 3 — dependency and build modernization ✅
+
+- [x] Migrate packaging to Archiver 8 ESM APIs without changing generated package semantics.
+- [x] Migrate Redux to Redux 5 / Redux Thunk 3 / React-Redux 8 while retaining React 17.
+- [x] Remove obsolete `redux-webext` and redundant Redux typings.
+- [x] Complete coordinated TypeScript 7 migration using `@typescript/native` for authoritative application typechecking and a TypeScript 6 compatibility package only where JavaScript compiler-API consumers require it.
+- [x] Replace legacy module resolution with modern bundler/esnext compiler configuration.
+- [x] Replace stale WebExtension typings with maintained Firefox WebExtension typings plus minimal local compatibility declarations.
+- [x] Modernize Jest to 30.4.x with repository-local TypeScript transformation and permanent TS7 typecheck.
+- [x] Restore reproducible `npm ci`; validated dependency graph reached zero findings in full and runtime-only npm audits at the migration point.
+- [x] Update compatible Actions/dependencies individually rather than blindly merging stale-base Dependabot branches.
+- [x] Permanently validate actual Firefox/Chromium archive contents and Firefox ZIP/XPI byte identity.
+- [x] Align tagged test-build/release workflows with locked installs, TS7 typecheck, tests, lint, production builds and SHA-256 package checksums.
+
+### Deliberately deferred coordinated majors
+
+These are **post-RC maintenance**, not current release blockers:
+
+- Bootstrap 5 stack migration
+- React / React DOM major migration
+- ESLint / `@typescript-eslint` major modernization
+- Font Awesome 7 coordinated migration
+- small non-security dependency cleanups such as direct AJV declaration alignment and `jest-date-mock` patch update
+
+Each coordinated migration must independently rerun locked install/audit, typecheck, Jest, lint, both builds, package validation and real-browser E2E as appropriate.
 
 ## Phase 4 — release readiness
 
-- [x] Harden `pull_request_target` commit-message lookup so a transient/non-JSON GitHub API response cannot abort CI before repository tests. The hardening is now present on current `3.X.X-Branch` base `3e061b7f` and synchronized into `modernization-p0`; current modernization push `32440492934` and PR-target `32440493862` are green.
-- [x] Produce Firefox and Chromium release-candidate packages from the same validated source state. PR CI now retains the installable `*Chrome.zip` and `*Firefox.xpi` plus `SHA256SUMS.txt` in a dedicated `release-candidate-packages` artifact. Commit `a8af649e` is green in regular CI: push `32322777150`, `pull_request_target` `32322778298`, and pull request `32322779658`; RC artifact `9390334806` is tied to that exact head SHA.
-- [x] Resolve base drift / merge conflicts between `modernization-p0` and `3.X.X-Branch` without replacing the validated modernization tree with stale base dependency/workflow state. The synchronization was performed on an isolated branch, the restored synchronized tree was verified byte-for-byte equivalent by matching Git tree/subtree SHAs, and null-diff PR #33 imported only the corrected base ancestry. Merge commit `fc70abfe` imported the then-current base `81b259c1`; a later hardening update advanced the base to `3e061b7f` and was synchronized separately as recorded below.
-- [x] Regenerate the first post-base-sync same-source `release-candidate-packages` artifact. Exact post-sync head `fc70abfe` was green in regular CI and produced artifact `9392296156`; that candidate is now **superseded** because later dependency/test-toolchain and tagged-workflow changes affected the candidate state.
-- [x] Revalidate the dependency/test toolchain after the post-sync update pass. Jest 30, `webextension-polyfill 0.12.0`, `ts-loader 9.6.2`, the repaired lockfile and Node engine metadata are now integrated; full and runtime `npm audit` both reached zero findings during the validated Jest migration.
-- [x] Align tagged test-build and tagged release workflows with the permanent release gates. Commit `0363f282` moved the test-build path from hard-coded Node 18 to `.nvmrc`, added locked-install/npm caching and permanent TS7 typecheck to both tag pipelines, pinned `softprops/action-gh-release` to v3.0.2, and added `SHA256SUMS.txt` to tagged package uploads. Regular CI on that workflow state is green: push `32439203126`, `pull_request_target` `32439204333`, and pull request `32439205746`.
-- [x] Remove all temporary dependency/Jest/lock synchronization helpers and generate a replacement release candidate from clean technical head `53209f36`. That candidate (`9431860563`) passed the permanent release gates but is now **superseded** because `3.X.X-Branch` subsequently advanced to hardened base `3e061b7f` and the modernization branch was synchronized with that base.
-- [x] Regenerate the release candidate after the hardened base synchronization. Current candidate source `b5cfd87f` is green in regular CI: push `32440492934`, `pull_request_target` `32440493862`, and pull request `32440495062`. Pull-request run `32440495062` passed the permanent TypeScript 7, Jest, lint, production build and archive-validation gates. Artifact `9432252522` contains the same-source `*Firefox.xpi`, `*Chrome.zip`, and `SHA256SUMS.txt`; its GitHub wrapper digest is `sha256:ff8c7495404f6b0d950ecfe91e5de93f6cb86770bd96d07cd252c6b521102ddd`.
-- [x] Supersede `b5cfd87f` / `9432252522` after candidate-affecting Temporary Container, popup, and browser-E2E changes. The old artifact remains historical evidence only and must not be used for the next release decision.
-- [x] Move repeatable packaged-runtime behavior into deterministic real-browser E2E using a controlled local site, with the RC artifact job downstream of both browser jobs so only already-tested package bytes can become the next candidate.
-- [ ] Qualify the replacement browser-E2E pipeline on one exact head. Chromium now validates packaged startup, popup sizing, cleanup/list behavior, profile relaunch persistence, and MV3 runtime reload; genuine `runtime.onStartup` greylist cleanup remains a residual manual full-browser-startup gate because the automated harness re-sideloads the unpacked extension with `--load-extension`. Firefox packaged-XPI automation is still being qualified against current GeckoDriver/Firefox extension-page navigation.
-- [ ] Perform representative manual browser smoke tests in addition to automated CI. The exact cross-browser procedure and result matrix are defined in `RC_TEST_CHECKLIST.md`; execution remains a manual release gate.
-- [ ] Confirm existing user settings/data survive a real release-candidate upgrade path in both target browser families. `RC_TEST_CHECKLIST.md` defines the non-destructive real-profile/export procedure; suitable historical data is still required.
-- [ ] Confirm popup/options, cleanup triggers, allowlist/greylist and restart behavior in packaged builds rather than source/unit tests alone. These packaged-runtime checks are enumerated in `RC_TEST_CHECKLIST.md` and must be recorded for both browser families.
-- [ ] Merge `modernization-p0` into `3.X.X-Branch` only after migration/runtime checks and release-candidate validation are green.
-- [ ] Create a tagged fork release only after the integrated branch has passed the release checklist.
-- [ ] Consider an upstream proposal only after the fork branch is stable and the modernization scope is documented.
+### Completed release infrastructure ✅
 
-## Blockers / dependencies
+- [x] Keep the modernization branch synchronized with the hardened `3.X.X-Branch` base without replacing validated modernization code with stale dependency/workflow state.
+- [x] Generate Firefox and Chromium packages from the same source state and attach SHA-256 checksums.
+- [x] Supersede all older RC artifacts after later candidate-affecting changes; old artifacts remain historical evidence only.
+- [x] Move repeatable packaged-runtime behavior into deterministic real-browser E2E using a controlled local test site.
+- [x] Make `Release Candidate Packages` downstream of both real-browser E2E jobs so only already-tested package bytes can become a candidate.
+- [x] Separate fast unit/regression coverage, real-browser E2E, genuine historical-upgrade validation and minimal manual smoke in `TESTING.md` / `RC_TEST_CHECKLIST.md`.
 
-- There is currently no known base-drift blocker: PR #1 targets `3.X.X-Branch` base `3e061b7f` unless that branch advances. The former `b5cfd87f` / `9432252522` candidate is superseded by candidate-affecting runtime/UI/E2E changes. The next candidate is blocked only on qualifying the updated Firefox/Chromium browser-E2E pipeline and then allowing the downstream RC job to emit same-source tested packages.
-- Real historical Firefox/Chromium profile or settings exports are not present as repository fixtures, so the real-world upgrade-path release gate cannot yet be marked complete.
-- The separate GitHub Advanced Security agent can fail before repository analysis because its requested hosted model is unsupported. This is external to the codebase and does not currently block functional modernization work.
-- Minimal manual packaged-browser validation remains required before release readiness can be claimed, including genuine full-browser-startup cleanup checks that cannot yet be represented faithfully by the current Firefox temporary-XPI and Chromium `--load-extension` harnesses.
+### Chromium real-browser E2E ✅ on the current test architecture
+
+The packaged Chromium build now verifies:
+
+- [x] MV3 extension startup and real options UI.
+- [x] Dynamic popup sizing / primary controls remain on one row.
+- [x] Unlisted last-tab cleanup.
+- [x] Domain-change cleanup.
+- [x] Cookie, LocalStorage, IndexedDB and website Service Worker removal.
+- [x] Selective browser HTTP-cache cleanup.
+- [x] Whitelist and greylist creation through the real expression UI plus policy retention behavior.
+- [x] Persistent-profile Chromium process relaunch.
+- [x] Persisted settings/lists survive the process relaunch while worker-global transient state does not.
+
+A whole-extension `chrome.runtime.reload()` is intentionally **not** used as an MV3 service-worker lifecycle proxy: reloading the entire unpacked extension is not equivalent to ordinary MV3 worker suspension/restart and conflicts with the `--load-extension` harness. The deterministic worker-module restart regression plus real process-relaunch state boundary cover the relevant persistence contract.
+
+### Firefox real-browser E2E — qualification in progress ⏳
+
+Already proven in the packaged XPI:
+
+- [x] Extension startup and real options UI.
+- [x] Firefox contextual-identities capability.
+- [x] Two independent `%tmp*` containers collapse into exactly one visible/persisted `%tmp` expression scope.
+- [x] No concrete temporary-container store IDs leak into persisted CAD state.
+
+Current qualification work:
+
+- [ ] Re-run the remaining Firefox cleanup/domain/list/runtime matrix after correcting the HTTP-cache platform boundary described below.
+
+### Firefox selective HTTP-cache platform boundary ✅ classified
+
+- [x] Current Firefox hostname-scoped `browsingData` cache removal does not reliably evict normal-tab partitioned HTTP-cache entries.
+- [x] Do **not** silently fall back to an unscoped full-cache clear: that would erase cache for unrelated/allowlisted sites and violate CAD's per-site policy semantics.
+- [x] Keep selective HTTP-cache behavior a mandatory packaged-runtime gate on Chromium.
+- [x] Exclude Firefox selective HTTP-cache from the CAD pass/fail release matrix until Firefox provides/reliably implements an appropriate per-site API; re-evaluate when browser behavior changes.
+
+### Replacement RC qualification ⏳
+
+- [ ] Obtain one exact current PR head with fast CI, Chromium E2E and Firefox E2E all green.
+- [ ] Confirm downstream `Release Candidate Packages` succeeds for that exact head and republishes the exact browser-tested bytes.
+- [ ] Record candidate SHA, current base SHA, PR run ID, artifact ID/digest and package filenames in `RC_TEST_CHECKLIST.md` and PR #1.
+
+### Residual manual/historical release gates ⏳
+
+- [ ] Minimal Firefox packaged visual/permission smoke.
+- [ ] Minimal Chromium packaged visual/permission smoke.
+- [ ] Full Firefox browser-startup cleanup with a normally installed candidate; CI currently uses a temporary unsigned XPI that Firefox removes at restart.
+- [ ] Full Chromium greylist startup cleanup with an already installed/loaded candidate; CI process relaunch must re-sideload the unpacked extension with `--load-extension`.
+- [ ] Genuine historical-profile/settings-export upgrade validation for both target browser families, or an explicit project decision documenting unavailable representative data and compensating evidence.
+- [ ] Confirm PR #1 is mergeable against the then-current `3.X.X-Branch` base with no unresolved code conflict/base drift.
+
+### Merge / release ⛔ until all required gates pass
+
+- [ ] Merge `modernization-p0` into `3.X.X-Branch` only after automated RC qualification plus residual manual/historical gates are green.
+- [ ] Validate the integrated branch.
+- [ ] Create a tagged fork release only after integrated-branch validation.
+- [ ] Consider an upstream proposal only after the fork branch is stable and modernization scope is documented.
+
+## Current blockers / dependencies
+
+1. **Firefox E2E qualification:** rerun the remaining packaged-XPI matrix after excluding the browser's unreliable hostname-scoped partitioned HTTP-cache behavior from the CAD pass/fail gate.
+2. **No genuine historical user data fixture:** real-world Firefox/Chromium upgrade validation remains open.
+3. **Full browser-startup semantics:** the current temporary-XPI and unpacked-`--load-extension` CI install models cannot faithfully reproduce every normally-installed startup path; these are deliberately small manual residual gates.
+4. **Firefox selective HTTP cache:** browser-platform limitation; CAD must not substitute a destructive global cache clear.
+5. **External GHAS AI agent:** may fail before repository analysis because of unavailable hosted model; non-blocking only while repository-owned CI/CodeQL are green.
 
 ## Completion status
 
-**Not fully completed.** Manifest V3 foundations, functional CI stabilization, the automated migration/runtime compatibility pass, Archiver 8 / Redux 5 modernization, maintained Firefox WebExtension typings, TypeScript 7 and the coordinated Jest 30 migration are complete and verified. TypeScript 7 is protected by regular CI typecheck; the repaired dependency graph supports reproducible `npm ci` and reached zero findings in the validated full/runtime npm audits. Phase 3 is complete: dependency/toolchain modernization and generated-package content auditing are permanently enforced and green. Phase 4 now also has automated coverage for published historical 3.0.2/3.4.0/3.6.0 release-state schemas, hardened tag/release pipelines, a base-synchronized PR #1, grouped `%tmp` Temporary Container semantics, dynamic popup sizing, and a deterministic packaged-browser E2E layer. The previous `b5cfd87f` / `9432252522` candidate is superseded. The active automated blocker is qualification of the replacement Firefox/Chromium E2E pipeline; after it is green, a new same-source RC can be pinned. Residual full-browser-startup smoke and real representative historical-profile/export upgrade validation remain manual release gates; merge/tagging remain prohibited until all required gates pass.
+**Not complete.** Phases 0, 1 and 3 are complete; Phase 2 is complete except for genuine historical-user-data validation. Phase 4 has deterministic real-browser infrastructure, grouped `%tmp` behavior, dynamic popup sizing and a green Chromium packaged-runtime matrix. The active automated task is finishing the Firefox packaged-XPI matrix and producing a new same-source tested RC. Manual full-startup/visual checks and genuine historical upgrades remain release blockers. PR #1 stays draft; merge and tagging remain prohibited until those gates are resolved.
