@@ -288,8 +288,17 @@ try {
     }).catch((error) => {
       if (!String(error).includes('Target page, context or browser has been closed')) throw error;
     });
-    await sleep(1800);
-    const workers = context.serviceWorkers();
+    await sleep(1000);
+
+    // MV3 does not guarantee that a service worker restarts immediately after
+    // runtime.reload(). Opening the real settings UI creates the extension
+    // connection that normally wakes the worker, so observe the replacement
+    // worker only after that demand exists.
+    const settings = await openSettings();
+    assert.equal(await settings.locator('#activeMode').getAttribute('aria-checked'), 'true');
+    assert.equal(await settings.locator('#indexedDBCleanup').getAttribute('aria-checked'), 'true');
+
+    let workers = context.serviceWorkers();
     if (workers.length === 0) {
       worker = await context.waitForEvent('serviceworker', { timeout: 15000 });
     } else {
@@ -297,10 +306,6 @@ try {
     }
     const transient = await worker.evaluate(() => globalThis.__cadE2ETransient ?? null);
     assert.equal(transient, null, 'MV3 worker-global transient state survived runtime reload unexpectedly');
-
-    const settings = await openSettings();
-    assert.equal(await settings.locator('#activeMode').getAttribute('aria-checked'), 'true');
-    assert.equal(await settings.locator('#indexedDBCleanup').getAttribute('aria-checked'), 'true');
     await settings.close();
 
     const expressions = await openExtensionTab('tabExpressionList', 'formText');
