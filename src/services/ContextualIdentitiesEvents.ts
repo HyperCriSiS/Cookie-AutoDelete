@@ -13,9 +13,14 @@
 
 import { SettingID } from '../typings/Enums';
 import StoreUser from './StoreUser';
-import { removeListUI } from '../redux/Actions';
+import { addExpressionUI, removeListUI } from '../redux/Actions';
 import contextualIdentitiesChangeInfo = browser.contextualIdentities.contextualIdentitiesChangeInfo;
-import { cadLog, getSetting } from './Libs';
+import {
+  cadLog,
+  getSetting,
+  isTemporaryContainerName,
+  TEMPORARY_CONTAINER_STORE_ID,
+} from './Libs';
 import { ReduxConstants } from '../typings/ReduxConstants';
 
 export default class ContextualIdentitiesEvents extends StoreUser {
@@ -171,6 +176,41 @@ export default class ContextualIdentitiesEvents extends StoreUser {
         type: ReduxConstants.ADD_CACHE,
       }),
     );
+
+    ContextualIdentitiesEvents.consolidateTemporaryContainerLists(
+      contextualIdentitiesObjects,
+    );
+  }
+
+  /**
+   * Temporary Containers creates short-lived cookieStoreIds. Older CAD state
+   * may therefore contain one expression list per temporary container. Merge
+   * those live legacy lists into the stable %tmp store and remove the old keys.
+   * Existing %tmp rules win if the same expression already exists.
+   */
+  private static consolidateTemporaryContainerLists(
+    contextualIdentitiesObjects: browser.contextualIdentities.ContextualIdentity[],
+  ): void {
+    const temporaryStoreIds = contextualIdentitiesObjects
+      .filter((container) => isTemporaryContainerName(container.name))
+      .map((container) => container.cookieStoreId)
+      .sort();
+
+    temporaryStoreIds.forEach((temporaryStoreId) => {
+      const expressions =
+        StoreUser.store.getState().lists[temporaryStoreId] || [];
+      expressions.forEach((expression) => {
+        StoreUser.store.dispatch(
+          addExpressionUI({
+            ...expression,
+            storeId: TEMPORARY_CONTAINER_STORE_ID,
+          }),
+        );
+      });
+      if (expressions.length > 0) {
+        StoreUser.store.dispatch(removeListUI(temporaryStoreId));
+      }
+    });
   }
 
   private static isEnabled(): boolean {
