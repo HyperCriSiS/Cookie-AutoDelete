@@ -54,11 +54,6 @@ const resolveExtensionUuid = async () => {
 };
 
 const navigateExtension = async () => {
-  // WebDriver navigation itself is content-context-only, while Firefox blocks
-  // direct content-context navigation to moz-extension:// pages. With
-  // geckodriver --allow-system-access we ask the browser UI process to load the
-  // extension URL and verify the browser chrome reached that exact URL before
-  // returning to normal content-context DOM automation.
   const target = extensionRoot();
   await driver.setContext(firefox.Context.CHROME);
   try {
@@ -94,12 +89,23 @@ const openExtensionTab = async (tabId, readyId) => {
 };
 
 const setCheckbox = async (id, wanted) => {
-  const element = await waitForElement(id);
-  const current = (await element.getAttribute('aria-checked')) === 'true';
-  if (current !== wanted) {
-    await element.click();
-    await driver.wait(async () => (await (await driver.findElement(By.id(id))).getAttribute('aria-checked')) === String(wanted), 10000);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const element = await waitForElement(id);
+      const current = (await element.getAttribute('aria-checked')) === 'true';
+      if (current === wanted) return;
+      await element.click();
+      await driver.wait(async () => {
+        const currentElement = await driver.findElement(By.id(id));
+        return (await currentElement.getAttribute('aria-checked')) === String(wanted);
+      }, 10000);
+      return;
+    } catch (error) {
+      if (!String(error?.name || error).includes('StaleElementReference')) throw error;
+      await sleep(100);
+    }
   }
+  throw new Error(`Firefox setting ${id} kept rerendering before it could be set to ${wanted}`);
 };
 
 const openSettings = async () => openExtensionTab('tabSettings', 'activeMode');
@@ -119,7 +125,10 @@ const configure = async () => {
   await delay.click();
   await delay.sendKeys(Key.chord(Key.CONTROL, 'a'));
   await delay.sendKeys('1', Key.TAB);
-  await driver.wait(async () => (await delay.getAttribute('value')) === '1', 5000);
+  await driver.wait(async () => {
+    const currentDelay = await driver.findElement(By.id('delayBeforeClean'));
+    return (await currentDelay.getAttribute('value')) === '1';
+  }, 5000);
   await sleep(300);
 };
 
@@ -166,11 +175,6 @@ const fetchCached = (token) => runSiteAsync('fetchCache', token);
 const closeSiteAndReturn = async () => {
   await driver.close();
   await driver.switchTo().window(controlHandle);
-};
-
-const inspectOrigin = async (origin) => {
-  await openSiteTab(origin);
-  return inspect();
 };
 
 const verifyCacheBaseline = (token, label) => {
@@ -223,9 +227,6 @@ try {
     );
     assert.equal(created.ok, true, `Firefox contextualIdentities/Temporary Container creation failed: ${created.error || 'unknown error'}`);
 
-    // Expressions queries contextual identities when its settings page mounts.
-    // Refresh the already loaded extension page so it sees the identities that
-    // were just created without another privileged moz-extension navigation.
     await driver.navigate().refresh();
     const expressionTab = await waitForElement('tabExpressionList');
     await driver.wait(until.elementIsVisible(expressionTab), 10000);
