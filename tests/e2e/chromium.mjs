@@ -147,31 +147,55 @@ try {
   await reporter.step('popup primary actions stay on one dynamically sized row', async () => {
     const page = await context.newPage();
     await page.goto(popupRoot());
-    await page.locator('#popupDomain').waitFor({ state: 'visible', timeout: 10000 });
+    const primaryActions = page.locator('#cadPrimaryActions');
+    await primaryActions.waitFor({ state: 'visible', timeout: 10000 });
+    await page.waitForFunction(
+      () => document.querySelectorAll('#cadPrimaryActions button').length >= 5,
+    );
+
     await page.evaluate(() => {
       document.documentElement.style.fontSize = '24px';
-      document.body.style.fontSize = '24px';
       window.dispatchEvent(new Event('resize'));
     });
     await page.waitForTimeout(250);
 
     const layout = await page.evaluate(() => {
-      const selectors = ['#cleanSiteData', '#cleanSiteDataAll', '#cleanCookies', '#cleanCookiesAll'];
-      const buttons = selectors.map((selector) => document.querySelector(selector)).filter(Boolean);
+      const row = document.querySelector('#cadPrimaryActions');
+      if (!row) return null;
+      const buttons = Array.from(row.querySelectorAll('button')).filter(
+        (button) => button.getClientRects().length > 0,
+      );
       const rects = buttons.map((button) => button.getBoundingClientRect());
+      const rowRect = row.getBoundingClientRect();
       const topValues = rects.map((rect) => Math.round(rect.top));
-      const requiredWidth = rects.reduce((sum, rect) => sum + rect.width, 0);
+      const firstTop = topValues[0];
       return {
         buttonCount: buttons.length,
-        sameRow: new Set(topValues).size === 1,
+        sameRow: topValues.every((top) => Math.abs(top - firstTop) <= 1),
         bodyWidth: document.body.getBoundingClientRect().width,
-        requiredWidth,
+        rowClientWidth: rowRect.width,
+        rowScrollWidth: row.scrollWidth,
+        allInsideRow:
+          rects.every(
+            (rect) =>
+              rect.left >= rowRect.left - 1 &&
+              rect.right <= rowRect.right + 1,
+          ),
       };
     });
 
-    assert.equal(layout.buttonCount, 4, 'Expected all four primary popup buttons to render');
+    assert.ok(layout, 'Primary popup action row did not render');
+    assert.equal(layout.buttonCount, 5, 'Expected all five top-level popup action buttons, including the clean dropdown');
     assert.equal(layout.sameRow, true, 'Primary popup buttons wrapped onto multiple rows');
-    assert.ok(layout.bodyWidth >= layout.requiredWidth, `Popup body width ${layout.bodyWidth} is smaller than required primary-action width ${layout.requiredWidth}`);
+    assert.equal(layout.allInsideRow, true, 'A primary popup button was clipped outside the action row');
+    assert.ok(
+      layout.rowClientWidth >= layout.rowScrollWidth,
+      `Primary action row still overflows: client ${layout.rowClientWidth}px < scroll ${layout.rowScrollWidth}px`,
+    );
+    assert.ok(
+      layout.bodyWidth >= layout.rowScrollWidth,
+      `Popup body width ${layout.bodyWidth}px is smaller than primary-action width ${layout.rowScrollWidth}px`,
+    );
     await page.close();
   });
 
