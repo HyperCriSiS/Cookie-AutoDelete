@@ -115,8 +115,9 @@ const configure = async () => {
   await setCheckbox('showNotificationAfterCleanup', false);
   await setCheckbox('manualNotifications', false);
   const delay = await waitForElement('delayBeforeClean');
-  await delay.clear();
-  await delay.sendKeys('1');
+  await delay.click();
+  await delay.sendKeys(Key.chord(Key.CONTROL, 'a'));
+  await delay.sendKeys('1', Key.TAB);
   await driver.wait(async () => (await delay.getAttribute('value')) === '1', 5000);
   await sleep(300);
 };
