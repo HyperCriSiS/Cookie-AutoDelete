@@ -52,6 +52,13 @@ class TestStore extends StoreUser {
     return StoreUser.store.getState().lists;
   }
 
+  public static clearLists() {
+    StoreUser.store.dispatch({
+      payload: StoreUser.store.getState().lists,
+      type: ReduxConstants.CLEAR_EXPRESSIONS,
+    });
+  }
+
   public static changeSetting(
     name: SettingID,
     value: string | boolean | number,
@@ -105,6 +112,8 @@ describe('ContextualIdentitiesEvents', () => {
   });
   afterEach(() => {
     TestStore.resetSetting();
+    TestStore.clearLists();
+    TestContextualIdentitiesEvents.setIsInitialized(false);
   });
 
   describe('init', () => {
@@ -129,6 +138,31 @@ describe('ContextualIdentitiesEvents', () => {
       expect(TestStore.getCacheValue('firefox-container-0')).toEqual(
         'Testing Container',
       );
+    });
+    it('should consolidate legacy %tmp container lists into one shared list', async () => {
+      TestStore.changeSetting(SettingID.CONTEXTUAL_IDENTITIES, true);
+      TestStore.dispatch(
+        {
+          ...wildCardWhiteListGoogle,
+          storeId: 'firefox-container-77',
+        },
+        ReduxConstants.ADD_EXPRESSION,
+      );
+      when(global.browser.contextualIdentities.query)
+        .calledWith({})
+        .mockResolvedValueOnce([
+          {
+            ...defaultContextualIdentity,
+            cookieStoreId: 'firefox-container-77',
+            name: '%tmp77',
+          },
+        ] as never);
+
+      await ContextualIdentitiesEvents.cacheCookieStoreIdNames();
+
+      expect(TestStore.getLists()).toHaveProperty('%tmp');
+      expect(TestStore.getLists()['%tmp']).toHaveLength(1);
+      expect(TestStore.getLists()).not.toHaveProperty('firefox-container-77');
     });
     it('should do nothing if contextualIdentities was already initialized', async () => {
       TestStore.changeSetting(SettingID.CONTEXTUAL_IDENTITIES, true);
