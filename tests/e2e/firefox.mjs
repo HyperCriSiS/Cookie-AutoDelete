@@ -51,7 +51,7 @@ const navigateExtension = async () => {
     await driver.executeScript(
       `const target = arguments[0];
        const principal = Services.scriptSecurityManager.getSystemPrincipal();
-       window.gBrowser.selectedBrowser.loadURI(target, { triggeringPrincipal: principal });`,
+       window.gBrowser.selectedBrowser.loadURI(Services.io.newURI(target), { triggeringPrincipal: principal });`,
       extensionRoot,
     );
   } finally {
