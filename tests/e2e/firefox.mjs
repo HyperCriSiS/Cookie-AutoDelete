@@ -29,16 +29,26 @@ let browserVersion = 'unknown';
 const options = new firefox.Options();
 options.addArguments('-headless');
 if (process.env.FIREFOX_BIN) options.setBinary(process.env.FIREFOX_BIN);
-options.setPreference(
-  'extensions.webextensions.uuids',
-  JSON.stringify({ [addonId]: extensionUuid }),
-);
+options.setPreference('extensions.webextensions.uuids', JSON.stringify({ [addonId]: extensionUuid }));
 options.setPreference('browser.shell.checkDefaultBrowser', false);
 options.setPreference('browser.startup.page', 0);
 options.setPreference('datareporting.policy.dataSubmissionEnabled', false);
 
 const service = new firefox.ServiceBuilder().addArguments('--allow-system-access');
 const extensionRoot = () => `moz-extension://${extensionUuid}/settings/settings.html`;
+const isStale = (error) => String(error?.name || error).includes('StaleElementReference');
+
+const retryDom = async (label, operation, attempts = 6) => {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isStale(error) || attempt === attempts) throw error;
+      await sleep(100);
+    }
+  }
+  throw new Error(`${label} could not complete after repeated DOM rerenders`);
+};
 
 const resolveExtensionUuid = async () => {
   await driver.setContext(firefox.Context.CHROME);
@@ -79,34 +89,48 @@ const waitForElement = async (id) => driver.wait(until.elementLocated(By.id(id))
 
 const openExtensionTab = async (tabId, readyId) => {
   await navigateExtension();
-  const tab = await waitForElement(tabId);
-  await driver.wait(until.elementIsVisible(tab), 10000);
-  await tab.click();
+  await retryDom(`open ${tabId}`, async () => {
+    const tab = await waitForElement(tabId);
+    await driver.wait(until.elementIsVisible(tab), 10000);
+    await tab.click();
+  });
   if (readyId) {
-    const ready = await waitForElement(readyId);
-    await driver.wait(until.elementIsVisible(ready), 10000);
+    await retryDom(`wait for ${readyId}`, async () => {
+      const ready = await waitForElement(readyId);
+      await driver.wait(until.elementIsVisible(ready), 10000);
+    });
   }
 };
 
-const setCheckbox = async (id, wanted) => {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+const setCheckbox = async (id, wanted) => retryDom(`set ${id}`, async () => {
+  const element = await waitForElement(id);
+  const current = (await element.getAttribute('aria-checked')) === 'true';
+  if (current !== wanted) await element.click();
+  await driver.wait(async () => {
     try {
-      const element = await waitForElement(id);
-      const current = (await element.getAttribute('aria-checked')) === 'true';
-      if (current === wanted) return;
-      await element.click();
-      await driver.wait(async () => {
-        const currentElement = await driver.findElement(By.id(id));
-        return (await currentElement.getAttribute('aria-checked')) === String(wanted);
-      }, 10000);
-      return;
+      const currentElement = await driver.findElement(By.id(id));
+      return (await currentElement.getAttribute('aria-checked')) === String(wanted);
     } catch (error) {
-      if (!String(error?.name || error).includes('StaleElementReference')) throw error;
-      await sleep(100);
+      if (isStale(error)) return false;
+      throw error;
     }
-  }
-  throw new Error(`Firefox setting ${id} kept rerendering before it could be set to ${wanted}`);
-};
+  }, 10000);
+});
+
+const setNumberInput = async (id, wanted) => retryDom(`set ${id}`, async () => {
+  const element = await waitForElement(id);
+  await element.click();
+  await element.sendKeys(Key.chord(Key.CONTROL, 'a'));
+  await element.sendKeys(String(wanted), Key.TAB);
+  await driver.wait(async () => {
+    try {
+      return (await driver.findElement(By.id(id)).getAttribute('value')) === String(wanted);
+    } catch (error) {
+      if (isStale(error)) return false;
+      throw error;
+    }
+  }, 5000);
+});
 
 const openSettings = async () => openExtensionTab('tabSettings', 'activeMode');
 
@@ -120,46 +144,50 @@ const configure = async () => {
   await setCheckbox('serviceWorkersCleanup', true);
   await setCheckbox('showNotificationAfterCleanup', false);
   await setCheckbox('manualNotifications', false);
-  const delay = await waitForElement('delayBeforeClean');
-  await delay.click();
-  await delay.sendKeys(Key.chord(Key.CONTROL, 'a'));
-  await delay.sendKeys('1', Key.TAB);
-  await driver.wait(async () => {
-    const currentDelay = await driver.findElement(By.id('delayBeforeClean'));
-    return (await currentDelay.getAttribute('value')) === '1';
-  }, 5000);
+  await setNumberInput('delayBeforeClean', 1);
   await sleep(300);
 };
 
 const addExpression = async (host, grey = false) => {
   await openExtensionTab('tabExpressionList', 'formText');
-  const input = await waitForElement('formText');
-  await input.clear();
-  if (grey) {
-    await input.sendKeys(host, Key.chord(Key.SHIFT, Key.ENTER));
-  } else {
-    await input.sendKeys(host, Key.ENTER);
-  }
-  await driver.wait(async () => (await input.getAttribute('value')) === '', 10000);
-  assert.ok((await driver.findElement(By.css('body')).getText()).includes(host), `${host} was not rendered in the Firefox expression list`);
+  await retryDom(`add expression ${host}`, async () => {
+    const input = await waitForElement('formText');
+    await input.clear();
+    await input.sendKeys(host, grey ? Key.chord(Key.SHIFT, Key.ENTER) : Key.ENTER);
+    await driver.wait(async () => {
+      try {
+        return (await driver.findElement(By.id('formText')).getAttribute('value')) === '';
+      } catch (error) {
+        if (isStale(error)) return false;
+        throw error;
+      }
+    }, 10000);
+  });
+  assert.ok(
+    (await driver.findElement(By.css('body')).getText()).includes(host),
+    `${host} was not rendered in the Firefox expression list`,
+  );
 };
 
 const readPersistedState = async () => {
-  const persistedState = await driver.executeAsyncScript(
+  const state = await driver.executeAsyncScript(
     `const done = arguments[arguments.length - 1];
      browser.storage.local.get('state')
        .then((value) => done(value.state ? JSON.parse(value.state) : {}))
        .catch((error) => done({ __error: String(error) }));`,
   );
-  assert.equal(persistedState.__error, undefined, `Unable to read persisted CAD state: ${persistedState.__error || ''}`);
-  return persistedState;
+  assert.equal(state.__error, undefined, `Unable to read persisted CAD state: ${state.__error || ''}`);
+  return state;
 };
 
 const openSiteTab = async (origin) => {
   await driver.switchTo().newWindow('tab');
   const handle = await driver.getWindowHandle();
-  await driver.get(origin + '/');
-  await driver.wait(async () => driver.executeScript('return typeof window.cadE2E?.inspect === "function";'), 10000);
+  await driver.get(`${origin}/`);
+  await driver.wait(
+    async () => driver.executeScript('return typeof window.cadE2E?.inspect === "function";'),
+    10000,
+  );
   return handle;
 };
 
@@ -207,9 +235,7 @@ try {
   await driver.get('about:blank');
   controlHandle = await driver.getWindowHandle();
 
-  await reporter.step('packaged Firefox extension starts and settings UI renders', async () => {
-    await configure();
-  });
+  await reporter.step('packaged Firefox extension starts and settings UI renders', configure);
 
   await reporter.step('Firefox contextual identities and Temporary Containers share one %tmp expression UI scope', async () => {
     const created = await driver.executeAsyncScript(
@@ -221,20 +247,22 @@ try {
          .then((containers) => done({ ok: true, ids: containers.map((container) => container.cookieStoreId) }))
          .catch((error) => done({ ok: false, error: String(error) }));`,
     );
-    assert.equal(created.ok, true, `Firefox contextualIdentities/Temporary Container creation failed: ${created.error || 'unknown error'}`);
+    assert.equal(created.ok, true, `Firefox Temporary Container creation failed: ${created.error || 'unknown error'}`);
 
     await driver.navigate().refresh();
-    const expressionTab = await waitForElement('tabExpressionList');
-    await driver.wait(until.elementIsVisible(expressionTab), 10000);
-    await expressionTab.click();
-    const formText = await waitForElement('formText');
-    await driver.wait(until.elementIsVisible(formText), 10000);
+    await retryDom('open expression list after container creation', async () => {
+      const tab = await waitForElement('tabExpressionList');
+      await driver.wait(until.elementIsVisible(tab), 10000);
+      await tab.click();
+      const formText = await waitForElement('formText');
+      await driver.wait(until.elementIsVisible(formText), 10000);
+    });
 
     const navLinks = await driver.findElements(By.css('ul.nav-tabs a.nav-link'));
     const labels = await Promise.all(navLinks.map((link) => link.getText()));
     assert.equal(labels.filter((label) => label === '%tmp').length, 1, `Expected one shared %tmp tab, got: ${labels.join(', ')}`);
-    assert.equal(labels.includes('%tmp-e2e-one'), false, 'First Temporary Container leaked into the expression tab list');
-    assert.equal(labels.includes('%tmp-e2e-two'), false, 'Second Temporary Container leaked into the expression tab list');
+    assert.equal(labels.includes('%tmp-e2e-one'), false, 'First Temporary Container leaked into the expression tabs');
+    assert.equal(labels.includes('%tmp-e2e-two'), false, 'Second Temporary Container leaked into the expression tabs');
 
     let temporaryTab;
     for (const link of navLinks) {
@@ -248,18 +276,14 @@ try {
     const input = await waitForElement('formText');
     await input.clear();
     await input.sendKeys('tmp-e2e.invalid', Key.ENTER);
-    await driver.wait(async () => (await input.getAttribute('value')) === '', 10000);
-    assert.ok((await driver.findElement(By.css('body')).getText()).includes('tmp-e2e.invalid'), 'Shared %tmp rule was not stored in the visible group');
+    await driver.wait(async () => (await driver.findElement(By.id('formText')).getAttribute('value')) === '', 10000);
+    assert.ok((await driver.findElement(By.css('body')).getText()).includes('tmp-e2e.invalid'));
 
-    const persistedState = await readPersistedState();
-    const storedLists = persistedState.lists || {};
-    assert.ok(storedLists['%tmp'], 'Shared %tmp expression list was not persisted in CAD state');
-    assert.ok(
-      storedLists['%tmp'].some((expression) => expression.expression === 'tmp-e2e.invalid'),
-      'Shared %tmp expression was missing from persisted CAD state',
-    );
+    const persisted = await readPersistedState();
+    assert.ok(persisted.lists?.['%tmp'], 'Shared %tmp expression list was not persisted');
+    assert.ok(persisted.lists['%tmp'].some((expression) => expression.expression === 'tmp-e2e.invalid'));
     for (const id of created.ids) {
-      assert.equal(storedLists[id], undefined, `Concrete Temporary Container store ${id} leaked into persistence`);
+      assert.equal(persisted.lists[id], undefined, `Concrete Temporary Container store ${id} leaked into persistence`);
     }
 
     const removed = await driver.executeAsyncScript(
@@ -274,57 +298,53 @@ try {
     await driver.get('about:blank');
   });
 
-  const closeToken = 'firefox-close';
   await reporter.step('unlisted last-tab close removes cookies and configured site data', async () => {
-    site.resetHits(closeToken);
+    const token = 'firefox-close';
+    site.resetHits(token);
     await openSiteTab(site.origin('a'));
-    assertSeeded(await seed(closeToken), 'Firefox close seed');
+    assertSeeded(await seed(token), 'Firefox close seed');
     await closeSiteAndReturn();
     await sleep(cleanupDelayMs);
-
     await openSiteTab(site.origin('a'));
     assertCleaned(await inspect(), 'Firefox last-tab cleanup');
     await closeSiteAndReturn();
   });
 
-  const domainToken = 'firefox-domain-change';
   await reporter.step('domain change removes the previous unlisted origin', async () => {
-    site.resetHits(domainToken);
+    const token = 'firefox-domain-change';
+    site.resetHits(token);
     await openSiteTab(site.origin('b'));
-    assertSeeded(await seed(domainToken), 'Firefox domain-change seed');
-    await driver.get(site.origin('a') + '/');
+    assertSeeded(await seed(token), 'Firefox domain-change seed');
+    await driver.get(`${site.origin('a')}/`);
     await sleep(cleanupDelayMs);
-
-    await driver.get(site.origin('b') + '/');
+    await driver.get(`${site.origin('b')}/`);
     assertCleaned(await inspect(), 'Firefox domain-change cleanup');
     await closeSiteAndReturn();
   });
 
-  const whitelistToken = 'firefox-whitelist';
   await reporter.step('whitelist created through real options UI retains site data', async () => {
+    const token = 'firefox-whitelist';
     await addExpression('127.0.0.1', false);
-    site.resetHits(whitelistToken);
+    site.resetHits(token);
     await openSiteTab(site.origin('a'));
-    assertSeeded(await seed(whitelistToken), 'Firefox whitelist seed');
+    assertSeeded(await seed(token), 'Firefox whitelist seed');
     await closeSiteAndReturn();
     await sleep(cleanupDelayMs);
-
     await openSiteTab(site.origin('a'));
-    assertRetained(await inspect(), whitelistToken, 'Firefox whitelist retention');
+    assertRetained(await inspect(), token, 'Firefox whitelist retention');
     await closeSiteAndReturn();
   });
 
-  const greylistToken = 'firefox-greylist';
   await reporter.step('greylist created through real options UI retains data on normal tab close', async () => {
+    const token = 'firefox-greylist';
     await addExpression('127.0.0.2', true);
-    site.resetHits(greylistToken);
+    site.resetHits(token);
     await openSiteTab(site.origin('b'));
-    assertSeeded(await seed(greylistToken), 'Firefox greylist seed');
+    assertSeeded(await seed(token), 'Firefox greylist seed');
     await closeSiteAndReturn();
     await sleep(cleanupDelayMs);
-
     await openSiteTab(site.origin('b'));
-    assertRetained(await inspect(), greylistToken, 'Firefox greylist close retention');
+    assertRetained(await inspect(), token, 'Firefox greylist close retention');
     await closeSiteAndReturn();
   });
 
@@ -333,13 +353,13 @@ try {
     assert.equal(await (await driver.findElement(By.id('activeMode'))).getAttribute('aria-checked'), 'true');
     assert.equal(await (await driver.findElement(By.id('indexedDBCleanup'))).getAttribute('aria-checked'), 'true');
 
-    const persistedState = await readPersistedState();
-    assert.equal(persistedState.settings?.activeMode?.value, true, 'Firefox activeMode was not persisted');
-    assert.equal(persistedState.settings?.indexedDBCleanup?.value, true, 'Firefox indexedDBCleanup was not persisted');
-    const persistedExpressions = Object.values(persistedState.lists || {}).flat();
-    assert.ok(persistedExpressions.some((expression) => expression.expression === '127.0.0.1'), 'Firefox whitelist entry was not persisted');
-    assert.ok(persistedExpressions.some((expression) => expression.expression === '127.0.0.2'), 'Firefox greylist entry was not persisted');
-    assert.ok(persistedExpressions.some((expression) => expression.expression === 'tmp-e2e.invalid'), 'Firefox shared %tmp entry was not persisted');
+    const persisted = await readPersistedState();
+    assert.equal(persisted.settings?.activeMode?.value, true, 'Firefox activeMode was not persisted');
+    assert.equal(persisted.settings?.indexedDBCleanup?.value, true, 'Firefox indexedDBCleanup was not persisted');
+    const expressions = Object.values(persisted.lists || {}).flat();
+    assert.ok(expressions.some((expression) => expression.expression === '127.0.0.1'), 'Firefox whitelist entry was not persisted');
+    assert.ok(expressions.some((expression) => expression.expression === '127.0.0.2'), 'Firefox greylist entry was not persisted');
+    assert.ok(expressions.some((expression) => expression.expression === 'tmp-e2e.invalid'), 'Firefox shared %tmp entry was not persisted');
     await driver.get('about:blank');
   });
 
