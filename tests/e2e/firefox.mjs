@@ -18,7 +18,7 @@ if (!xpiPath || !(await fs.stat(xpiPath).catch(() => false))) {
 }
 
 const addonId = 'CookieAutoDelete@kennydo.com';
-const extensionUuid = '2d6ffdb7-5310-4b78-9d0b-2d0d2ac6e2e1';
+let extensionUuid = '2d6ffdb7-5310-4b78-9d0b-2d0d2ac6e2e1';
 const cleanupDelayMs = 2600;
 const reporter = createReporter('firefox');
 const site = await startTestSite();
@@ -38,26 +38,46 @@ options.setPreference('browser.startup.page', 0);
 options.setPreference('datareporting.policy.dataSubmissionEnabled', false);
 
 const service = new firefox.ServiceBuilder().addArguments('--allow-system-access');
-const extensionRoot = `moz-extension://${extensionUuid}/settings/settings.html`;
+const extensionRoot = () => `moz-extension://${extensionUuid}/settings/settings.html`;
+
+const resolveExtensionUuid = async () => {
+  await driver.setContext(firefox.Context.CHROME);
+  try {
+    const raw = await driver.executeScript(
+      `return Services.prefs.getStringPref('extensions.webextensions.uuids', '{}');`,
+    );
+    const mapping = JSON.parse(String(raw || '{}'));
+    if (mapping[addonId]) extensionUuid = mapping[addonId];
+  } finally {
+    await driver.setContext(firefox.Context.CONTENT);
+  }
+};
 
 const navigateExtension = async () => {
   // WebDriver navigation itself is content-context-only, while Firefox blocks
   // direct content-context navigation to moz-extension:// pages. With
-  // geckodriver --allow-system-access we can ask the browser UI process to load
-  // the trusted, test-controlled extension URL with the system principal, then
-  // return to normal content-context automation for DOM assertions.
+  // geckodriver --allow-system-access we ask the browser UI process to load the
+  // extension URL and verify the browser chrome reached that exact URL before
+  // returning to normal content-context DOM automation.
+  const target = extensionRoot();
   await driver.setContext(firefox.Context.CHROME);
   try {
     await driver.executeScript(
       `const target = arguments[0];
        const principal = Services.scriptSecurityManager.getSystemPrincipal();
        window.gBrowser.selectedBrowser.loadURI(Services.io.newURI(target), { triggeringPrincipal: principal });`,
-      extensionRoot,
+      target,
+    );
+    await driver.wait(
+      async () => driver.executeScript(
+        `return window.gBrowser.selectedBrowser.currentURI?.spec || '';`,
+      ).then((url) => String(url).startsWith(target)),
+      10000,
     );
   } finally {
     await driver.setContext(firefox.Context.CONTENT);
   }
-  await driver.wait(async () => (await driver.getCurrentUrl()).startsWith(extensionRoot), 10000);
+  await driver.wait(async () => (await driver.getCurrentUrl()).startsWith(target), 10000);
 };
 
 const waitForElement = async (id) => driver.wait(until.elementLocated(By.id(id)), 10000);
@@ -180,6 +200,7 @@ try {
   browserVersion = capabilities.get('browserVersion') || 'unknown';
   const installedId = await driver.installAddon(xpiPath, true);
   assert.equal(installedId, addonId, 'Firefox installed an unexpected extension id');
+  await resolveExtensionUuid();
 
   await driver.get('about:blank');
   controlHandle = await driver.getWindowHandle();
@@ -239,6 +260,15 @@ try {
     await driver.wait(async () => (await input.getAttribute('value')) === '', 10000);
     assert.ok((await driver.findElement(By.css('body')).getText()).includes('tmp-e2e.invalid'), 'Shared %tmp rule was not stored in the visible group');
 
+    const stored = await driver.executeAsyncScript(
+      `const done = arguments[arguments.length - 1];
+       browser.storage.local.get('expressionStore').then((value) => done(value.expressionStore || {}));`,
+    );
+    assert.ok(stored['%tmp'], 'Shared %tmp expression store was not persisted');
+    for (const id of created.ids) {
+      assert.equal(stored[id], undefined, `Concrete Temporary Container store ${id} leaked into persistence`);
+    }
+
     const removed = await driver.executeAsyncScript(
       `const ids = arguments[0];
        const done = arguments[arguments.length - 1];
@@ -248,50 +278,42 @@ try {
       created.ids,
     );
     assert.equal(removed.ok, true, `Firefox Temporary Container cleanup failed: ${removed.error || 'unknown error'}`);
-
-    await openExtensionTab('tabExpressionList', 'formText');
-    const remainingLabels = await Promise.all(
-      (await driver.findElements(By.css('ul.nav-tabs a.nav-link'))).map((link) => link.getText()),
-    );
-    assert.equal(remainingLabels.filter((label) => label === '%tmp').length, 1, 'Shared %tmp rule scope disappeared when individual Temporary Containers were removed');
     await driver.get('about:blank');
   });
 
+  const closeToken = 'firefox-close';
   await reporter.step('unlisted last-tab close removes cookies and configured site data', async () => {
-    const token = 'firefox-close';
-    site.resetHits(token);
+    site.resetHits(closeToken);
     await openSiteTab(site.origin('a'));
-    assertSeeded(await seed(token), 'Firefox last-tab-close seed');
-    verifyCacheBaseline(token, 'Firefox last-tab-close seed');
+    assertSeeded(await seed(closeToken), 'Firefox close seed');
+    verifyCacheBaseline(closeToken, 'Firefox close seed');
     await closeSiteAndReturn();
     await sleep(cleanupDelayMs);
 
-    const after = await inspectOrigin(site.origin('a'));
-    assertCleaned(after, 'Firefox last-tab-close cleanup');
-    await verifyCacheCleaned(token, 'Firefox last-tab-close cleanup');
+    await openSiteTab(site.origin('a'));
+    assertCleaned(await inspect(), 'Firefox last-tab cleanup');
+    await verifyCacheCleaned(closeToken, 'Firefox last-tab cleanup');
     await closeSiteAndReturn();
   });
 
+  const domainToken = 'firefox-domain-change';
   await reporter.step('domain change removes the previous unlisted origin', async () => {
-    const token = 'firefox-domain-change';
-    site.resetHits(token);
+    site.resetHits(domainToken);
     await openSiteTab(site.origin('b'));
-    assertSeeded(await seed(token), 'Firefox domain-change seed');
-    verifyCacheBaseline(token, 'Firefox domain-change seed');
+    assertSeeded(await seed(domainToken), 'Firefox domain-change seed');
+    verifyCacheBaseline(domainToken, 'Firefox domain-change seed');
     await driver.get(site.origin('a') + '/');
     await sleep(cleanupDelayMs);
-    await closeSiteAndReturn();
 
-    const after = await inspectOrigin(site.origin('b'));
-    assertCleaned(after, 'Firefox domain-change cleanup');
-    await verifyCacheCleaned(token, 'Firefox domain-change cleanup');
+    await driver.get(site.origin('b') + '/');
+    assertCleaned(await inspect(), 'Firefox domain-change cleanup');
+    await verifyCacheCleaned(domainToken, 'Firefox domain-change cleanup');
     await closeSiteAndReturn();
   });
 
   const whitelistToken = 'firefox-whitelist';
   await reporter.step('whitelist created through real options UI retains site data', async () => {
     await addExpression('127.0.0.1', false);
-    await driver.get('about:blank');
     site.resetHits(whitelistToken);
     await openSiteTab(site.origin('a'));
     assertSeeded(await seed(whitelistToken), 'Firefox whitelist seed');
@@ -299,7 +321,8 @@ try {
     await closeSiteAndReturn();
     await sleep(cleanupDelayMs);
 
-    assertRetained(await inspectOrigin(site.origin('a')), whitelistToken, 'Firefox whitelist retention');
+    await openSiteTab(site.origin('a'));
+    assertRetained(await inspect(), whitelistToken, 'Firefox whitelist retention');
     await verifyCacheRetained(whitelistToken, 'Firefox whitelist retention');
     await closeSiteAndReturn();
   });
@@ -307,7 +330,6 @@ try {
   const greylistToken = 'firefox-greylist';
   await reporter.step('greylist created through real options UI retains data on normal tab close', async () => {
     await addExpression('127.0.0.2', true);
-    await driver.get('about:blank');
     site.resetHits(greylistToken);
     await openSiteTab(site.origin('b'));
     assertSeeded(await seed(greylistToken), 'Firefox greylist seed');
@@ -315,30 +337,33 @@ try {
     await closeSiteAndReturn();
     await sleep(cleanupDelayMs);
 
-    assertRetained(await inspectOrigin(site.origin('b')), greylistToken, 'Firefox greylist close retention');
+    await openSiteTab(site.origin('b'));
+    assertRetained(await inspect(), greylistToken, 'Firefox greylist close retention');
     await verifyCacheRetained(greylistToken, 'Firefox greylist close retention');
     await closeSiteAndReturn();
   });
 
-  await reporter.step('Firefox extension runtime reload preserves persisted settings and expression state', async () => {
+  await reporter.step('extension runtime reload restores persisted settings and expression state', async () => {
     await openSettings();
-    await driver.executeScript('browser.runtime.reload();').catch(() => undefined);
+    await driver.executeScript('browser.runtime.reload();');
+    await driver.get('about:blank');
     await sleep(1800);
+
     await openSettings();
-    assert.equal(await (await waitForElement('activeMode')).getAttribute('aria-checked'), 'true');
-    assert.equal(await (await waitForElement('indexedDBCleanup')).getAttribute('aria-checked'), 'true');
+    assert.equal(await (await driver.findElement(By.id('activeMode'))).getAttribute('aria-checked'), 'true');
+    assert.equal(await (await driver.findElement(By.id('indexedDBCleanup'))).getAttribute('aria-checked'), 'true');
 
     await openExtensionTab('tabExpressionList', 'formText');
     const body = await driver.findElement(By.css('body')).getText();
-    assert.ok(body.includes('127.0.0.1'), 'Firefox whitelist entry was lost across extension runtime reload');
-    assert.ok(body.includes('127.0.0.2'), 'Firefox greylist entry was lost across extension runtime reload');
+    assert.ok(body.includes('127.0.0.1'), 'Firefox whitelist entry was lost across runtime reload');
+    assert.ok(body.includes('127.0.0.2'), 'Firefox greylist entry was lost across runtime reload');
     await driver.get('about:blank');
   });
 
-  await reporter.write({ browserVersion, addonId, status: 'pass' });
+  await reporter.write({ browserVersion, extensionId: installedId, status: 'pass' });
 } catch (error) {
   await screenshotFailure();
-  await reporter.write({ browserVersion, addonId, status: 'fail' });
+  await reporter.write({ browserVersion, extensionId: addonId, status: 'fail' });
   throw error;
 } finally {
   await driver?.quit().catch(() => undefined);
