@@ -23,6 +23,7 @@ import { generateId } from './IdService';
 
 /* --- CONSTANTS --- */
 export const CADCOOKIENAME = 'CookieAutoDeleteBrowsingDataCleanup';
+export const TEMPORARY_CONTAINER_STORE_ID = '%tmp';
 export const SITEDATATYPES = [
   SiteDataType.CACHE,
   SiteDataType.INDEXEDDB,
@@ -32,6 +33,15 @@ export const SITEDATATYPES = [
 ];
 
 /* --- FUNCTIONS --- */
+
+/**
+ * Temporary Containers uses short-lived Firefox container IDs whose names
+ * start with "%tmp".  Treat them as one logical expression store so rules
+ * survive container churn and apply to every temporary container.
+ */
+export const isTemporaryContainerName = (name: unknown): boolean =>
+  typeof name === 'string' && name.trim().toLowerCase().startsWith('%tmp');
+
 /**
  * Console Log Outputs - Mostly For Debugging
  */
@@ -477,9 +487,14 @@ export const getSetting = (
  * Gets a sanitized cookieStoreId
  */
 export const getStoreId = (state: State, storeId: string): string => {
+  const contextualIdentitiesEnabled = getSetting(
+    state,
+    SettingID.CONTEXTUAL_IDENTITIES,
+  ) as boolean;
+
   if (
     storeId === 'firefox-default' ||
-    (!getSetting(state, SettingID.CONTEXTUAL_IDENTITIES) &&
+    (!contextualIdentitiesEnabled &&
       storeId !== 'firefox-private' &&
       isFirefox(state.cache)) ||
     (isChrome(state.cache) && storeId === '0') ||
@@ -489,6 +504,12 @@ export const getStoreId = (state: State, storeId: string): string => {
   }
   if (isChrome(state.cache) && storeId === '1') {
     return 'private';
+  }
+  if (
+    contextualIdentitiesEnabled &&
+    isTemporaryContainerName(state.cache[storeId])
+  ) {
+    return TEMPORARY_CONTAINER_STORE_ID;
   }
 
   return storeId;
