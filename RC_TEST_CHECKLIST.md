@@ -10,24 +10,24 @@ Former candidate `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `94322525
 
 ### Pinned technical release candidate
 
-- Technical RC source: `7fc3dd14bc2c82464ccaf24ebada6493dff76b0c`
+- Technical RC source: `be91e59f3013569687dcf9a08c5fbb5d7a381814`
 - Base SHA (`3.X.X-Branch`): `3e061b7f77175e536ff664788f3e6692ac6540e8`
-- CI pull-request run: `32644238045`
-- `release-candidate-packages` artifact: `9494441111`
-- Artifact wrapper digest: `sha256:b482c9a7d9a90bca727d84275001c95de9def717aab3aa865a1baa7ddfdae4b8`
-- Firefox package: `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Firefox.xpi`
-- Chromium package: `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Chrome.zip`
-- Firefox convenience artifact: `9494441599`
-- Chromium convenience artifact: `9494442021`
-- Firefox E2E results artifact: `9494435062`
-- Chromium E2E results artifact: `9494438468`
+- CI pull-request run: `32678681488`
+- `release-candidate-packages` artifact: `9503496423`
+- Artifact wrapper digest: `sha256:07d57d72865d4878db789f96eac90cf881146267348386363322f454d0b66c09`
+- Firefox package: `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Firefox.xpi`
+- Chromium package: `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Chrome.zip`
+- Firefox convenience artifact: `9503496653`
+- Chromium convenience artifact: `9503496820`
+- Firefox E2E results artifact: `9503492776`
+- Chromium E2E results artifact: `9503495005`
 - Chromium E2E: ✅
 - Firefox E2E: ✅
 - Fast CI/build/package validation: ✅
 - CodeQL / Actions / JavaScript-TypeScript analysis: ✅
-- Genuine historical-profile/export result: pending suitable data
+- Genuine historical-user-data regression: ✅ Firefox issue #197 (CAD 2.0.1 persisted state) + Chromium issue #1606 (CAD 3.8.2 settings snapshot); packaged upgrade/restart remains pending
 
-`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `7fc3dd14…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
+`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `be91e59f…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
 
 The separate `github-advanced-security` AI-agent check still fails before repository analysis because its requested hosted model is unavailable. It remains non-blocking while repository-owned CI/CodeQL are green.
 
@@ -71,12 +71,12 @@ A whole-extension runtime reload is not used as a background-lifecycle proxy in 
 Reproducible local verification for the pinned candidate:
 
 ```bash
-gh run download 32644238045 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-7fc3dd1
-cd cad-rc-7fc3dd1
+gh run download 32678681488 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-be91e59
+cd cad-rc-be91e59
 sha256sum -c SHA256SUMS.txt
 ```
 
-The command must report `OK` for both `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260823_140402_7fc3dd1_Chrome.zip`. Do not substitute the GitHub artifact-wrapper digest for these inner package checksums. Artifact `9494441111` was reconfirmed as available and unexpired on 2026-08-23.
+The command must report `OK` for both `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Chrome.zip`. Do not substitute the GitHub artifact-wrapper digest for these inner package checksums. Artifact `9503496423` was reconfirmed as available and unexpired on 2026-08-24.
 - [x] PR #1 still targets recorded base `3e061b7f77175e536ff664788f3e6692ac6540e8`; no newer base has been observed during RC qualification.
 
 ## Minimal manual packaged smoke
@@ -102,9 +102,9 @@ Do not manually repeat the data-cleanup/list matrices already proven by E2E unle
 
 ## Genuine historical-profile / export upgrade
 
-Release-derived 3.0.2 / 3.4.0 / 3.6.0 fixtures already protect schema migration in CI, but they **do not** satisfy this gate.
+Release-derived 3.0.2 / 3.4.0 / 3.6.0 fixtures protect schema migration in CI. In addition, genuine public user data now passes automated migration regression: Firefox issue #197 provides a CAD 2.0.1 persisted state and Chromium issue #1606 provides a CAD 3.8.2 core-settings snapshot. The browser-level gate below still requires the exact packaged RC and restart path.
 
-For representative historical data, where available:
+Using the committed genuine-user fixtures/evidence:
 
 - [ ] Back up the profile/export and record old CAD version if known.
 - [ ] Record representative non-default cleanup settings and white-/greylist entries.
@@ -115,14 +115,14 @@ For representative historical data, where available:
 - [ ] Restart and confirm migrated state remains stable.
 - [ ] Record any dropped or rewritten value.
 
-If suitable genuine data is unavailable, leave the gate open unless an explicit project decision documents why it is unobtainable and what compensating evidence is accepted.
+The data-availability blocker is resolved. Leave this gate open until the exact packaged RC has been exercised through the browser-level upgrade/restart path; automated fixture validation alone is intentionally insufficient.
 
 ## Result record
 
 | Browser | Version / OS | Automated E2E | SHA256 | Visual/permission | Full startup | Historical upgrade | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Firefox | pending | GitHub Actions ✅ | pending | pending | pending | pending | packaged XPI E2E green |
-| Chromium | pending | GitHub Actions ✅ | pending | pending | pending | pending | packaged ZIP E2E green |
+| Firefox | pending | GitHub Actions ✅ | pending | pending | pending | automated genuine-user regression ✅; packaged upgrade pending | upstream #197 / CAD 2.0.1 state |
+| Chromium | pending | GitHub Actions ✅ | pending | pending | pending | automated genuine-user regression ✅; packaged upgrade pending | upstream #1606 / CAD 3.8.2 settings snapshot |
 
 ## Release decision
 
@@ -131,7 +131,7 @@ If suitable genuine data is unavailable, leave the gate open unless an explicit 
 - [ ] Downloaded package SHA256 verification is confirmed.
 - [ ] Minimal visual/permission smoke is green in both browser families.
 - [ ] Residual full-browser-startup checks are green.
-- [ ] Genuine historical upgrade evidence is green, or an explicit compensating-evidence decision exists.
+- [ ] Exact-RC packaged historical upgrade + restart evidence is green in both browser families (automated genuine-user migration regression is already green).
 - [ ] PR #1 is mergeable against the current base with no unresolved conflicts/blocking functional checks.
 - [ ] No candidate-affecting change occurred after the pinned SHA without replacement validation.
 - [ ] Only then merge `modernization-p0` into `3.X.X-Branch`.
