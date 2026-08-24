@@ -10,24 +10,25 @@ Former candidate `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `94322525
 
 ### Pinned technical release candidate
 
-- Technical RC source: `be91e59f3013569687dcf9a08c5fbb5d7a381814`
+- Technical RC source: `c7492fe4ff72872c455d3bc18d4ed22fa4d0f219`
 - Base SHA (`3.X.X-Branch`): `3e061b7f77175e536ff664788f3e6692ac6540e8`
-- CI pull-request run: `32678681488`
-- `release-candidate-packages` artifact: `9503496423`
-- Artifact wrapper digest: `sha256:07d57d72865d4878db789f96eac90cf881146267348386363322f454d0b66c09`
-- Firefox package: `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Firefox.xpi`
-- Chromium package: `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Chrome.zip`
-- Firefox convenience artifact: `9503496653`
-- Chromium convenience artifact: `9503496820`
-- Firefox E2E results artifact: `9503492776`
-- Chromium E2E results artifact: `9503495005`
+- CI pull-request run: `32679074620`
+- `release-candidate-packages` artifact: `9503607308`
+- Artifact wrapper digest: `sha256:b66a56243acb4b013e4000bdaf0ce5654166f73f668c74e6f3f9cc39d73a80c1`
+- Firefox package: `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Firefox.xpi`
+- Chromium package: `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Chrome.zip`
+- Firefox convenience artifact: `9503607675`
+- Chromium convenience artifact: `9503608005`
+- Firefox E2E results artifact: `9503600671`
+- Chromium E2E results artifact: `9503605187`
 - Chromium E2E: ✅
 - Firefox E2E: ✅
 - Fast CI/build/package validation: ✅
+- Published-RC artifact download + inner SHA256 roundtrip: ✅ (`Verify Release Candidate Download`, job `97292731483`)
 - CodeQL / Actions / JavaScript-TypeScript analysis: ✅
 - Genuine historical-user-data regression: ✅ Firefox issue #197 (CAD 2.0.1 persisted state) + Chromium issue #1606 (CAD 3.8.2 settings snapshot); packaged upgrade/restart remains pending
 
-`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `be91e59f…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
+`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `c7492fe4…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
 
 The separate `github-advanced-security` AI-agent check still fails before repository analysis because its requested hosted model is unavailable. It remains non-blocking while repository-owned CI/CodeQL are green.
 
@@ -66,17 +67,17 @@ A whole-extension runtime reload is not used as a background-lifecycle proxy in 
 
 - [x] `Release Candidate Packages` ran after both browser E2E jobs on the exact technical RC source.
 - [x] Artifact publication succeeded with one Chromium package, one Firefox package and `SHA256SUMS.txt` configured as required inputs.
-- [ ] Verify the downloaded Firefox and Chromium package files against `SHA256SUMS.txt` before residual manual testing.
+- [x] Published `release-candidate-packages` artifact was downloaded again by a separate downstream CI job and both Firefox/Chromium package files verified against `SHA256SUMS.txt`.
 
-Reproducible local verification for the pinned candidate:
+Optional reproducible local cross-check for the pinned candidate:
 
 ```bash
-gh run download 32678681488 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-be91e59
-cd cad-rc-be91e59
+gh run download 32679074620 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-c7492fe
+cd cad-rc-c7492fe
 sha256sum -c SHA256SUMS.txt
 ```
 
-The command must report `OK` for both `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Chrome.zip`. Do not substitute the GitHub artifact-wrapper digest for these inner package checksums. Artifact `9503496423` was reconfirmed as available and unexpired on 2026-08-24.
+CI job `Verify Release Candidate Download` already performed this exact artifact roundtrip successfully. The optional command should likewise report `OK` for both `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Chrome.zip`. The GitHub artifact-wrapper digest is recorded separately and is not substituted for the inner package checksums.
 - [x] PR #1 still targets recorded base `3e061b7f77175e536ff664788f3e6692ac6540e8`; no newer base has been observed during RC qualification.
 
 ## Minimal manual packaged smoke
@@ -121,14 +122,14 @@ The data-availability blocker is resolved. Leave this gate open until the exact 
 
 | Browser | Version / OS | Automated E2E | SHA256 | Visual/permission | Full startup | Historical upgrade | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Firefox | pending | GitHub Actions ✅ | pending | pending | pending | automated genuine-user regression ✅; packaged upgrade pending | upstream #197 / CAD 2.0.1 state |
-| Chromium | pending | GitHub Actions ✅ | pending | pending | pending | automated genuine-user regression ✅; packaged upgrade pending | upstream #1606 / CAD 3.8.2 settings snapshot |
+| Firefox | pending | GitHub Actions ✅ | CI roundtrip ✅ | pending | pending | automated genuine-user regression ✅; packaged upgrade pending | upstream #197 / CAD 2.0.1 state |
+| Chromium | pending | GitHub Actions ✅ | CI roundtrip ✅ | pending | pending | automated genuine-user regression ✅; packaged upgrade pending | upstream #1606 / CAD 3.8.2 settings snapshot |
 
 ## Release decision
 
 - [x] Fast CI, package validation, Chromium E2E and Firefox E2E are green for one exact technical candidate SHA.
 - [x] Same-source `release-candidate-packages` provenance is confirmed.
-- [ ] Downloaded package SHA256 verification is confirmed.
+- [x] Published-artifact download and inner package SHA256 verification are confirmed by a separate downstream CI job.
 - [ ] Minimal visual/permission smoke is green in both browser families.
 - [ ] Residual full-browser-startup checks are green.
 - [ ] Exact-RC packaged historical upgrade + restart evidence is green in both browser families (automated genuine-user migration regression is already green).

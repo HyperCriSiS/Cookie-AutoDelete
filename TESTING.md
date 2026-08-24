@@ -130,8 +130,13 @@ Regular CI is ordered so an RC cannot be published before the exact packages hav
    - requires both browser jobs + fast CI to be green
    - republishes the same already-tested package bytes
    - adds `SHA256SUMS.txt`
+5. **Verify Release Candidate Download** (PR only)
+   - runs only after RC artifact publication
+   - downloads `release-candidate-packages` again through GitHub Actions artifact storage
+   - requires exactly one Chromium ZIP, one Firefox XPI and a two-line `SHA256SUMS.txt`
+   - runs `sha256sum -c SHA256SUMS.txt` against the downloaded package bytes
 
-Both E2E jobs upload machine-readable result JSON; failure screenshots are uploaded where possible.
+Both E2E jobs upload machine-readable result JSON; failure screenshots are uploaded where possible. The RC download-verification job makes artifact roundtrip integrity a repository-owned automated release gate rather than a manual checksum prerequisite.
 
 ## Local E2E
 

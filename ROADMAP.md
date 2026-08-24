@@ -13,12 +13,12 @@ Modernize Cookie AutoDelete into a robust cross-browser Manifest V3 extension wh
 - Development/integration branch: `modernization-p0`
 - Draft PR: #1 → `3.X.X-Branch`
 - Validated base: `3e061b7f77175e536ff664788f3e6692ac6540e8`
-- Pinned technical RC source: `be91e59f3013569687dcf9a08c5fbb5d7a381814`
-- Qualified pull-request CI run: `32678681488`
-- `release-candidate-packages` artifact: `9503496423`
-- Artifact wrapper digest: `sha256:07d57d72865d4878db789f96eac90cf881146267348386363322f454d0b66c09`
-- Firefox package: `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Firefox.xpi`
-- Chromium package: `Cookie-AutoDelete_Dev_20260824_010631_be91e59_Chrome.zip`
+- Pinned technical RC source: `c7492fe4ff72872c455d3bc18d4ed22fa4d0f219`
+- Qualified pull-request CI run: `32679074620`
+- `release-candidate-packages` artifact: `9503607308`
+- Artifact wrapper digest: `sha256:b66a56243acb4b013e4000bdaf0ce5654166f73f668c74e6f3f9cc39d73a80c1`
+- Firefox package: `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Firefox.xpi`
+- Chromium package: `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Chrome.zip`
 - Former RC `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `9432252522`: **superseded**
 - Only draft modernization PR #1 is currently intended to remain open.
 
@@ -28,13 +28,14 @@ For the exact technical RC source, all repository-owned automated qualification 
 - `Browser E2E — Firefox` ✅
 - `Browser E2E — Chromium` ✅
 - `Release Candidate Packages` ✅
+- `Verify Release Candidate Download` ✅ — published artifact downloaded again and both inner packages match `SHA256SUMS.txt`
 - CodeQL ✅
 - Actions analysis ✅
 - JavaScript/TypeScript analysis ✅
 
 The separate GitHub Advanced Security AI-agent check can still fail before repository analysis because its hosted model is unavailable. This remains external to repository functionality while the repository-owned security/CI checks above are green.
 
-Documentation-only commits after `be91e59f…` do not change the tested package bytes and therefore do not invalidate this technical RC. Any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure or base change requires a replacement candidate.
+Documentation-only commits after `c7492fe4…` do not change the tested package bytes and therefore do not invalidate this technical RC. Any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure or base change requires a replacement candidate.
 
 ## Engineering principles
 
@@ -62,7 +63,7 @@ Documentation-only commits after `be91e59f…` do not change the tested package 
 - [x] Keep repository-owned CodeQL / JavaScript-TypeScript / Actions analysis green.
 - [x] Harden `pull_request_target` prechecks against transient/non-JSON GitHub API responses.
 - [x] Avoid duplicate full Push + PR browser matrices on feature/development branches.
-- [x] Ignore Markdown-only changes for expensive browser CI and cancel superseded PR runs automatically.
+- [x] Support explicit `[ci skip]` maintenance commits, avoid duplicate Push + PR browser matrices on development branches, and cancel superseded PR runs automatically. PR-level `paths-ignore` is not treated as a reliable latest-commit detector once a PR already contains code changes.
 
 ## Phase 2 — migration and behavioral compatibility
 
@@ -172,11 +173,11 @@ Firefox MV3 uses `background.scripts` here. A whole-extension `browser.runtime.r
 
 ### Replacement technical RC qualification ✅
 
-- [x] Exact source `be91e59f3013569687dcf9a08c5fbb5d7a381814` passes fast CI, Chromium E2E and Firefox E2E.
-- [x] Downstream `Release Candidate Packages` succeeds in PR run `32678681488`.
-- [x] Technical RC artifact `9503496423` is pinned with wrapper digest `sha256:07d57d72865d4878db789f96eac90cf881146267348386363322f454d0b66c09`.
+- [x] Exact source `c7492fe4ff72872c455d3bc18d4ed22fa4d0f219` passes fast CI, Chromium E2E and Firefox E2E.
+- [x] Downstream `Release Candidate Packages` succeeds in PR run `32679074620`.
+- [x] Technical RC artifact `9503607308` is pinned with wrapper digest `sha256:b66a56243acb4b013e4000bdaf0ce5654166f73f668c74e6f3f9cc39d73a80c1`.
 - [x] Browser-specific artifacts/results are recorded in `RC_TEST_CHECKLIST.md`.
-- [ ] Verify downloaded package files against the included `SHA256SUMS.txt` before residual manual testing.
+- [x] Download the published `release-candidate-packages` artifact again in a separate downstream job and verify both package files against the included `SHA256SUMS.txt`.
 
 ### Residual manual/historical release gates ⏳
 
@@ -198,10 +199,9 @@ Firefox MV3 uses `background.scripts` here. A whole-extension `browser.runtime.r
 
 1. **Residual manual smoke:** visual/permission sanity and normally-installed full-startup paths in Firefox/Chromium.
 2. **Packaged historical upgrade smoke:** genuine Firefox/Chromium user-data fixtures now exist and pass automated migration regression; the exact-RC browser-level upgrade + restart check remains open.
-3. **Downloaded-package checksum verification:** verify the exact RC package files against `SHA256SUMS.txt` before manual use.
-4. **Firefox selective HTTP cache:** browser-platform limitation; CAD must not substitute a destructive global cache clear.
-5. **External GHAS AI agent:** may fail before repository analysis because of unavailable hosted model; non-blocking only while repository-owned CI/CodeQL are green.
+3. **Firefox selective HTTP cache:** browser-platform limitation; CAD must not substitute a destructive global cache clear.
+4. **External GHAS AI agent:** may fail before repository analysis because of unavailable hosted model; non-blocking only while repository-owned CI/CodeQL are green.
 
 ## Completion status
 
-**Not complete.** Phases 0, 1, 2 and 3 are now complete, including automated migration regression against genuine public historical Firefox and Chromium user data. Phase 4 has a fully green same-source real-browser technical RC (`be91e59f…`, artifact `9503496423`) covering the packaged Firefox and Chromium matrices, grouped `%tmp` behavior, dynamic popup sizing and optimized CI orchestration. Remaining release blockers are limited to package checksum verification, minimal visual/permission smoke, genuine normally-installed startup paths and the exact-RC packaged historical upgrade/restart smoke. PR #1 remains draft; merge and tagging remain prohibited until those gates are resolved.
+**Not complete.** Phases 0, 1, 2 and 3 are now complete, including automated migration regression against genuine public historical Firefox and Chromium user data. Phase 4 has a fully green same-source real-browser technical RC (`c7492fe4…`, artifact `9503607308`) covering the packaged Firefox and Chromium matrices, grouped `%tmp` behavior, dynamic popup sizing and optimized CI orchestration. The published RC artifact now also passes an automated download/inner-SHA256 roundtrip. Remaining release blockers are limited to minimal visual/permission smoke, genuine normally-installed startup paths and the exact-RC packaged historical upgrade/restart smoke. PR #1 remains draft; merge and tagging remain prohibited until those gates are resolved.
