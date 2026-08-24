@@ -55,7 +55,7 @@ describe.each(fixtures)(
   (fixture) => {
     it('records auditable public-user provenance', () => {
       expect(fixture.metadata.kind).toMatch(
-        /^public-upstream-user-(persisted-state|settings-export)$/,
+        /^public-upstream-user-(persisted-state|settings-snapshot)$/,
       );
       expect(fixture.metadata.upstreamIssue).toBeGreaterThan(0);
       expect(fixture.metadata.sourceUrl).toBe(
