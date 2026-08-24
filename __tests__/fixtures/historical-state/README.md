@@ -38,3 +38,27 @@ A sanitized real-profile fixture must still be validated manually in the
 packaged release candidate as required by `RC_TEST_CHECKLIST.md`; this automated
 harness is an additional non-destructive regression gate, not a replacement for
 that browser-level test.
+
+## Public genuine-user fixtures
+
+Genuine public historical-user evidence lives separately in
+`../genuine-user-state/` and is exercised by
+`GenuineHistoricalUserData.regression.spec.ts`.
+
+The initial evidence set contains:
+
+- Firefox 57.0b9 / CAD 2.0.1 from upstream issue #197: a verbatim persisted
+  Redux state posted by the user, including a real Firefox-container whitelist,
+  counters, legacy setting shapes/value types, and container cache entries.
+- Google Chrome 119.0.6045.160 / CAD 3.8.2 from upstream issue #1606: the real
+  CAD core-settings values posted by the user. The fixture only performs the
+  mechanical name-to-key transformation needed to feed those exported values
+  through the persisted-state migration harness; no user values are invented.
+
+Both source issues are public. The committed evidence contains no cookies,
+credentials, tokens, browsing history, private domains, or personal profile
+paths. Provenance and source form are recorded in each fixture.
+
+This closes the gap in **automated** migration evidence between release-derived
+schemas and genuine user data. It does not replace the packaged/manual upgrade
+and restart checks in `RC_TEST_CHECKLIST.md`.
