@@ -7,7 +7,7 @@ This file defines **how** Cookie AutoDelete is tested. `ROADMAP.md` tracks proje
 1. **Static / build** — locked install, TypeScript, lint, production builds, manifest/archive validation.
 2. **Unit + regression** — fast Jest coverage for reducers/services, migration rules and browser-lifecycle logic using controlled WebExtension mocks.
 3. **Real-browser E2E** — the actual packaged Firefox XPI / Chromium ZIP runs in real desktop browsers against a local deterministic test site.
-4. **Historical upgrade** — release-derived schema fixtures in CI plus genuine archived user profiles/exports when available.
+4. **Historical upgrade** — release-derived schema fixtures plus genuine public historical user-data snapshots in CI, with exact-RC packaged/browser upgrade + restart retained as a release smoke.
 5. **Minimal manual smoke** — only browser chrome, permission/install UX, full-startup paths the CI install model cannot faithfully reproduce, and visual sanity.
 
 Do not treat a unit test as proof that a browser really removed site data. Conversely, do not force a browser E2E test to simulate a lifecycle that its temporary/sideloaded install model cannot represent faithfully.
@@ -35,7 +35,7 @@ Port 80 is intentional. CAD cleanup is hostname-oriented; using the normal HTTP 
 
 `__tests__/` remains the fast logic layer. Targeted `*.regression.spec.*` files are retained when they document a concrete previous failure mode; apparent overlap alone is not a reason to delete them.
 
-Historical state fixtures for 3.0.2, 3.4.0 and 3.6.0 protect migration logic but **do not** count as genuine historical-profile validation.
+Historical release-state fixtures for 3.0.2, 3.4.0 and 3.6.0 are complemented by genuine public historical user-data fixtures from upstream issues #197 (Firefox / CAD 2.0.1 persisted state) and #1606 (Chromium / CAD 3.8.2 settings snapshot). All run through the production hydration/normalization path and a second persistence/hydration cycle.
 
 Local fast validation:
 
@@ -167,11 +167,16 @@ GitHub Actions installs its own browser runtimes and prepares the port capabilit
 
 Release-derived 3.0.2 / 3.4.0 / 3.6.0 persisted-state fixtures exercise the production migration path for both browser families and remain mandatory CI regressions.
 
-### Genuine user data
+Genuine public historical-user evidence is also committed separately and exercised by `GenuineHistoricalUserData.regression.spec.ts`:
 
-A real historical profile/export may expose storage encoding and settings/list combinations that schema fixtures cannot reproduce. If suitable privacy-safe archived data exists, upgrade it in a disposable profile without clearing extension storage and record the result in `RC_TEST_CHECKLIST.md`.
+- upstream issue #197: Firefox 57.0b9 / CAD 2.0.1 verbatim persisted Redux state, including a real container whitelist, counters, legacy setting shapes/value types and container cache;
+- upstream issue #1606: Google Chrome 119.0.6045.160 / CAD 3.8.2 user-posted core-settings snapshot, mechanically keyed for the persistence harness without inventing user values.
 
-Never mark this gate complete from synthetic fixtures alone.
+The regression verifies that user-provided lists/settings/counters survive production hydration and `validateSettings()` normalization, that current defaults fill later-added settings without destructive reset, and that the normalized result survives a second persistence/hydration cycle.
+
+### Packaged/browser historical smoke
+
+Automated genuine-user migration coverage does not prove the exact packaged RC installation/upgrade and browser-restart path. Use the committed genuine evidence in a disposable browser/profile workflow without clearing extension storage and record the result in `RC_TEST_CHECKLIST.md`. This remains a release gate until exercised on the pinned RC.
 
 ## What remains manual
 
@@ -181,7 +186,7 @@ Manual release work is intentionally limited to:
 - browser permission/install UX
 - Firefox full browser startup with a normally installed candidate
 - Chromium greylist startup cleanup with an already installed/loaded candidate
-- genuine historical profile/export upgrades until reproducible fixtures exist
+- exact-RC packaged historical upgrade + restart smoke using the committed genuine-user evidence
 - platform-specific release claims not represented by desktop Linux E2E, e.g. Firefox Android
 
 Any repeatable functional defect found manually should become an automated regression/E2E test before being considered fixed.
