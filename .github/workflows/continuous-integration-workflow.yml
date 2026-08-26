@@ -80,11 +80,6 @@ jobs:
             ${{ runner.os }}-node24-e2e-npm-
       - name: Install isolated E2E dependencies
         run: npm run test:e2e:install
-      - name: Cache Playwright Chromium
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('tests/e2e/package.json') }}
       - name: Install Playwright Chromium and Linux dependencies
         run: npm --prefix tests/e2e exec -- playwright install --with-deps chromium
       - name: Allow the controlled E2E server to bind HTTP port 80
