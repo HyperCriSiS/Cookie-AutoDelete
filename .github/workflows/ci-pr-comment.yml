@@ -8,6 +8,10 @@ on:
     branches-ignore:
       - '_archived__**'
 
+concurrency:
+  group: pr-results-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: read
