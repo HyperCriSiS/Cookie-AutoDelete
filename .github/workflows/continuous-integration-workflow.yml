@@ -2,14 +2,18 @@ name: CI
 
 on:
   push:
-    branches-ignore:
-      - '_archived__**'
-      - 'l10n_*'
+    branches:
+      - '3.X.X-Branch'
+    paths-ignore:
+      - '**/*.md'
+  pull_request:
+    branches:
+      - '3.X.X-Branch'
     paths-ignore:
       - '**/*.md'
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -19,6 +23,7 @@ jobs:
   all_jobs:
     name: Tests, Builds, Coverage
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'l10n_') }}
     steps:
       - name: Checkout Default Commit
         uses: actions/checkout@v7
@@ -36,7 +41,7 @@ jobs:
       - name: Run Build
         run: npm run build
         env:
-          GITSHA: ${{ github.sha }}
+          GITSHA: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Archive Code Coverage Results
         uses: actions/upload-artifact@v7
         with:
