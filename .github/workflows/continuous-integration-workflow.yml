@@ -20,81 +20,18 @@ permissions:
   contents: read
 
 jobs:
-  pre_info:
-    name: Initial Checks
-    runs-on: ubuntu-latest
-    outputs:
-      skipCI: ${{ steps.checkci.outputs.result }}
-      gitSHA: ${{ steps.checkci.outputs.gitSHA }}
-    steps:
-      - name: Run CI Check
-        id: checkci
-        env:
-          GH_API: ${{ github.event.repository.commits_url }}
-          GH_TOKEN: ${{ github.token }}
-          GH_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          REF: ${{ github.head_ref || github.ref_name }}
-        run: |
-          echo "Run ID    : $GITHUB_RUN_ID"
-          echo "Event Name: $GITHUB_EVENT_NAME"
-          echo "Branch    : $REF"
-          echo "Commit SHA: $GH_SHA"
-          echo "gitSHA=$GH_SHA" >> "$GITHUB_OUTPUT"
-
-          SKIP_A=$([[ "$REF" == l10n_* ]] && echo true || echo false)
-          echo "Starts With l10n_ : $SKIP_A"
-
-          GH_API=${GH_API/'{/sha}'/}
-          RESPONSE_FILE=$(mktemp)
-          HTTP_STATUS=$(
-            curl --silent --show-error --location \
-              --header "Accept: application/vnd.github+json" \
-              --header "Authorization: Bearer $GH_TOKEN" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              --output "$RESPONSE_FILE" \
-              --write-out "%{http_code}" \
-              "$GH_API/$GH_SHA" || true
-          )
-
-          CM=""
-          if [[ "$HTTP_STATUS" == "200" ]] && \
-            jq -e '.commit.message | type == "string"' "$RESPONSE_FILE" > /dev/null 2>&1; then
-            CM=$(jq -r '.commit.message' "$RESPONSE_FILE")
-          else
-            echo "::warning::Could not read commit message from GitHub API (HTTP ${HTTP_STATUS:-unknown}); CI will run instead of failing."
-          fi
-          rm -f "$RESPONSE_FILE"
-
-          echo "Commit Message: $CM"
-          EXP_SKIP="\[ci skip\]"
-          SKIP_B=$([[ "$CM" =~ $EXP_SKIP ]] && echo true || echo false)
-          echo "Skip via Commit: $SKIP_B"
-
-          RES=$([[ $SKIP_A == true || $SKIP_B == true ]] && echo true || echo false)
-          echo "Skip CI: $RES"
-          echo "result=$RES" >> "$GITHUB_OUTPUT"
-
   all_jobs:
     name: Tests, Builds, Coverage
     runs-on: ubuntu-latest
-    needs: pre_info
-    if: needs.pre_info.outputs.skipCI == 'false'
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'l10n_') }}
     steps:
       - name: Checkout tested commit
         uses: actions/checkout@v7
       - name: Use Node.js from .nvmrc
-        id: node
         uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
-      - name: Cache npm download cache
-        id: nodeCache
-        uses: actions/cache@v6
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nodejs-${{ steps.node.outputs.node-version }}-npm-
+          cache: npm
       - name: Install locked dependencies
         run: npm ci --prefer-offline --no-fund
       - name: Run TypeScript 7 typecheck
@@ -106,7 +43,7 @@ jobs:
       - name: Run Build
         run: npm run build
         env:
-          GITSHA: ${{ needs.pre_info.outputs.gitSHA }}
+          GITSHA: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Upload packages for real-browser E2E
         uses: actions/upload-artifact@v7
         with:
@@ -126,10 +63,7 @@ jobs:
     name: Browser E2E — Chromium
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs:
-      - pre_info
-      - all_jobs
-    if: needs.pre_info.outputs.skipCI == 'false'
+    needs: all_jobs
     steps:
       - name: Checkout tested commit
         uses: actions/checkout@v7
@@ -137,8 +71,20 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Cache E2E npm downloads
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node24-e2e-npm-${{ hashFiles('tests/e2e/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node24-e2e-npm-
       - name: Install isolated E2E dependencies
         run: npm run test:e2e:install
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('tests/e2e/package.json') }}
       - name: Install Playwright Chromium and Linux dependencies
         run: npm --prefix tests/e2e exec -- playwright install --with-deps chromium
       - name: Allow the controlled E2E server to bind HTTP port 80
@@ -157,7 +103,7 @@ jobs:
       - name: Run real-browser Chromium E2E
         run: npm run test:e2e:chromium -- builds/e2e-chromium
       - name: Upload Chromium E2E diagnostics
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: browser-e2e-chromium-results
@@ -169,10 +115,7 @@ jobs:
     name: Browser E2E — Firefox
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs:
-      - pre_info
-      - all_jobs
-    if: needs.pre_info.outputs.skipCI == 'false'
+    needs: all_jobs
     steps:
       - name: Checkout tested commit
         uses: actions/checkout@v7
@@ -180,15 +123,45 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Cache E2E npm downloads
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node24-e2e-npm-${{ hashFiles('tests/e2e/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node24-e2e-npm-
       - name: Install isolated E2E dependencies
         run: npm run test:e2e:install
-      - name: Install current Mozilla Firefox
+      - name: Resolve current Firefox version
+        id: firefox-version
         run: |
-          curl --fail --location --retry 4 \
-            'https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US' \
-            --output /tmp/firefox.tar.xz
+          VERSION=$(
+            curl --fail --silent --show-error --retry 4 \
+              'https://product-details.mozilla.org/1.0/firefox_versions.json' |
+              jq -r '.LATEST_FIREFOX_VERSION'
+          )
+          test -n "$VERSION"
+          test "$VERSION" != "null"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Cache current Firefox archive
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/cad-firefox
+          key: ${{ runner.os }}-firefox-${{ steps.firefox-version.outputs.version }}
+      - name: Install current Mozilla Firefox
+        env:
+          FIREFOX_VERSION: ${{ steps.firefox-version.outputs.version }}
+        run: |
+          mkdir -p "$HOME/.cache/cad-firefox"
+          FIREFOX_ARCHIVE="$HOME/.cache/cad-firefox/firefox-${FIREFOX_VERSION}.tar.xz"
+          if [[ ! -s "$FIREFOX_ARCHIVE" ]]; then
+            curl --fail --location --retry 4 \
+              'https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US' \
+              --output "$FIREFOX_ARCHIVE"
+          fi
+          sudo rm -rf /opt/cad-firefox
           sudo mkdir -p /opt/cad-firefox
-          sudo tar -xJf /tmp/firefox.tar.xz -C /opt/cad-firefox --strip-components=1
+          sudo tar -xJf "$FIREFOX_ARCHIVE" -C /opt/cad-firefox --strip-components=1
           test -x /opt/cad-firefox/firefox
           echo 'FIREFOX_BIN=/opt/cad-firefox/firefox' >> "$GITHUB_ENV"
       - name: Allow the controlled E2E server to bind HTTP port 80
@@ -204,7 +177,7 @@ jobs:
           test -n "$FIREFOX_XPI"
           npm run test:e2e:firefox -- "$FIREFOX_XPI"
       - name: Upload Firefox E2E diagnostics
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: browser-e2e-firefox-results
@@ -216,11 +189,10 @@ jobs:
     name: Release Candidate Packages
     runs-on: ubuntu-latest
     needs:
-      - pre_info
       - all_jobs
       - browser_e2e_chromium
       - browser_e2e_firefox
-    if: github.event_name == 'pull_request' && needs.pre_info.outputs.skipCI == 'false'
+    if: github.event_name == 'pull_request'
     steps:
       - name: Download exact browser-tested packages
         uses: actions/download-artifact@v8
@@ -240,6 +212,19 @@ jobs:
             builds/*Firefox.xpi
             builds/SHA256SUMS.txt
           if-no-files-found: error
+      - name: Download published release candidate
+        uses: actions/download-artifact@v8
+        with:
+          name: release-candidate-packages
+          path: builds/rc-roundtrip
+      - name: Verify package checksums after artifact roundtrip
+        run: |
+          cd builds/rc-roundtrip
+          test -f SHA256SUMS.txt
+          test "$(find . -maxdepth 1 -name '*Chrome.zip' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -name '*Firefox.xpi' | wc -l)" -eq 1
+          test "$(wc -l < SHA256SUMS.txt)" -eq 2
+          sha256sum -c SHA256SUMS.txt
       - name: Extract browser packages for convenience artifacts
         id: extbuilds
         run: |
@@ -262,25 +247,3 @@ jobs:
         with:
           name: ${{ steps.extbuilds.outputs.crdir }}
           path: builds/${{ steps.extbuilds.outputs.crdir }}
-
-  verify_release_candidate:
-    name: Verify Release Candidate Download
-    runs-on: ubuntu-latest
-    needs:
-      - pre_info
-      - release_candidate
-    if: github.event_name == 'pull_request' && needs.pre_info.outputs.skipCI == 'false'
-    steps:
-      - name: Download published release candidate
-        uses: actions/download-artifact@v8
-        with:
-          name: release-candidate-packages
-          path: builds/rc-roundtrip
-      - name: Verify package checksums after artifact roundtrip
-        run: |
-          cd builds/rc-roundtrip
-          test -f SHA256SUMS.txt
-          test "$(find . -maxdepth 1 -name '*Chrome.zip' | wc -l)" -eq 1
-          test "$(find . -maxdepth 1 -name '*Firefox.xpi' | wc -l)" -eq 1
-          test "$(wc -l < SHA256SUMS.txt)" -eq 2
-          sha256sum -c SHA256SUMS.txt
