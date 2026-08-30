@@ -67,7 +67,7 @@ A whole-extension runtime reload is not used as a background-lifecycle proxy in 
 
 - [x] `Release Candidate Packages` ran after both browser E2E jobs on the exact technical RC source.
 - [x] Artifact publication succeeded with one Chromium package, one Firefox package and `SHA256SUMS.txt` configured as required inputs.
-- [x] Published `release-candidate-packages` artifact was downloaded again by a separate downstream CI job and both Firefox/Chromium package files verified against `SHA256SUMS.txt`.
+- [x] Published `release-candidate-packages` artifact was downloaded again inside the already-required `Release Candidate Packages` job and both Firefox/Chromium package files verified against `SHA256SUMS.txt`.
 
 Optional reproducible local cross-check for the pinned candidate:
 
@@ -129,7 +129,7 @@ The data-availability blocker is resolved. Leave this gate open until the exact 
 
 - [x] Fast CI, package validation, Chromium E2E and Firefox E2E are green for one exact technical candidate SHA.
 - [x] Same-source `release-candidate-packages` provenance is confirmed.
-- [x] Published-artifact download and inner package SHA256 verification are confirmed by a separate downstream CI job.
+- [x] Published-artifact download and inner package SHA256 verification are confirmed inside the already-required `Release Candidate Packages` job.
 - [ ] Minimal visual/permission smoke is green in both browser families.
 - [ ] Residual full-browser-startup checks are green.
 - [ ] Exact-RC packaged historical upgrade + restart evidence is green in both browser families (automated genuine-user migration regression is already green).
