@@ -127,38 +127,27 @@ jobs:
             ${{ runner.os }}-node24-e2e-npm-
       - name: Install isolated E2E dependencies
         run: npm run test:e2e:install
-      - name: Resolve current Firefox version
-        id: firefox-version
+      - name: Install current Mozilla Firefox and Firefox ESR
         run: |
-          VERSION=$(
-            curl --fail --silent --show-error --retry 4 \
-              'https://product-details.mozilla.org/1.0/firefox_versions.json' |
-              jq -r '.LATEST_FIREFOX_VERSION'
-          )
-          test -n "$VERSION"
-          test "$VERSION" != "null"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Cache current Firefox archive
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/cad-firefox
-          key: ${{ runner.os }}-firefox-${{ steps.firefox-version.outputs.version }}
-      - name: Install current Mozilla Firefox
-        env:
-          FIREFOX_VERSION: ${{ steps.firefox-version.outputs.version }}
-        run: |
-          mkdir -p "$HOME/.cache/cad-firefox"
-          FIREFOX_ARCHIVE="$HOME/.cache/cad-firefox/firefox-${FIREFOX_VERSION}.tar.xz"
-          if [[ ! -s "$FIREFOX_ARCHIVE" ]]; then
-            curl --fail --location --retry 4 \
-              'https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US' \
-              --output "$FIREFOX_ARCHIVE"
-          fi
-          sudo rm -rf /opt/cad-firefox
-          sudo mkdir -p /opt/cad-firefox
-          sudo tar -xJf "$FIREFOX_ARCHIVE" -C /opt/cad-firefox --strip-components=1
+          curl --fail --location --retry 4 \
+            'https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US' \
+            --output /tmp/cad-firefox-release.tar.xz &
+          RELEASE_PID=$!
+          curl --fail --location --retry 4 \
+            'https://download.mozilla.org/?product=firefox-esr-latest&os=linux64&lang=en-US' \
+            --output /tmp/cad-firefox-esr.tar.xz &
+          ESR_PID=$!
+          wait "$RELEASE_PID"
+          wait "$ESR_PID"
+
+          sudo rm -rf /opt/cad-firefox /opt/cad-firefox-esr
+          sudo mkdir -p /opt/cad-firefox /opt/cad-firefox-esr
+          sudo tar -xJf /tmp/cad-firefox-release.tar.xz -C /opt/cad-firefox --strip-components=1
+          sudo tar -xJf /tmp/cad-firefox-esr.tar.xz -C /opt/cad-firefox-esr --strip-components=1
           test -x /opt/cad-firefox/firefox
+          test -x /opt/cad-firefox-esr/firefox
           echo 'FIREFOX_BIN=/opt/cad-firefox/firefox' >> "$GITHUB_ENV"
+          echo 'FIREFOX_PERSISTENT_BIN=/opt/cad-firefox-esr/firefox' >> "$GITHUB_ENV"
       - name: Allow the controlled E2E server to bind HTTP port 80
         run: sudo setcap 'cap_net_bind_service=+ep' "$(readlink -f "$(command -v node)")"
       - name: Download exact packaged browser candidates
@@ -171,6 +160,11 @@ jobs:
           FIREFOX_XPI=$(find builds/e2e-packages -maxdepth 1 -name '*Firefox.xpi' -print -quit)
           test -n "$FIREFOX_XPI"
           npm run test:e2e:firefox -- "$FIREFOX_XPI"
+      - name: Run persistent-install Firefox restart E2E
+        run: |
+          FIREFOX_XPI=$(find builds/e2e-packages -maxdepth 1 -name '*Firefox.xpi' -print -quit)
+          test -n "$FIREFOX_XPI"
+          node tests/e2e/firefox-persistent.mjs "$FIREFOX_XPI"
       - name: Upload Firefox E2E diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
