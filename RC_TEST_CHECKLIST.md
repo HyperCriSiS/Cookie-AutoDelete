@@ -6,29 +6,29 @@ Do not merge PR #1 or create a tagged release until every required gate below is
 
 ## Candidate state
 
-Former candidate `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `9432252522` is **superseded**.
+Former candidate `c7492fe4ff72872c455d3bc18d4ed22fa4d0f219` / artifact `9503607308` is **superseded** by the subsequently qualified base/CI-orchestration changes. Earlier candidate `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `9432252522` is also superseded.
 
 ### Pinned technical release candidate
 
-- Technical RC source: `c7492fe4ff72872c455d3bc18d4ed22fa4d0f219`
-- Base SHA (`3.X.X-Branch`): `3e061b7f77175e536ff664788f3e6692ac6540e8`
-- CI pull-request run: `32679074620`
-- `release-candidate-packages` artifact: `9503607308`
-- Artifact wrapper digest: `sha256:b66a56243acb4b013e4000bdaf0ce5654166f73f668c74e6f3f9cc39d73a80c1`
-- Firefox package: `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Firefox.xpi`
-- Chromium package: `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Chrome.zip`
-- Firefox convenience artifact: `9503607675`
-- Chromium convenience artifact: `9503608005`
-- Firefox E2E results artifact: `9503600671`
-- Chromium E2E results artifact: `9503605187`
+- Technical RC source: `97c032f24c3aad902ad6fc28007721f61b50ee56`
+- Base SHA (`3.X.X-Branch`): `7eecf7fbc281e8e0ea8a08047c0f617d6517ad8d`
+- CI pull-request run: `32972498711`
+- `release-candidate-packages` artifact: `9608199330`
+- Artifact wrapper digest: `sha256:266910f910856f4fa039dd58e95cecc56c279e8cb8641b977d82313d0bca3adc`
+- Firefox package: `Cookie-AutoDelete_Dev_20260826_130949_97c032f_Firefox.xpi`
+- Chromium package: `Cookie-AutoDelete_Dev_20260826_130949_97c032f_Chrome.zip`
+- Firefox convenience artifact: `9608200398`
+- Chromium convenience artifact: `9608201015`
+- Firefox E2E diagnostics artifact: not emitted on success (failure-only by design)
+- Chromium E2E diagnostics artifact: not emitted on success (failure-only by design)
 - Chromium E2E: ✅
 - Firefox E2E: ✅
 - Fast CI/build/package validation: ✅
-- Published-RC artifact download + inner SHA256 roundtrip: ✅ (`Verify Release Candidate Download`, job `97292731483`)
+- Published-RC artifact download + inner SHA256 roundtrip: ✅ (integrated into `Release Candidate Packages`, job `98189883184`)
 - CodeQL / Actions / JavaScript-TypeScript analysis: ✅
 - Genuine historical-user-data regression: ✅ Firefox issue #197 (CAD 2.0.1 persisted state) + Chromium issue #1606 (CAD 3.8.2 settings snapshot); packaged upgrade/restart remains pending
 
-`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `c7492fe4…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
+`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `97c032f2…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
 
 The separate `github-advanced-security` AI-agent check still fails before repository analysis because its requested hosted model is unavailable. It remains non-blocking while repository-owned CI/CodeQL are green.
 
@@ -72,13 +72,13 @@ A whole-extension runtime reload is not used as a background-lifecycle proxy in 
 Optional reproducible local cross-check for the pinned candidate:
 
 ```bash
-gh run download 32679074620 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-c7492fe
-cd cad-rc-c7492fe
+gh run download 32972498711 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-97c032f
+cd cad-rc-97c032f
 sha256sum -c SHA256SUMS.txt
 ```
 
-CI job `Verify Release Candidate Download` already performed this exact artifact roundtrip successfully. The optional command should likewise report `OK` for both `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260824_011351_c7492fe_Chrome.zip`. The GitHub artifact-wrapper digest is recorded separately and is not substituted for the inner package checksums.
-- [x] PR #1 still targets recorded base `3e061b7f77175e536ff664788f3e6692ac6540e8`; no newer base has been observed during RC qualification.
+`Release Candidate Packages` job `98189883184` already performed this exact artifact roundtrip successfully after publishing the RC artifact. The optional command should likewise report `OK` for both `Cookie-AutoDelete_Dev_20260826_130949_97c032f_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260826_130949_97c032f_Chrome.zip`. The GitHub artifact-wrapper digest is recorded separately and is not substituted for the inner package checksums.
+- [x] Replacement RC was qualified against base `7eecf7fbc281e8e0ea8a08047c0f617d6517ad8d` and PR #1 is currently mergeable/`clean` against that base as of 2026-08-30. The final mergeability gate remains open until residual testing is complete.
 
 ## Minimal manual packaged smoke
 
