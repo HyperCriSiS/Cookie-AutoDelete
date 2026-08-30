@@ -72,38 +72,24 @@ const onStartUp = async () => {
       },
       type: ReduxConstants.ADD_CACHE,
     });
-    store.dispatch({
-      payload: {
-        key: 'browserVersion',
-        value: browserInfo.version,
-      },
-      type: ReduxConstants.ADD_CACHE,
-    });
   } else {
     browserVersion = getBrowserMajorVersionFromUserAgent(
       detectedBrowser,
-      navigator.userAgent,
+      typeof navigator !== 'undefined' ? navigator.userAgent : '',
     );
-    if (browserVersion !== undefined) {
-      store.dispatch({
-        payload: {
-          key: 'browserVersion',
-          value: browserVersion,
-        },
-        type: ReduxConstants.ADD_CACHE,
-      });
-    }
   }
 
-  const platformInfo = await browser.runtime.getPlatformInfo();
-  store.dispatch({
-    payload: {
-      key: 'platformOs',
-      value: platformInfo.os,
-    },
-    type: ReduxConstants.ADD_CACHE,
-  });
+  if (browserVersion !== undefined && Number.isFinite(browserVersion)) {
+    store.dispatch({
+      payload: {
+        key: 'browserVersion',
+        value: browserVersion,
+      },
+      type: ReduxConstants.ADD_CACHE,
+    });
+  }
 
+  // Store which browser environment in cache
   store.dispatch({
     payload: {
       key: 'browserDetect',
@@ -112,125 +98,95 @@ const onStartUp = async () => {
     type: ReduxConstants.ADD_CACHE,
   });
 
-  const validatedSettings = validateSettings(store.getState().settings);
+  // Store platform in cache
+  const platformInfo = await browser.runtime.getPlatformInfo();
   store.dispatch({
-    payload: validatedSettings,
-    type: ReduxConstants.UPDATE_SETTINGS,
+    payload: {
+      key: 'platformInfo',
+      value: platformInfo,
+    },
+    type: ReduxConstants.ADD_CACHE,
+  });
+  store.dispatch({
+    payload: {
+      key: 'platformOs',
+      value: platformInfo.os,
+    },
+    type: ReduxConstants.ADD_CACHE,
   });
 
-  statePersistence.connect(store);
+  // The store is available to initialization services now, but browser event
+  // handlers and UI requests remain gated until markReady() below.
+  StoreUser.init(store, false);
 
-  await checkIfProtected(store.getState());
+  SettingService.init();
+  store.subscribe(SettingService.onSettingsChange);
+  store.subscribe(() => statePersistence.save(store.getState()));
 
-  if (browser.contextMenus) {
-    await ContextMenuEvents.menuInit();
-  }
-
-  await ContextualIdentitiesEvents.initContainers();
-
-  const settings = store.getState().settings;
-  if (
-    getSetting(store.getState(), SettingID.CONTEXTUAL_IDENTITIES) &&
-    browser.contextualIdentities
-  ) {
-    await ContextualIdentitiesEvents.cacheContainers();
-  }
+  store.dispatch<any>(validateSettings());
 
   await setGlobalIcon(
     getSetting(store.getState(), SettingID.ACTIVE_MODE) as boolean,
-    getSetting(store.getState(), SettingID.KEEP_DEFAULT_ICON) as boolean,
   );
 
-  actionApi.setBadgeBackgroundColor({
-    color: '#900000',
-  });
+  await checkIfProtected(store.getState());
 
-  const activeModeSetting = settings[SettingID.ACTIVE_MODE];
-  const activeMode = activeModeSetting ? activeModeSetting.value : false;
+  if (browser.contextualIdentities) {
+    await ContextualIdentitiesEvents.init();
+  }
   actionApi.setTitle({
-    title: `${mf.name} ${mf.version} (${
-      activeMode ? browser.i18n.getMessage('activeModeText') : 'OFF'
-    })`,
+    title: `${mf.name} ${mf.version} [READY] (0)`,
   });
 
-  StoreUser.resolve(store);
+  // Only release synchronously registered browser listeners and UI store
+  // requests after the entire background initialization completed.
+  StoreUser.markReady();
 };
 
-const browserDetect = () => {
-  const agent = navigator.userAgent.toLowerCase();
-  if (agent.indexOf('edge') > -1) {
-    return browserName.EdgeLegacy;
-  }
-  if (agent.indexOf('edg') > -1) {
-    return browserName.EdgeChromium;
-  }
-  if (agent.indexOf('opr') > -1) {
-    return browserName.Opera;
-  }
-  if (agent.indexOf('chrome') > -1) {
-    return browserName.Chrome;
-  }
-  if (agent.indexOf('firefox') > -1) {
-    return browserName.Firefox;
-  }
-  return browserName.Unknown;
-};
+// Keeps a memory of all runtime ports for popups.  Should only be one but just in case.
+const cookiePopupPorts: browser.runtime.Port[] = [];
 
-const handleConnect = (p: browser.runtime.Port) => {
-  StoreUser.usingStore((readyStore) => {
-    readyStore.subscribe(() => {
-      p.postMessage(readyStore.getState());
-    });
-    p.postMessage(readyStore.getState());
-
-    p.onMessage.addListener((message) => {
-      readyStore.dispatch(message);
-    });
-  }).catch((error) => {
-    console.error('Cookie AutoDelete failed to connect extension UI.', error);
+async function onCookiePopupUpdates(changeInfo: {
+  removed: boolean;
+  cookie: CadCookie;
+  cause: browser.cookies.OnChangedCause;
+}) {
+  const cDomain = extractMainDomain(changeInfo.cookie.domain);
+  cookiePopupPorts.forEach((p) => {
+    if (!p.name) return;
+    if (!p.name.startsWith('popupCAD_')) return;
+    const d = p.name.split('_');
+    if (d[2] !== changeInfo.cookie.storeId || d[1] !== cDomain) return;
+    p.postMessage({
+      popupHostname: cDomain,
+      cookieUpdated: true,
+    } as CookieCountMsg);
   });
-};
+}
+
+browser.cookies.onChanged.addListener(onCookiePopupUpdates);
+
+function handleConnect(p: browser.runtime.Port) {
+  if (!p.name) return;
+  if (!p.name.startsWith('popupCAD_')) return;
+  cookiePopupPorts.push(p);
+  p.onDisconnect.addListener((pp) => {
+    const i = cookiePopupPorts.indexOf(pp);
+    if (i !== -1) {
+      cookiePopupPorts.splice(i, 1);
+    }
+  });
+}
 
 browser.runtime.onConnect.addListener(handleConnect);
 
-const cleanDomainByEvent = async (info: any, tab?: browser.tabs.Tab) => {
-  if (!tab || !tab.url) return;
-  const url = new URL(tab.url);
-  const cookieDomain = await extractMainDomain(url.hostname);
-  if (!cookieDomain) return;
-  const payload = {
-    cookieStoreId: (tab as any).cookieStoreId,
-    domain: cookieDomain,
-  };
-  store.dispatch<any>(
-    cookieCleanup({
-      ignoreOpenTabs: false,
-      ...payload,
-    }),
+if (browser.contextMenus) {
+  eventListenerActions(
+    browser.contextMenus.onClicked,
+    StoreUser.withStoreReady(ContextMenuEvents.onContextMenuClicked),
+    EventListenerAction.ADD,
   );
-};
-
-const handleEventListenerAction = async (
-  action: EventListenerAction,
-  info: any,
-  tab?: browser.tabs.Tab,
-) => {
-  switch (action) {
-    case EventListenerAction.CLEAN:
-      await cleanDomainByEvent(info, tab);
-      break;
-    case EventListenerAction.CLEAN_ALL:
-      store.dispatch<any>(cookieCleanup({ ignoreOpenTabs: true }));
-      break;
-    case EventListenerAction.CLEAN_OPEN_TABS:
-      store.dispatch<any>(cookieCleanup({ ignoreOpenTabs: false }));
-      break;
-    default:
-      break;
-  }
-};
-
-eventListenerActions(handleEventListenerAction);
+}
 
 if (browser.contextualIdentities) {
   browser.contextualIdentities.onCreated.addListener(
@@ -273,12 +229,9 @@ const handleBrowserStartup = async (): Promise<void> => {
     if (getSetting(store.getState(), SettingID.ENABLE_GREYLIST) === true) {
       let isFFSessionRestore = false;
       if (store.getState().cache.browserDetect === browserName.Firefox) {
-        // Firefox exposes an explicit session-restore page when startup is
-        // waiting for the user to restore a crashed/previous session. Only
-        // that page should suppress restart cleanup. Merely having entries in
-        // sessions.getRecentlyClosed() is normal and can survive a browser
-        // restart, so treating those entries as a restore silently skips the
-        // configured greylist cleanup.
+        // Only Firefox's explicit restore page should suppress restart cleanup.
+        // Recently closed tabs are ordinary session history and can survive a
+        // browser restart, so they are not evidence that a restore is pending.
         const startupTabs = await browser.tabs.query({ windowType: 'normal' });
         isFFSessionRestore = hasFirefoxSessionRestoreTab(startupTabs);
       }
@@ -298,22 +251,54 @@ const handleInstalled = async (details: any): Promise<void> => {
     (details.reason === 'install' || details.reason === 'update')
   ) {
     await ContextMenuEvents.menuClear();
-    await ContextMenuEvents.menuInit();
+    if (getSetting(store.getState(), SettingID.CONTEXT_MENUS)) {
+      ContextMenuEvents.menuInit();
+    }
   }
 
   switch (details.reason) {
     case 'install':
-      browser.runtime.openOptionsPage();
+      await browser.runtime.openOptionsPage();
       break;
-    case 'update':
+    case 'update': {
+      const currentVersion = convertVersionToNumber(
+        browser.runtime.getManifest().version,
+      );
+      const previousVersion = convertVersionToNumber(details.previousVersion);
+      if (previousVersion < convertVersionToNumber('3.5.0')) {
+        store.dispatch({
+          payload: {
+            name: SettingID.OLD_WHITE_CLEAN_LOCALSTORAGE,
+            value: false,
+          },
+          type: ReduxConstants.UPDATE_SETTING,
+        });
+        store.dispatch({
+          payload: {
+            name: SettingID.OLD_GREY_CLEAN_LOCALSTORAGE,
+            value: false,
+          },
+          type: ReduxConstants.UPDATE_SETTING,
+        });
+      }
+      if (
+        currentVersion > previousVersion &&
+        getSetting(store.getState(), SettingID.ENABLE_NEW_POPUP)
+      ) {
+        await browser.runtime.openOptionsPage();
+      }
       break;
+    }
     default:
       break;
   }
 };
 
+// Register all core browser event listeners synchronously. The wrappers wait
+// for asynchronous state hydration before invoking services that depend on the
+// shared Redux store.
 browser.tabs.onUpdated.addListener(
-  StoreUser.withStoreReady(TabEvents.onDomainChange),
+  StoreUser.withStoreReady(DomainChangeEvents.onDomainChange),
 );
 browser.tabs.onUpdated.addListener(
   StoreUser.withStoreReady(TabEvents.onTabDiscarded),
@@ -322,7 +307,7 @@ browser.tabs.onUpdated.addListener(
   StoreUser.withStoreReady(TabEvents.onTabUpdate),
 );
 browser.tabs.onRemoved.addListener(
-  StoreUser.withStoreReady(TabEvents.onDomainChangeRemove),
+  StoreUser.withStoreReady(DomainChangeEvents.onDomainChangeRemove),
 );
 browser.tabs.onRemoved.addListener(
   StoreUser.withStoreReady(TabEvents.cleanFromTabEvents),
@@ -355,5 +340,6 @@ void onStartUp()
   .catch((error) => {
     // The store may not be available when hydration itself fails, so avoid
     // using state-dependent logging here.
+    StoreUser.markFailed(error);
     console.error('Cookie AutoDelete background initialization failed.', error);
   });
