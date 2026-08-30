@@ -6,29 +6,29 @@ Do not merge PR #1 or create a tagged release until every required gate below is
 
 ## Candidate state
 
-Former candidate `c7492fe4ff72872c455d3bc18d4ed22fa4d0f219` / artifact `9503607308` is **superseded** by the subsequently qualified base/CI-orchestration changes. Earlier candidate `b5cfd87fabdfb9ca70c566a3b12dd8dbee998170` / artifact `9432252522` is also superseded.
+Former candidate `97c032f24c3aad902ad6fc28007721f61b50ee56` / artifact `9608199330` is **superseded** by the persistent Firefox startup test and session-restore regression fix. Candidate `c7492fe4ff72872c455d3bc18d4ed22fa4d0f219` / artifact `9503607308` and earlier candidates are also superseded.
 
 ### Pinned technical release candidate
 
-- Technical RC source: `97c032f24c3aad902ad6fc28007721f61b50ee56`
+- Technical RC source: `1deff25d035c950e6b1688419406005965df9a29`
 - Base SHA (`3.X.X-Branch`): `7eecf7fbc281e8e0ea8a08047c0f617d6517ad8d`
-- CI pull-request run: `32972498711`
-- `release-candidate-packages` artifact: `9608199330`
-- Artifact wrapper digest: `sha256:266910f910856f4fa039dd58e95cecc56c279e8cb8641b977d82313d0bca3adc`
-- Firefox package: `Cookie-AutoDelete_Dev_20260826_130949_97c032f_Firefox.xpi`
-- Chromium package: `Cookie-AutoDelete_Dev_20260826_130949_97c032f_Chrome.zip`
-- Firefox convenience artifact: `9608200398`
-- Chromium convenience artifact: `9608201015`
+- CI pull-request run: `33288673483`
+- `release-candidate-packages` artifact: `9725278462`
+- Artifact wrapper digest: `sha256:b8065e49be1577025f50703a7c3944994712cc34b94b59758855866436ebba18`
+- Firefox package: `Cookie-AutoDelete_Dev_20260830_024453_1deff25_Firefox.xpi`
+- Chromium package: `Cookie-AutoDelete_Dev_20260830_024453_1deff25_Chrome.zip`
+- Firefox convenience artifact: `9725279042`
+- Chromium convenience artifact: `9725279326`
 - Firefox E2E diagnostics artifact: not emitted on success (failure-only by design)
 - Chromium E2E diagnostics artifact: not emitted on success (failure-only by design)
 - Chromium E2E: ✅
 - Firefox E2E: ✅
 - Fast CI/build/package validation: ✅
-- Published-RC artifact download + inner SHA256 roundtrip: ✅ (integrated into `Release Candidate Packages`, job `98189883184`)
+- Published-RC artifact download + inner SHA256 roundtrip: ✅ (integrated into `Release Candidate Packages`, job `99196488207`)
 - CodeQL / Actions / JavaScript-TypeScript analysis: ✅
 - Genuine historical-user-data regression: ✅ Firefox issue #197 (CAD 2.0.1 persisted state) + Chromium issue #1606 (CAD 3.8.2 settings snapshot); packaged upgrade/restart remains pending
 
-`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `97c032f2…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
+`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `1deff25d…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
 
 The separate `github-advanced-security` AI-agent check still fails before repository analysis because its requested hosted model is unavailable. It remains non-blocking while repository-owned CI/CodeQL are green.
 
@@ -58,10 +58,11 @@ These are CI gates, **not manual retest instructions**.
 - [x] Packaged XPI exposes contextual identities.
 - [x] Multiple `%tmp*` identities produce exactly one visible/persisted `%tmp` expression scope.
 - [x] No concrete temporary-container store IDs leak into persisted CAD state.
+- [x] Exact packaged XPI can be persistently installed in Firefox ESR, survives a complete browser restart without reinstallation, retains CAD state, and performs greylist cleanup on the real startup event.
 
 Firefox selective HTTP-cache cleanup is **not** a release gate while Firefox cannot reliably evict normal-tab partitioned cache by hostname. CAD must not replace that limitation with a destructive full-browser-cache clear. Chromium remains the packaged-runtime selective-cache gate.
 
-A whole-extension runtime reload is not used as a background-lifecycle proxy in either browser. Chromium worker persistence is covered by deterministic worker-restart regressions plus real process relaunch; Firefox uses `background.scripts`, with hydration/restart logic covered by regressions and the genuine installed-browser startup path retained below.
+A whole-extension runtime reload is not used as a background-lifecycle proxy in either browser. Chromium worker persistence is covered by deterministic worker-restart regressions plus real process relaunch; Firefox uses `background.scripts`; hydration/restart logic is covered by regressions and the persistent-install Firefox ESR startup path is now a green packaged E2E gate.
 
 ## Package provenance
 
@@ -72,12 +73,12 @@ A whole-extension runtime reload is not used as a background-lifecycle proxy in 
 Optional reproducible local cross-check for the pinned candidate:
 
 ```bash
-gh run download 32972498711 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-97c032f
-cd cad-rc-97c032f
+gh run download 33288673483 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-1deff25
+cd cad-rc-1deff25
 sha256sum -c SHA256SUMS.txt
 ```
 
-`Release Candidate Packages` job `98189883184` already performed this exact artifact roundtrip successfully after publishing the RC artifact. The optional command should likewise report `OK` for both `Cookie-AutoDelete_Dev_20260826_130949_97c032f_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260826_130949_97c032f_Chrome.zip`. The GitHub artifact-wrapper digest is recorded separately and is not substituted for the inner package checksums.
+`Release Candidate Packages` job `99196488207` already performed this exact artifact roundtrip successfully after publishing the RC artifact. The optional command should likewise report `OK` for both `Cookie-AutoDelete_Dev_20260830_024453_1deff25_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260830_024453_1deff25_Chrome.zip`. The GitHub artifact-wrapper digest is recorded separately and is not substituted for the inner package checksums.
 - [x] Replacement RC was qualified against base `7eecf7fbc281e8e0ea8a08047c0f617d6517ad8d` and PR #1 is currently mergeable/`clean` against that base as of 2026-08-30. The final mergeability gate remains open until residual testing is complete.
 
 ## Minimal manual packaged smoke
@@ -90,7 +91,7 @@ Do not manually repeat the data-cleanup/list matrices already proven by E2E unle
 - [ ] Popup visually opens, is readable and reflects the current site.
 - [ ] Options page is visually usable without obvious layout regressions.
 - [ ] Browser permission/install UX is reasonable, including Firefox host/file-access switches.
-- [ ] Perform one genuine full Firefox browser restart with a normally installed candidate and confirm expected startup cleanup/persisted state. CI temporary XPIs are removed on restart and cannot prove this path faithfully.
+- [x] Full Firefox restart/startup cleanup is automated in CI with the exact packaged XPI persistently installed in Firefox ESR; the same disposable profile restarts without reinstalling the add-on and proves persisted state plus greylist startup cleanup.
 - [ ] Record Firefox version, OS and unexpected browser/background errors.
 
 ### Chromium
@@ -122,7 +123,7 @@ The data-availability blocker is resolved. Leave this gate open until the exact 
 
 | Browser | Version / OS | Automated E2E | SHA256 | Visual/permission | Full startup | Historical upgrade | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Firefox | pending | GitHub Actions ✅ | CI roundtrip ✅ | pending | pending | automated genuine-user regression ✅; packaged upgrade pending | upstream #197 / CAD 2.0.1 state |
+| Firefox | current Release + ESR / Ubuntu 24.04 CI | GitHub Actions ✅ | CI roundtrip ✅ | pending | persistent-install restart ✅ | automated genuine-user regression ✅; packaged upgrade pending | startup session-restore regression fixed; upstream #197 / CAD 2.0.1 state |
 | Chromium | pending | GitHub Actions ✅ | CI roundtrip ✅ | pending | pending | automated genuine-user regression ✅; packaged upgrade pending | upstream #1606 / CAD 3.8.2 settings snapshot |
 
 ## Release decision
@@ -131,7 +132,7 @@ The data-availability blocker is resolved. Leave this gate open until the exact 
 - [x] Same-source `release-candidate-packages` provenance is confirmed.
 - [x] Published-artifact download and inner package SHA256 verification are confirmed inside the already-required `Release Candidate Packages` job.
 - [ ] Minimal visual/permission smoke is green in both browser families.
-- [ ] Residual full-browser-startup checks are green.
+- [ ] Residual full-browser-startup checks are green. Firefox is now ✅; Chromium already-installed startup remains pending.
 - [ ] Exact-RC packaged historical upgrade + restart evidence is green in both browser families (automated genuine-user migration regression is already green).
 - [ ] PR #1 is mergeable against the current base with no unresolved conflicts/blocking functional checks.
 - [ ] No candidate-affecting change occurred after the pinned SHA without replacement validation.

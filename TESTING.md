@@ -79,7 +79,7 @@ Greylist cleanup on a genuine already-installed browser startup remains a small 
 
 ## Firefox packaged E2E
 
-`tests/e2e/firefox.mjs` uses Selenium/GeckoDriver and installs the **packaged Firefox XPI** temporarily in a disposable Firefox profile. A test-only fixed WebExtension UUID makes packaged extension pages addressable from Selenium.
+Firefox uses two complementary Selenium/GeckoDriver paths against the **same packaged Firefox XPI**. `tests/e2e/firefox.mjs` temporarily installs it in current Firefox for the broad packaged feature matrix. `tests/e2e/firefox-persistent.mjs` persistently installs it in Firefox ESR with signature enforcement disabled for local/CI test purposes, then restarts the same profile without reinstalling the add-on. A test-only fixed WebExtension UUID makes packaged extension pages addressable from Selenium.
 
 It verifies:
 
@@ -92,12 +92,15 @@ It verifies:
 - cookie, LocalStorage, IndexedDB and website Service Worker removal
 - whitelist/greylist creation through the real expression UI and retention semantics
 - production `storage.local.state` contains the settings and expression lists created through those real browser/UI interactions
+- persistent installation of the exact XPI survives a complete Firefox ESR process restart without reinstallation
+- persisted active-mode/greylist state survives the restart
+- greylisted data is retained on ordinary tab close before restart, then removed specifically by the real `runtime.onStartup` cleanup path
 
 ### Firefox lifecycle boundary
 
 Firefox MV3 uses `background.scripts` for this build. Calling `browser.runtime.reload()` reloads the **entire temporary extension**, not an ordinary background-script lifecycle, and destabilizes Marionette. It is therefore not used as an E2E persistence proxy.
 
-State hydration/recreation and simulated restart behavior remain protected by deterministic Jest regressions. A genuine browser restart of a normally installed candidate remains a residual manual gate because Firefox removes temporary unsigned add-ons on restart.
+State hydration/recreation and simulated restart behavior remain protected by deterministic Jest regressions. The genuine installed-browser startup path is now automated separately with Firefox ESR: CI disables signature enforcement only in the disposable test profile, persistently installs the exact XPI, exits Firefox, relaunches the same profile without another install call, verifies the add-on/state survived, and proves startup greylist cleanup. This test caught a regression where ordinary `sessions.getRecentlyClosed()` history was mistaken for an active session restore; startup suppression is now limited to an explicit `about:sessionrestore` tab.
 
 ### Firefox HTTP-cache boundary
 
@@ -125,7 +128,8 @@ Regular CI is ordered so an RC cannot be published before the exact packages hav
    - runs the packaged-browser matrix
 3. **Browser E2E — Firefox**
    - downloads the exact Firefox XPI from the build job
-   - runs the packaged-browser matrix
+   - runs the current-Firefox temporary-XPI packaged-browser matrix
+   - runs a persistent-install Firefox ESR restart/startup-cleanup matrix against the same XPI and profile
 4. **Release Candidate Packages** (PR only)
    - requires both browser jobs + fast CI to be green
    - republishes the same already-tested package bytes
@@ -158,8 +162,11 @@ npm run build
 # Chromium: extract the generated *Chrome.zip first
 npm run test:e2e:chromium -- /path/to/unpacked/chromium-package
 
-# Firefox
+# Firefox current-release feature matrix
 FIREFOX_BIN=/path/to/firefox npm run test:e2e:firefox -- /path/to/Cookie-AutoDelete_Firefox.xpi
+
+# Firefox persistent-install restart/startup matrix (Developer Edition/Nightly/ESR-style unsigned testing)
+FIREFOX_PERSISTENT_BIN=/path/to/firefox-esr node tests/e2e/firefox-persistent.mjs /path/to/Cookie-AutoDelete_Firefox.xpi
 ```
 
 GitHub Actions installs its own browser runtimes and prepares the port capability automatically.
@@ -187,7 +194,6 @@ Manual release work is intentionally limited to:
 
 - visual sanity of packaged popup/options
 - browser permission/install UX
-- Firefox full browser startup with a normally installed candidate
 - Chromium greylist startup cleanup with an already installed/loaded candidate
 - exact-RC packaged historical upgrade + restart smoke using the committed genuine-user evidence
 - platform-specific release claims not represented by desktop Linux E2E, e.g. Firefox Android
