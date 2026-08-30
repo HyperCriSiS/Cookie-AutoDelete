@@ -1,6 +1,7 @@
 import { browserName, SiteDataType } from '../../src/typings/Enums';
 import {
   getBrowserMajorVersionFromUserAgent,
+  hasFirefoxSessionRestoreTab,
   getRuntimeCapabilities,
   getStorageTypeSupport,
   supportsPartitionedCookies,
@@ -131,6 +132,21 @@ describe('BrowserCapabilities', () => {
         browserDetect: browserName.Firefox,
         browserVersion: 94,
       }),
+    ).toBe(true);
+  });
+
+  it('recognizes only an explicit Firefox session-restore page at startup', () => {
+    expect(
+      hasFirefoxSessionRestoreTab([
+        { url: 'about:blank' },
+        { url: 'https://example.com/' },
+      ]),
+    ).toBe(false);
+    expect(
+      hasFirefoxSessionRestoreTab([
+        { url: 'about:blank' },
+        { url: 'about:sessionrestore' },
+      ]),
     ).toBe(true);
   });
 

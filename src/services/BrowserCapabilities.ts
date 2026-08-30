@@ -132,6 +132,10 @@ export const supportsStorageType = (
   }
 };
 
+export const hasFirefoxSessionRestoreTab = (
+  tabs: ReadonlyArray<{ url?: string }>,
+): boolean => tabs.some((tab) => tab.url === 'about:sessionrestore');
+
 export const getRuntimeCapabilities = (): RuntimeCapabilities => {
   const api = browser as any;
   return {
