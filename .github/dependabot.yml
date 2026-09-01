@@ -18,8 +18,9 @@ updates:
           - "minor"
           - "patch"
 
-  # Keep npm updates reviewable. Major updates stay separate so toolchain and
-  # runtime migrations can be tested deliberately instead of being bulk-merged.
+  # Keep npm updates reviewable. Generic majors stay separate so they can be
+  # tested deliberately; the coordinated post-RC migrations listed in
+  # ROADMAP.md are ignored until that release gate is complete.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -36,3 +37,34 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      - dependency-name: "bootstrap"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "react"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "react-dom"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "eslint"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@typescript-eslint/eslint-plugin"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@typescript-eslint/parser"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@fortawesome/fontawesome-svg-core"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@fortawesome/free-regular-svg-icons"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@fortawesome/free-solid-svg-icons"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@fortawesome/react-fontawesome"
+        update-types:
+          - "version-update:semver-major"
