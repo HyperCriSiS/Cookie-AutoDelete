@@ -18,9 +18,11 @@ updates:
           - "minor"
           - "patch"
 
-  # Keep npm updates reviewable. Generic majors stay separate so they can be
-  # tested deliberately; the coordinated post-RC migrations listed in
-  # ROADMAP.md are ignored until that release gate is complete.
+  # Keep npm updates reviewable. Minor/patch updates are grouped globally.
+  # Breaking majors that ROADMAP.md deliberately defers are grouped by
+  # coordinated migration stack rather than ignored. These rules apply only
+  # to version updates, so Dependabot security updates keep their independent
+  # update path.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -30,6 +32,34 @@ updates:
       timezone: "Europe/Berlin"
     open-pull-requests-limit: 10
     groups:
+      bootstrap-major:
+        applies-to: version-updates
+        patterns:
+          - "bootstrap"
+        update-types:
+          - "major"
+      react-major:
+        applies-to: version-updates
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types:
+          - "major"
+      lint-major:
+        applies-to: version-updates
+        patterns:
+          - "eslint"
+          - "@typescript-eslint/*"
+        update-types:
+          - "major"
+      fontawesome-major:
+        applies-to: version-updates
+        patterns:
+          - "@fortawesome/*"
+        update-types:
+          - "major"
       npm-minor-patch:
         applies-to: version-updates
         patterns:
@@ -37,34 +67,3 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    ignore:
-      - dependency-name: "bootstrap"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "react"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "react-dom"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "eslint"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "@typescript-eslint/eslint-plugin"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "@typescript-eslint/parser"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "@fortawesome/fontawesome-svg-core"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "@fortawesome/free-regular-svg-icons"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "@fortawesome/free-solid-svg-icons"
-        update-types:
-          - "version-update:semver-major"
-      - dependency-name: "@fortawesome/react-fontawesome"
-        update-types:
-          - "version-update:semver-major"
