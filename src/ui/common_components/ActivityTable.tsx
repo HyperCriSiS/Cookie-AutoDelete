@@ -21,7 +21,14 @@ import {
   siteDataToBrowser,
   throwErrorNotification,
 } from '../../services/Libs';
-import { FilterOptions } from '../../typings/Enums';
+import {
+  FilterOptions,
+  ListType,
+  ReasonClean,
+  ReasonKeep,
+  SettingID,
+  SiteDataType,
+} from '../../typings/Enums';
 import { ReduxAction } from '../../typings/ReduxConstants';
 import IconButton from './IconButton';
 
@@ -150,8 +157,7 @@ const restoreCookies = async (
       if (obj.cookie.preparedCookieDomain.startsWith('file:')) {
         cadLog(
           {
-            msg:
-              'Cookie appears to come from a local file.  Cannot be restored normally.',
+            msg: 'Cookie appears to come from a local file.  Cannot be restored normally.',
             type: 'warn',
             x: obj.cookie,
           },
@@ -216,8 +222,7 @@ const restoreCookies = async (
       );
       cadLog(
         {
-          msg:
-            'An Error occurred while trying to restore cookie(s).  The rest of the cookies to restore are not processed.',
+          msg: 'An Error occurred while trying to restore cookie(s).  The rest of the cookies to restore are not processed.',
           type: 'error',
           x: e,
         },

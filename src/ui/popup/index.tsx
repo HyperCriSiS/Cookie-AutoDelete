@@ -1,5 +1,3 @@
-/* istanbul ignore file: React-redux init */
-
 /**
  * Copyright (c) 2017-2022 Kenny Do and CAD Team (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/graphs/contributors)
  * Licensed under MIT (https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/blob/3.X.X-Branch/LICENSE)
@@ -14,8 +12,8 @@
  */
 import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
-import { createUIStore } from 'redux-webext';
-import { isChrome, sleep } from '../../services/Libs';
+import createUIStore from '../../redux/UIStore';
+import { isChrome } from '../../services/Libs';
 import ErrorBoundary from '../common_components/ErrorBoundary';
 import fontAwesomeImports from '../font-awesome-imports';
 import App from './App';
@@ -23,11 +21,7 @@ import App from './App';
 fontAwesomeImports();
 
 async function initApp() {
-  let store = await createUIStore();
-  while (!store.getState()) {
-    await sleep(250);
-    store = await createUIStore();
-  }
+  const store = await createUIStore();
   const mountNode = document.createElement('div');
   document.body.appendChild(mountNode);
 
@@ -45,4 +39,6 @@ async function initApp() {
   );
 }
 
-initApp();
+void initApp().catch((error) => {
+  console.error('Cookie AutoDelete popup failed to initialize.', error);
+});

@@ -11,6 +11,13 @@
  * SOFTWARE.
  */
 
+import {
+  browserName,
+  SiteDataType,
+  SettingID,
+  ListType,
+  EventListenerAction,
+} from '../../src/typings/Enums';
 import { when } from 'jest-when';
 import { initialState } from '../../src/redux/State';
 import {
@@ -51,7 +58,7 @@ import {
 
 import ipaddr from 'ipaddr.js';
 
-const mockCookie: browser.cookies.Cookie = {
+const mockCookie: CadCookie = {
   domain: 'domain.com',
   hostOnly: true,
   httpOnly: true,
@@ -313,14 +320,14 @@ describe('Library Functions', () => {
           Function,
           EventListenerAction.ADD,
         );
-      }).not.toThrowError();
+      }).not.toThrow();
       // Unexpected error would be TypeError: "cannot read property 'hasListener' of undefined"
     });
 
     it('should do nothing if an "event" passed in is not an Event Listener', () => {
       expect(() => {
         eventListenerActions({} as any, Function, EventListenerAction.REMOVE);
-      }).not.toThrowError();
+      }).not.toThrow();
     });
 
     it('should add the event listener', () => {
@@ -486,7 +493,7 @@ describe('Library Functions', () => {
         .mockResolvedValue([testCookie] as never);
     });
 
-    const testCookie: browser.cookies.Cookie = {
+    const testCookie: CadCookie = {
       domain: 'domain.com',
       hostOnly: true,
       httpOnly: true,
@@ -1531,9 +1538,9 @@ describe('Library Functions', () => {
         .mockReturnValue('');
     });
     afterAll(() => {
-      global.browser.i18n.getMessage.clearMocks();
-      global.browser.runtime.getManifest.clearMocks();
-      global.browser.runtime.getURL.clearMocks();
+      global.browser.i18n.getMessage.mockReset();
+      global.browser.runtime.getManifest.mockReset();
+      global.browser.runtime.getURL.mockReset();
       jest.clearAllTimers();
     });
 
@@ -1605,7 +1612,7 @@ describe('Library Functions', () => {
       expect.assertions(3);
       const result = sleep(100).then((r) => {
         expect(r).toEqual(undefined);
-        expect(spySetTimeout).toBeCalledTimes(1);
+        expect(spySetTimeout).toHaveBeenCalledTimes(1);
         expect(spySetTimeout).toHaveBeenCalledWith(expect.any(Function), 250);
       });
       jest.runAllTimers();
@@ -1616,7 +1623,7 @@ describe('Library Functions', () => {
       expect.assertions(3);
       const result = sleep(1500).then((r) => {
         expect(r).toEqual(undefined);
-        expect(spySetTimeout).toBeCalledTimes(1);
+        expect(spySetTimeout).toHaveBeenCalledTimes(1);
         expect(spySetTimeout).toHaveBeenCalledWith(expect.any(Function), 1500);
       });
       jest.runAllTimers();
@@ -1627,7 +1634,7 @@ describe('Library Functions', () => {
       expect.assertions(3);
       const result = sleep(2345678901).then((r) => {
         expect(r).toEqual(undefined);
-        expect(spySetTimeout).toBeCalledTimes(1);
+        expect(spySetTimeout).toHaveBeenCalledTimes(1);
         expect(spySetTimeout).toHaveBeenCalledWith(
           expect.any(Function),
           2147483500,
@@ -1674,9 +1681,9 @@ describe('Library Functions', () => {
       jest.clearAllTimers();
     });
     afterAll(() => {
-      global.browser.i18n.getMessage.clearMocks();
-      global.browser.runtime.getManifest.clearMocks();
-      global.browser.runtime.getURL.clearMocks();
+      global.browser.i18n.getMessage.mockReset();
+      global.browser.runtime.getManifest.mockReset();
+      global.browser.runtime.getURL.mockReset();
     });
 
     it('should expect one call to browser.notifications.create', () => {

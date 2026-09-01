@@ -10,6 +10,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { browserName, SettingID } from '../../../typings/Enums';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { cadLog, isFirefox } from '../../../services/Libs';

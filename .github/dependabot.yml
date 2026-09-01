@@ -1,14 +1,69 @@
 version: 2
 updates:
-  # Maintain Dependencies for GitHub Actions
+  # Keep GitHub Actions current without opening one PR per minor/patch update.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
-  # Maintain Dependencies for NodeJS / npm
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Keep npm updates reviewable. Minor/patch updates are grouped globally.
+  # Breaking majors that ROADMAP.md deliberately defers are grouped by
+  # coordinated migration stack rather than ignored. These rules apply only
+  # to version updates, so Dependabot security updates keep their independent
+  # update path.
   - package-ecosystem: "npm"
-    # Look for `package.json` and `lock` files in the `root` directory
     directory: "/"
-    # Check npm registry for updates every day (weekdays)
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
+      time: "06:15"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 10
+    groups:
+      bootstrap-major:
+        applies-to: version-updates
+        patterns:
+          - "bootstrap"
+        update-types:
+          - "major"
+      react-major:
+        applies-to: version-updates
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types:
+          - "major"
+      lint-major:
+        applies-to: version-updates
+        patterns:
+          - "eslint"
+          - "@typescript-eslint/*"
+        update-types:
+          - "major"
+      fontawesome-major:
+        applies-to: version-updates
+        patterns:
+          - "@fortawesome/*"
+        update-types:
+          - "major"
+      npm-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

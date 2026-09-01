@@ -10,6 +10,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { browserName, SettingID, ListType } from '../../../typings/Enums';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
@@ -22,6 +23,8 @@ import {
   cadLog,
   getMatchedExpressions,
   getSetting,
+  isTemporaryContainerName,
+  TEMPORARY_CONTAINER_STORE_ID,
   validateExpressionDomain,
 } from '../../../services/Libs';
 import { ReduxAction } from '../../../typings/ReduxConstants';
@@ -307,7 +310,11 @@ class Expressions extends React.Component<ExpressionProps> {
     const containers = new Set<string>(Object.keys(lists));
     if (contextualIdentities) {
       contextualIdentitiesObjects.forEach((c) =>
-        containers.add(c.cookieStoreId),
+        containers.add(
+          isTemporaryContainerName(c.name)
+            ? TEMPORARY_CONTAINER_STORE_ID
+            : c.cookieStoreId,
+        ),
       );
     }
     containers.add(
@@ -361,16 +368,34 @@ class Expressions extends React.Component<ExpressionProps> {
     const { error, contextualIdentitiesObjects, storeId, success } = this.state;
     const mapIDtoName: { [k: string]: string | undefined } = {};
     if (contextualIdentities) {
+      let hasTemporaryContainers = false;
       contextualIdentitiesObjects.forEach((c) => {
+        if (isTemporaryContainerName(c.name)) {
+          hasTemporaryContainers = true;
+          return;
+        }
         mapIDtoName[c.cookieStoreId] = c.name;
       });
+
+      if (
+        hasTemporaryContainers ||
+        Object.prototype.hasOwnProperty.call(
+          lists,
+          TEMPORARY_CONTAINER_STORE_ID,
+        )
+      ) {
+        mapIDtoName[TEMPORARY_CONTAINER_STORE_ID] = '%tmp';
+      }
+
       Object.keys(lists).forEach((list) => {
-        if (list === 'default') return;
+        if (list === 'default' || list === TEMPORARY_CONTAINER_STORE_ID) return;
         const container = contextualIdentitiesObjects.find((c) => {
           return c.cookieStoreId === list;
         });
         if (!container) {
           mapIDtoName[list] = undefined;
+        } else if (isTemporaryContainerName(container.name)) {
+          delete mapIDtoName[list];
         }
       });
     }

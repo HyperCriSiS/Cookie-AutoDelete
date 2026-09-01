@@ -11,11 +11,19 @@
  * SOFTWARE.
  */
 
+import {
+  browserName,
+  SiteDataType,
+  SettingID,
+  ListType,
+  EventListenerAction,
+} from '../typings/Enums';
 import ipaddr from 'ipaddr.js';
-import shortid from 'shortid';
+import { generateId } from './IdService';
 
 /* --- CONSTANTS --- */
 export const CADCOOKIENAME = 'CookieAutoDeleteBrowsingDataCleanup';
+export const TEMPORARY_CONTAINER_STORE_ID = '%tmp';
 export const SITEDATATYPES = [
   SiteDataType.CACHE,
   SiteDataType.INDEXEDDB,
@@ -25,6 +33,15 @@ export const SITEDATATYPES = [
 ];
 
 /* --- FUNCTIONS --- */
+
+/**
+ * Temporary Containers uses short-lived Firefox container IDs whose names
+ * start with "%tmp".  Treat them as one logical expression store so rules
+ * survive container churn and apply to every temporary container.
+ */
+export const isTemporaryContainerName = (name: unknown): boolean =>
+  typeof name === 'string' && name.trim().toLowerCase().startsWith('%tmp');
+
 /**
  * Console Log Outputs - Mostly For Debugging
  */
@@ -138,7 +155,7 @@ export const eventListenerActions = (
 export const extractMainDomain = (domain: string): string => {
   if (domain === '') return '';
   // return itself if it is a local html file or IP Address.
-  if (domain.startsWith('file://') || ipaddr.isValid(domain)) return domain;
+  if (domain.startsWith('file://') || isAnIP(domain)) return domain;
 
   // https://en.wikipedia.org/wiki/Second-level_domain
   const secondLvlDomains = [
@@ -181,7 +198,7 @@ export const extractMainDomain = (domain: string): string => {
 export const getAllCookiesForDomain = async (
   state: State,
   tab: browser.tabs.Tab,
-): Promise<browser.cookies.Cookie[] | undefined> => {
+): Promise<CadCookie[] | undefined> => {
   if (!tab.url || tab.url === '') return;
   if (tab.url.startsWith('about:') || tab.url.startsWith('chrome:')) return;
   const debug = getSetting(state, SettingID.DEBUG_MODE) as boolean;
@@ -198,7 +215,7 @@ export const getAllCookiesForDomain = async (
     );
     return;
   }
-  const cookies: browser.cookies.Cookie[] = [];
+  const cookies: CadCookie[] = [];
   const mainDomain = extractMainDomain(hostname);
 
   if (hostname.startsWith('file:')) {
@@ -410,18 +427,12 @@ export const getMatchedExpressions = (
   const expressions = lists[storeId] || [];
   if (expressions.length === 0 || !input || input.trim().length == 0)
     return expressions;
-  // Check if input is a valid IP Address (IPv4 or IPv6) (non-CIDR)
-  // This takes care of IPv4-mapped IPv6 address (converts to IPv4 counterpart)
-  let iip = ipaddr.isValid(input) ? ipaddr.process(input) : undefined;
-  // If initial test passes, do further checks.
-  // This makes sure the IP Address is a full four part decimal.
-  if (
-    iip &&
-    iip.kind() == 'ipv4' &&
-    !ipaddr.IPv4.isValidFourPartDecimal(input)
-  ) {
-    iip = undefined;
-  }
+  // Check if input is a valid IP Address (IPv4 or IPv6) (non-CIDR).
+  // IPv6 URL hostnames may be enclosed in square brackets; remove those only
+  // for ipaddr.js parsing while preserving the original value everywhere else.
+  // ipaddr.process also normalizes IPv4-mapped IPv6 addresses.
+  const preparedInput = ipv6Prep(input) || input;
+  const iip = isAnIP(input) ? ipaddr.process(preparedInput) : undefined;
   return expressions.filter((expression) => {
     const exp = expression.expression;
     if (iip) {
@@ -476,9 +487,14 @@ export const getSetting = (
  * Gets a sanitized cookieStoreId
  */
 export const getStoreId = (state: State, storeId: string): string => {
+  const contextualIdentitiesEnabled = getSetting(
+    state,
+    SettingID.CONTEXTUAL_IDENTITIES,
+  ) as boolean;
+
   if (
     storeId === 'firefox-default' ||
-    (!getSetting(state, SettingID.CONTEXTUAL_IDENTITIES) &&
+    (!contextualIdentitiesEnabled &&
       storeId !== 'firefox-private' &&
       isFirefox(state.cache)) ||
     (isChrome(state.cache) && storeId === '0') ||
@@ -488,6 +504,12 @@ export const getStoreId = (state: State, storeId: string): string => {
   }
   if (isChrome(state.cache) && storeId === '1') {
     return 'private';
+  }
+  if (
+    contextualIdentitiesEnabled &&
+    isTemporaryContainerName(state.cache[storeId])
+  ) {
+    return TEMPORARY_CONTAINER_STORE_ID;
   }
 
   return storeId;
@@ -512,16 +534,27 @@ export const globExpressionToRegExp = (glob: string): string => {
 };
 
 /**
- * Returns true if it is an IP (v4 or v6)
+ * Remove URL-style square brackets around an IPv6 address for ipaddr.js.
+ * CIDR suffixes are preserved, e.g. `[fd00::]/64` becomes `fd00::/64`.
+ */
+export const ipv6Prep = (value: string): string | undefined => {
+  const match = /^\[([^\]]+)](\/\d+)?$/.exec(value.trim());
+  if (!match) return undefined;
+  return `${match[1]}${match[2] || ''}`;
+};
+
+/**
+ * Returns true if it is an IP (v4 or v6). Accepts raw addresses, bracketed
+ * IPv6 hostnames, and HTTP(S) URLs containing an IP hostname.
  */
 export const isAnIP = (url: string | undefined): boolean => {
-  if (!url) {
-    return false;
-  }
-  const hostname = getHostname(url);
+  if (!url || url.startsWith('file:')) return false;
+
+  const candidate = /^https?:/i.test(url) ? getHostname(url) : url.trim();
+  const prepared = ipv6Prep(candidate) || candidate;
   return (
-    ipaddr.IPv4.isValidFourPartDecimal(hostname) ||
-    ipaddr.IPv6.isValid(hostname)
+    ipaddr.IPv4.isValidFourPartDecimal(prepared) ||
+    ipaddr.IPv6.isValid(prepared)
   );
 };
 
@@ -622,10 +655,11 @@ export const matchIPInExpression = (
   exp: Expression['expression'],
   iip: ipaddr.IPv4 | ipaddr.IPv6,
 ): boolean | undefined => {
-  // Check if expression is a single IP Address (IPv4 or IPv6), non CIDR
-  if (ipaddr.isValid(exp)) {
+  // Check if expression is a single IP Address (IPv4 or IPv6), non CIDR.
+  const preparedExpression = ipv6Prep(exp) || exp;
+  if (ipaddr.isValid(preparedExpression)) {
     // This takes care of IPv4-mapped IPv6 address (converts to IPv4 counterpart)
-    const eip = ipaddr.process(exp);
+    const eip = ipaddr.process(preparedExpression);
     // Returns false if trying to match IPv4 and IPv6 together.
     // Putting this through the match function below will throw error.
     if (iip.kind() !== eip.kind()) return false;
@@ -644,14 +678,14 @@ export const matchIPInExpression = (
     return eip.match(iip, bits);
   } // Not a single IP Address in Expression.
   // Check for CIDR notation '10.0.0.0/8' or '::/48'
-  const cidrNotation = exp.split('/');
+  const cidrNotation = preparedExpression.split('/');
   // [0] should be IP, [1] should be CIDR range number
   if (cidrNotation.length === 2) {
     if (ipaddr.isValid(cidrNotation[0])) {
       try {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore Needed otherwise TS complains about no compatibility in union signatures.
-        return iip.match(ipaddr.parseCIDR(exp));
+        return iip.match(ipaddr.parseCIDR(preparedExpression));
       } catch (e) {
         // Most likely an attempt to match IPv4 and IPv6 together,
         // or CIDR is invalid.
@@ -685,33 +719,41 @@ export const prepareCleanupDomains = (
   if (domain.trim() === '') return [];
   let d: string = domain.trim();
   const domains = new Set<string>();
+
   if (ipaddr.IPv4.isValidFourPartDecimal(d)) {
     domains.add(d);
-  } else if (ipaddr.IPv6.isValid(d)) {
-    domains.add(`[${d}]`);
   } else {
-    const www = new RegExp(/^www[0-9a-z]?\./i);
-    const sDot = new RegExp(/^\./);
-    // Most likely not an IPv4 or IPv6 address. Presuming domain.
-    if (sDot.test(d)) {
-      // dot at beginning.  .sub.doma.in(.)
-      d = d.slice(1);
-    }
-    // at this point it should be all unison - sub.doma.in(.)
-    domains.add(d); // sub.doma.in
-    domains.add(`.${d}`); // .sub.doma.in
+    const preparedIPv6 = ipv6Prep(d) || d;
+    if (ipaddr.IPv6.isValid(preparedIPv6)) {
+      domains.add(`[${preparedIPv6}]`);
+    } else {
+      const www = new RegExp(/^www[0-9a-z]?\./i);
+      const sDot = new RegExp(/^\./);
+      // Most likely not an IPv4 or IPv6 address. Presuming domain.
+      if (sDot.test(d)) {
+        // dot at beginning.  .sub.doma.in(.)
+        d = d.slice(1);
+      }
+      // at this point it should be all unison - sub.doma.in(.)
+      domains.add(d); // sub.doma.in
+      domains.add(`.${d}`); // .sub.doma.in
 
-    if (!www.test(d)) {
-      domains.add(`www.${d}`); // www.sub.doma.in
-      domains.add(`.www.${d}`); // .www.sub.doma.in
+      if (!www.test(d)) {
+        domains.add(`www.${d}`); // www.sub.doma.in
+        domains.add(`.www.${d}`); // .www.sub.doma.in
+      }
     }
   }
 
-  if (bName === browserName.Chrome || bName === browserName.Opera) {
+  if (
+    bName === browserName.Chrome ||
+    bName === browserName.EdgeChromium ||
+    bName === browserName.Opera
+  ) {
     const origins: string[] = [];
-    for (const d of domains) {
-      origins.push(`http://${d}`);
-      origins.push(`https://${d}`);
+    for (const preparedDomain of domains) {
+      origins.push(`http://${preparedDomain}`);
+      origins.push(`https://${preparedDomain}`);
     }
     return origins;
   }
@@ -722,15 +764,16 @@ export const prepareCleanupDomains = (
 /**
  * Puts the domain in the right format for browser.cookies.remove()
  */
-export const prepareCookieDomain = (cookie: browser.cookies.Cookie): string => {
+export const prepareCookieDomain = (cookie: CadCookie): string => {
   let cookieDomain = cookie.domain.trim();
   if (cookieDomain.length === 0 && cookie.path.trim().length !== 0) {
     // No Domain - presuming local file (file:// protocol)
     return `file://${cookie.path}`;
   }
 
-  if (ipaddr.IPv6.isValid(cookieDomain)) {
-    cookieDomain = `[${cookieDomain}]`;
+  const preparedIPv6 = ipv6Prep(cookieDomain) || cookieDomain;
+  if (ipaddr.IPv6.isValid(preparedIPv6)) {
+    cookieDomain = `[${preparedIPv6}]`;
   }
 
   const sDot = cookieDomain.startsWith('.') ? 1 : 0;
@@ -806,7 +849,7 @@ export const showNotification = (
   display = true,
 ): void => {
   if (!display) return;
-  const sid = `CAD-notification-${shortid.generate()}`;
+  const sid = `CAD-notification-${generateId()}`;
   browser.notifications.create(sid, {
     iconUrl: browser.runtime.getURL('icons/icon_48.png'),
     message: x.msg,
@@ -845,7 +888,7 @@ export const sleep = (ms: number): Promise<any> => {
  * @param duration number in seconds
  */
 export const throwErrorNotification = (e: Error, duration: number): void => {
-  const nid = `CAD-notification-failed-${shortid.generate()}`;
+  const nid = `CAD-notification-failed-${generateId()}`;
   browser.notifications.create(nid, {
     iconUrl: browser.runtime.getURL('icons/icon_red_48.png'),
     message: e.message,
