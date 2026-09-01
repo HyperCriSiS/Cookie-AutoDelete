@@ -61,7 +61,11 @@ const createDriver = async (marionettePort) => {
 };
 
 const extensionRoot = () => `moz-extension://${extensionUuid}/settings/settings.html`;
-const isStale = (error) => String(error?.name || error).includes('StaleElementReference');
+const isStale = (error) => {
+  const name = String(error?.name || '');
+  const message = String(error?.message || error || '');
+  return name.includes('StaleElementReference') || message.includes("can't access dead object");
+};
 
 const retryDom = async (label, operation, attempts = 6) => {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
