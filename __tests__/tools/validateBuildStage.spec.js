@@ -43,7 +43,15 @@ const createStage = (target) => {
     homepage_url: 'https://github.com/Cookie-AutoDelete/Cookie-AutoDelete',
     author: 'CAD Team',
     action: {},
-    permissions: ['scripting'],
+    permissions: [
+      'alarms',
+      'browsingData',
+      'contextMenus',
+      'cookies',
+      'notifications',
+      'scripting',
+      'storage',
+    ],
     host_permissions: ['<all_urls>'],
     background:
       target === 'chromium'
@@ -70,6 +78,59 @@ describe('validateBuildStage', () => {
     expect(() =>
       validateBuildStage(target, stage, { production: true, sourceDir: source }),
     ).not.toThrow();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it.each(['chromium', 'firefox'])(
+    'rejects an unexpected %s permission',
+    (target) => {
+      const { root, source, stage } = createStage(target);
+      const manifestPath = path.join(stage, 'manifest.json');
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      manifest.permissions.push('tabs');
+      writeJson(manifestPath, manifest);
+
+      expect(() =>
+        validateBuildStage(target, stage, {
+          production: true,
+          sourceDir: source,
+        }),
+      ).toThrow(/permissions changed/);
+      fs.rmSync(root, { recursive: true, force: true });
+    },
+  );
+
+  it('rejects a missing required permission', () => {
+    const { root, source, stage } = createStage('chromium');
+    const manifestPath = path.join(stage, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    manifest.permissions = manifest.permissions.filter(
+      (permission) => permission !== 'storage',
+    );
+    writeJson(manifestPath, manifest);
+
+    expect(() =>
+      validateBuildStage('chromium', stage, {
+        production: true,
+        sourceDir: source,
+      }),
+    ).toThrow(/permissions changed/);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('rejects an unexpected host permission', () => {
+    const { root, source, stage } = createStage('chromium');
+    const manifestPath = path.join(stage, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    manifest.host_permissions.push('https://example.com/*');
+    writeJson(manifestPath, manifest);
+
+    expect(() =>
+      validateBuildStage('chromium', stage, {
+        production: true,
+        sourceDir: source,
+      }),
+    ).toThrow(/host_permissions changed/);
     fs.rmSync(root, { recursive: true, force: true });
   });
 

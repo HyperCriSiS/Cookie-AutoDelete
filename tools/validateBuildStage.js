@@ -10,9 +10,29 @@ const path = require('path');
 const EXPECTED_HOMEPAGE =
   'https://github.com/Cookie-AutoDelete/Cookie-AutoDelete';
 const EXPECTED_AUTHOR = 'CAD Team';
+const BASE_PERMISSIONS = [
+  'alarms',
+  'browsingData',
+  'contextMenus',
+  'cookies',
+  'notifications',
+  'scripting',
+  'storage',
+];
+const EXPECTED_HOST_PERMISSIONS = ['<all_urls>'];
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(`Build validation failed: ${message}`);
+};
+
+const assertStringSetEquals = (actual, expected, label) => {
+  assert(Array.isArray(actual), `${label} must be an array`);
+  const actualSorted = [...actual].sort();
+  const expectedSorted = [...expected].sort();
+  assert(
+    JSON.stringify(actualSorted) === JSON.stringify(expectedSorted),
+    `${label} changed. expected=${expectedSorted.join(',')} actual=${actualSorted.join(',')}`,
+  );
 };
 
 const listFiles = (directory, base = directory) => {
@@ -70,19 +90,15 @@ const validateBuildStage = (
   assert(manifest.homepage_url === EXPECTED_HOMEPAGE, 'homepage_url changed');
   assert(manifest.author === EXPECTED_AUTHOR, 'author metadata changed');
   assert(manifest.action, 'MV3 action entry is missing');
-  assert(Array.isArray(manifest.host_permissions), 'host_permissions missing');
-  assert(
-    manifest.host_permissions.includes('<all_urls>'),
-    '<all_urls> host permission missing',
-  );
-  assert(
-    Array.isArray(manifest.permissions) &&
-      manifest.permissions.includes('scripting'),
-    'scripting permission missing',
-  );
-  assert(
-    !manifest.permissions.includes('unlimitedStorage'),
-    'unlimitedStorage must not be added without a demonstrated requirement',
+  const expectedPermissions =
+    target === 'firefox'
+      ? [...BASE_PERMISSIONS, 'contextualIdentities']
+      : BASE_PERMISSIONS;
+  assertStringSetEquals(manifest.permissions, expectedPermissions, 'permissions');
+  assertStringSetEquals(
+    manifest.host_permissions,
+    EXPECTED_HOST_PERMISSIONS,
+    'host_permissions',
   );
 
   if (target === 'chromium') {
