@@ -6,31 +6,32 @@ Do not merge PR #1 or create a tagged release until every required gate below is
 
 ## Candidate state
 
+Former candidate `6e5b2e5ba886647a1531b04fb743c32be563e07b` / artifact `9822777195` is **superseded** after the packaged-permission contract was tightened and fully requalified; runtime behavior and package payload semantics were unchanged.
 Former candidate `895ad27a3c632be7b8db9f415692c7a9af878e76` / artifact `9822511331` is **superseded** only to qualify the final Dependabot version-update policy on the exact current repository state; browser/runtime behavior was unchanged.
 Former candidate `1deff25d035c950e6b1688419406005965df9a29` / artifact `9725278462` is **superseded** because CI-policy and Firefox persistent-E2E harness changes required replacement qualification.
 Former candidate `97c032f24c3aad902ad6fc28007721f61b50ee56` / artifact `9608199330` is **superseded** by the persistent Firefox startup test and session-restore regression fix. Candidate `c7492fe4ff72872c455d3bc18d4ed22fa4d0f219` / artifact `9503607308` and earlier candidates are also superseded.
 
 ### Pinned technical release candidate
 
-- Technical RC source: `6e5b2e5ba886647a1531b04fb743c32be563e07b`
+- Technical RC source: `308bd19909bd4c8573b3caa2bf0ad1a261c9e877`
 - Base SHA (`3.X.X-Branch`): `7eecf7fbc281e8e0ea8a08047c0f617d6517ad8d`
-- CI pull-request run: `33564965259`
-- `release-candidate-packages` artifact: `9822777195`
-- Artifact wrapper digest: `sha256:09616c432dc052bcb024a6c557fabe0fa94315cfa3a35dcbbd8bb43cd5edc699`
-- Firefox package: `Cookie-AutoDelete_Dev_20260901_221123_6e5b2e5_Firefox.xpi`
-- Chromium package: `Cookie-AutoDelete_Dev_20260901_221123_6e5b2e5_Chrome.zip`
-- Firefox convenience artifact: `9822777979`
-- Chromium convenience artifact: `9822778480`
+- CI pull-request run: `35643495743`
+- `release-candidate-packages` artifact: `10659216154`
+- Artifact wrapper digest: `sha256:f4746643a872f0bdde9cf41f3dd250d1706af1ce2dc77a28db68462611cbbad5`
+- Firefox package: `Cookie-AutoDelete_Dev_20260921_191436_308bd19_Firefox.xpi`
+- Chromium package: `Cookie-AutoDelete_Dev_20260921_191436_308bd19_Chrome.zip`
+- Firefox convenience artifact: `10659670426`
+- Chromium convenience artifact: `10659905242`
 - Firefox E2E diagnostics artifact: not emitted on success (failure-only by design)
 - Chromium E2E diagnostics artifact: not emitted on success (failure-only by design)
 - Chromium E2E: ✅
 - Firefox E2E: ✅
 - Fast CI/build/package validation: ✅
-- Published-RC artifact download + inner SHA256 roundtrip: ✅ (integrated into `Release Candidate Packages`, job `100046360642`)
+- Published-RC artifact download + inner SHA256 roundtrip: ✅ (integrated into `Release Candidate Packages`, job `106479075743`)
 - CodeQL / Actions / JavaScript-TypeScript analysis: ✅
 - Genuine historical-user-data regression: ✅ Firefox issue #197 (CAD 2.0.1 persisted state) + Chromium issue #1606 (CAD 3.8.2 settings snapshot); packaged upgrade/restart remains pending
 
-`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `6e5b2e5…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
+`Release Candidate Packages` ran only after the fast build job and both browser-E2E jobs succeeded and republishes the same package bytes they consumed. Documentation-only commits made after the technical RC record do not change those package bytes and do not invalidate `308bd19…`; any candidate-affecting source/runtime, manifest, build/packaging, dependency, toolchain, browser-test-infrastructure, or base change does.
 
 The separate `github-advanced-security` AI-agent check still fails before repository analysis because its requested hosted model is unavailable. It remains non-blocking while repository-owned CI/CodeQL are green.
 
@@ -38,13 +39,15 @@ The separate `github-advanced-security` AI-agent check still fails before reposi
 
 These are CI gates, **not manual retest instructions**.
 
+- [x] Packaged manifest permissions are contract-locked in CI: Chromium allows exactly the approved base permission set plus `<all_urls>` host access; Firefox allows exactly that set plus `contextualIdentities`. Missing or additional permissions fail build validation.
+
 ### Shared Firefox + Chromium
 
 - [x] Packaged extension starts in a real browser and the real options UI works.
 - [x] Configured automatic last-tab cleanup removes cookie, LocalStorage, IndexedDB and website Service Worker data for an unlisted site.
 - [x] Domain change cleans the previous unlisted origin.
-- [x] Whitelist created through the real expression UI retains protected data.
-- [x] Greylist created through the real expression UI retains data on normal tab close.
+- [x] Whitelist created through the real options UI retains protected data.
+- [x] Greylist created through the real options UI retains data on normal tab close.
 - [x] Production persistence contains the settings and expression lists created through real browser/UI interactions.
 
 ### Chromium-specific
@@ -75,17 +78,17 @@ A whole-extension runtime reload is not used as a background-lifecycle proxy in 
 Optional reproducible local cross-check for the pinned candidate:
 
 ```bash
-gh run download 33564965259 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-6e5b2e5
-cd cad-rc-6e5b2e5
+gh run download 35643495743 --repo HyperCriSiS/Cookie-AutoDelete --name release-candidate-packages --dir cad-rc-308bd19
+cd cad-rc-308bd19
 sha256sum -c SHA256SUMS.txt
 ```
 
-`Release Candidate Packages` job `100046360642` already performed this exact artifact roundtrip successfully after publishing the RC artifact. The optional command should likewise report `OK` for both `Cookie-AutoDelete_Dev_20260901_221123_6e5b2e5_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260901_221123_6e5b2e5_Chrome.zip`. The GitHub artifact-wrapper digest is recorded separately and is not substituted for the inner package checksums.
-- [x] Replacement RC was qualified against base `7eecf7fbc281e8e0ea8a08047c0f617d6517ad8d` and PR #1 is currently mergeable/`clean` against that base as of 2026-09-01. The final mergeability gate remains open until residual testing is complete.
+`Release Candidate Packages` job `106479075743` already performed this exact artifact roundtrip successfully after publishing the RC artifact. The optional command should likewise report `OK` for both `Cookie-AutoDelete_Dev_20260921_191436_308bd19_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260921_191436_308bd19_Chrome.zip`. The GitHub artifact-wrapper digest is recorded separately and is not substituted for the inner package checksums.
+- [x] Replacement RC was qualified against base `7eecf7fbc281e8e0ea8a08047c0f617d6517ad8d` and PR #1 is currently mergeable/`clean` against that base as of 2026-09-21. The final mergeability gate remains open until residual testing is complete.
 
 ## Minimal manual packaged smoke
 
-Do not manually repeat the data-cleanup/list matrices already proven by E2E unless diagnosing a failure.
+Do not manually repeat the data-cleanup/list matrices or permission-set validation already proven by CI/E2E unless diagnosing a failure. The remaining permission checks below concern browser install/permission UX, not manifest drift.
 
 ### Firefox
 
