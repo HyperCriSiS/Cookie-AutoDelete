@@ -11,6 +11,7 @@
  * SOFTWARE.
  */
 
+import { browserName, SettingID } from '../../src/typings/Enums';
 import { when } from 'jest-when';
 import { Store } from 'redux';
 
@@ -125,7 +126,7 @@ describe('TabEvents', () => {
         .mockResolvedValue([testCookie] as never);
     });
 
-    const testCookie: browser.cookies.Cookie = {
+    const testCookie: CadCookie = {
       domain: 'domain.com',
       hostOnly: true,
       httpOnly: true,
@@ -313,7 +314,7 @@ describe('TabEvents', () => {
   describe('onTabUpdate', () => {
     beforeAll(() => {
       when(spyTabEvents.getAllCookieActions)
-        .calledWith()
+        .calledWith(expect.any(Object))
         .mockResolvedValue(undefined as any);
     });
     afterAll(() => {

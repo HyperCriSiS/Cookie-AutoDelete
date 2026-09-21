@@ -16,8 +16,102 @@ import { Store } from 'redux';
 import { ReduxAction } from '../typings/ReduxConstants';
 
 export default class StoreUser {
-  public static init(store: Store): void {
+  /**
+   * Attach the hydrated Redux store. Tests and legacy callers keep the historic
+   * behaviour where init(store) means immediately ready. The real MV3
+   * background can pass ready=false and call markReady() only after all
+   * initialization steps have completed.
+   */
+  public static init(
+    store: Store<State, ReduxAction>,
+    ready = true,
+  ): void {
     StoreUser.store = store;
+    if (ready) {
+      StoreUser.markReady();
+    }
   }
+
+  /**
+   * Mark the background as fully initialized and release listeners/UI messages
+   * that were registered synchronously before asynchronous startup completed.
+   */
+  public static markReady(): void {
+    StoreUser.isReady = true;
+    if (StoreUser.resolveReady) {
+      StoreUser.resolveReady(StoreUser.store);
+      StoreUser.resolveReady = undefined;
+      StoreUser.rejectReady = undefined;
+    }
+  }
+
+  /**
+   * Fail all pending and future readiness requests. This avoids UI requests and
+   * browser events hanging forever when state hydration or startup validation
+   * aborts intentionally (for example to protect a corrupt persisted state).
+   */
+  public static markFailed(error: unknown): void {
+    const failure =
+      error instanceof Error
+        ? error
+        : new Error('Cookie AutoDelete background initialization failed.');
+    StoreUser.initializationError = failure;
+    if (StoreUser.rejectReady) {
+      StoreUser.rejectReady(failure);
+      StoreUser.resolveReady = undefined;
+      StoreUser.rejectReady = undefined;
+    }
+  }
+
+  /**
+   * Resolve only when the shared store exists and the background initialization
+   * has completed. This replaces polling loops and prevents events from running
+   * against a partially initialized state.
+   */
+  public static ready(): Promise<Store<State, ReduxAction>> {
+    if (StoreUser.initializationError) {
+      return Promise.reject(StoreUser.initializationError);
+    }
+    if (StoreUser.store && StoreUser.isReady) {
+      return Promise.resolve(StoreUser.store);
+    }
+    return StoreUser.readyPromise;
+  }
+
+  /**
+   * Wrap a browser event handler so it can be registered synchronously while
+   * deferring its actual work until the background is fully ready.
+   */
+  public static withStoreReady<P extends unknown[], R>(
+    handler: (...args: P) => R,
+  ): (...args: P) => Promise<R> {
+    return async (...args: P): Promise<R> => {
+      await StoreUser.ready();
+      return handler(...args);
+    };
+  }
+
   protected static store: Store<State, ReduxAction>;
+
+  private static initializationError: Error | undefined;
+  private static isReady = false;
+
+  private static resolveReady:
+    | ((store: Store<State, ReduxAction>) => void)
+    | undefined;
+
+  private static rejectReady: ((error: Error) => void) | undefined;
+
+  private static readyPromise = new Promise<Store<State, ReduxAction>>(
+    (resolve, reject) => {
+      StoreUser.resolveReady = resolve;
+      StoreUser.rejectReady = reject;
+    },
+  );
+
+  // Avoid an unhandled-rejection warning if startup fails before anything has
+  // requested ready(); callers still observe the original rejection.
+  private static handledReadyPromise = StoreUser.readyPromise.catch(
+    () => undefined,
+  );
 }

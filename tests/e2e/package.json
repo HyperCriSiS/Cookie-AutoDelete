@@ -1,0 +1,12 @@
+{
+  "name": "cookie-autodelete-e2e",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1",
+    "selenium-webdriver": "4.47.0"
+  }
+}

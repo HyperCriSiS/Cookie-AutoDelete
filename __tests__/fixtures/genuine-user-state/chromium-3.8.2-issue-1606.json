@@ -1,0 +1,50 @@
+{
+  "metadata": {
+    "kind": "public-upstream-user-settings-snapshot",
+    "browserFamily": "Chromium",
+    "browserVersion": "Google Chrome 119.0.6045.160",
+    "cadVersion": "3.8.2",
+    "os": "Windows 10 Pro",
+    "upstreamIssue": 1606,
+    "sourceUrl": "https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/issues/1606",
+    "capturedAt": "2023-11-24",
+    "sourceForm": "CAD current settings values posted in the issue body",
+    "note": "Public user-provided CAD core-settings snapshot. The fixture mechanically keys each posted name/value pair by setting name; no synthetic user values are added. This is not claimed to be a downloadable import/export attachment."
+  },
+  "state": {
+    "lists": {},
+    "cookieDeletedCounterTotal": 0,
+    "cookieDeletedCounterSession": 0,
+    "settings": {
+      "activeMode": {"name": "activeMode", "value": true},
+      "delayBeforeClean": {"name": "delayBeforeClean", "value": 5},
+      "discardedCleanup": {"name": "discardedCleanup", "value": false},
+      "domainChangeCleanup": {"name": "domainChangeCleanup", "value": false},
+      "enableGreyListCleanup": {"name": "enableGreyListCleanup", "value": true},
+      "cleanCookiesFromOpenTabsOnStartup": {"name": "cleanCookiesFromOpenTabsOnStartup", "value": false},
+      "cleanExpiredCookies": {"name": "cleanExpiredCookies", "value": true},
+      "siteDataEmptyOnEnable": {"name": "siteDataEmptyOnEnable", "value": true},
+      "cacheCleanup": {"name": "cacheCleanup", "value": false},
+      "indexedDBCleanup": {"name": "indexedDBCleanup", "value": false},
+      "localStorageCleanup": {"name": "localStorageCleanup", "value": false},
+      "pluginDataCleanup": {"name": "pluginDataCleanup", "value": false},
+      "serviceWorkersCleanup": {"name": "serviceWorkersCleanup", "value": false},
+      "contextualIdentities": {"name": "contextualIdentities", "value": false},
+      "contextualIdentitiesAutoRemove": {"name": "contextualIdentitiesAutoRemove", "value": true},
+      "statLogging": {"name": "statLogging", "value": true},
+      "showNumOfCookiesInIcon": {"name": "showNumOfCookiesInIcon", "value": true},
+      "keepDefaultIcon": {"name": "keepDefaultIcon", "value": false},
+      "showNotificationAfterCleanup": {"name": "showNotificationAfterCleanup", "value": true},
+      "manualNotifications": {"name": "manualNotifications", "value": true},
+      "notificationOnScreen": {"name": "notificationOnScreen", "value": 5},
+      "enableNewVersionPopup": {"name": "enableNewVersionPopup", "value": false},
+      "sizePopup": {"name": "sizePopup", "value": 16},
+      "sizeSetting": {"name": "sizeSetting", "value": 16},
+      "contextMenus": {"name": "contextMenus", "value": true},
+      "debugMode": {"name": "debugMode", "value": false}
+    },
+    "cache": {
+      "browserDetect": "Chrome"
+    }
+  }
+}

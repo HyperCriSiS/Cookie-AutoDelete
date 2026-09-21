@@ -64,3 +64,23 @@ label:hover {
 .table {
   margin-bottom: 0;
 }
+
+#cadPopup {
+  width: max-content;
+  min-width: 100%;
+}
+
+.cad-primary-actions {
+  flex-wrap: nowrap !important;
+  width: max-content;
+  min-width: 100%;
+  white-space: nowrap;
+}
+
+.cad-primary-actions > * {
+  flex: 0 0 auto;
+}
+
+.cad-primary-actions .btn {
+  white-space: nowrap;
+}

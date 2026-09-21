@@ -11,69 +11,48 @@
  * SOFTWARE.
  */
 
+import { SettingID } from '../typings/Enums';
 import StoreUser from './StoreUser';
-import { removeListUI } from '../redux/Actions';
+import { addExpressionUI, removeListUI } from '../redux/Actions';
 import contextualIdentitiesChangeInfo = browser.contextualIdentities.contextualIdentitiesChangeInfo;
-import { cadLog, eventListenerActions, getSetting } from './Libs';
+import {
+  cadLog,
+  getSetting,
+  isTemporaryContainerName,
+  TEMPORARY_CONTAINER_STORE_ID,
+} from './Libs';
 import { ReduxConstants } from '../typings/ReduxConstants';
 
 export default class ContextualIdentitiesEvents extends StoreUser {
   public static async init(): Promise<void> {
     if (
-      !browser.contextualIdentities ||
-      (!getSetting(
-        StoreUser.store.getState(),
-        SettingID.CONTEXTUAL_IDENTITIES,
-      ) as boolean) ||
+      !ContextualIdentitiesEvents.isEnabled() ||
       ContextualIdentitiesEvents.isInitialized
     )
       return;
     ContextualIdentitiesEvents.isInitialized = true;
-    // Populate cache with mapped Container ID to Name
+    // Populate cache with mapped Container ID to Name. Event listeners are
+    // registered synchronously by the background entry point.
     await ContextualIdentitiesEvents.cacheCookieStoreIdNames();
-    eventListenerActions(
-      browser.contextualIdentities.onCreated,
-      ContextualIdentitiesEvents.onContainerCreated,
-      EventListenerAction.ADD,
-    );
-    eventListenerActions(
-      browser.contextualIdentities.onRemoved,
-      ContextualIdentitiesEvents.onContainerRemoved,
-      EventListenerAction.ADD,
-    );
-    eventListenerActions(
-      browser.contextualIdentities.onUpdated,
-      ContextualIdentitiesEvents.onContainerUpdated,
-      EventListenerAction.ADD,
-    );
     cadLog(
       {
-        msg: `ContextualIdentitiesEvents.deInit:  Container Events have been added.`,
+        msg: `ContextualIdentitiesEvents.init:  Container support has been initialized.`,
       },
       getSetting(StoreUser.store.getState(), SettingID.DEBUG_MODE) as boolean,
     );
   }
 
   /**
-   * This removes all related event listeners and attempts to 'un-define' existing containers.
+   * Disable container-specific behavior and remove cached container names.
+   * Event listeners stay registered at the background entry point so an MV3
+   * service worker never depends on asynchronous listener registration.
    */
   public static async deInit(): Promise<void> {
-    if (!ContextualIdentitiesEvents.isInitialized) return;
-    eventListenerActions(
-      browser.contextualIdentities.onCreated,
-      ContextualIdentitiesEvents.onContainerCreated,
-      EventListenerAction.REMOVE,
-    );
-    eventListenerActions(
-      browser.contextualIdentities.onRemoved,
-      ContextualIdentitiesEvents.onContainerRemoved,
-      EventListenerAction.REMOVE,
-    );
-    eventListenerActions(
-      browser.contextualIdentities.onUpdated,
-      ContextualIdentitiesEvents.onContainerUpdated,
-      EventListenerAction.REMOVE,
-    );
+    if (
+      !ContextualIdentitiesEvents.isInitialized ||
+      !browser.contextualIdentities
+    )
+      return;
     ContextualIdentitiesEvents.isInitialized = false;
     const existingContainers = await browser.contextualIdentities.query({});
     for (const ci of existingContainers) {
@@ -87,7 +66,7 @@ export default class ContextualIdentitiesEvents extends StoreUser {
     }
     cadLog(
       {
-        msg: `ContextualIdentitiesEvents.deInit:  Container Events have been removed.`,
+        msg: `ContextualIdentitiesEvents.deInit:  Container support has been disabled.`,
       },
       getSetting(StoreUser.store.getState(), SettingID.DEBUG_MODE) as boolean,
     );
@@ -100,6 +79,7 @@ export default class ContextualIdentitiesEvents extends StoreUser {
   public static onContainerCreated(
     changeInfo: contextualIdentitiesChangeInfo,
   ): void {
+    if (!ContextualIdentitiesEvents.isEnabled()) return;
     StoreUser.store.dispatch({
       payload: {
         key: changeInfo.contextualIdentity.cookieStoreId,
@@ -116,6 +96,7 @@ export default class ContextualIdentitiesEvents extends StoreUser {
   public static onContainerRemoved(
     changeInfo: contextualIdentitiesChangeInfo,
   ): void {
+    if (!ContextualIdentitiesEvents.isEnabled()) return;
     // Only remove expression list id if setting is enabled.
     if (
       getSetting(
@@ -144,6 +125,7 @@ export default class ContextualIdentitiesEvents extends StoreUser {
   public static onContainerUpdated(
     changeInfo: contextualIdentitiesChangeInfo,
   ): void {
+    if (!ContextualIdentitiesEvents.isEnabled()) return;
     const cache = StoreUser.store.getState().cache;
     if (
       cache[changeInfo.contextualIdentity.cookieStoreId] &&
@@ -193,6 +175,51 @@ export default class ContextualIdentitiesEvents extends StoreUser {
         },
         type: ReduxConstants.ADD_CACHE,
       }),
+    );
+
+    ContextualIdentitiesEvents.consolidateTemporaryContainerLists(
+      contextualIdentitiesObjects,
+    );
+  }
+
+  /**
+   * Temporary Containers creates short-lived cookieStoreIds. Older CAD state
+   * may therefore contain one expression list per temporary container. Merge
+   * those live legacy lists into the stable %tmp store and remove the old keys.
+   * Existing %tmp rules win if the same expression already exists.
+   */
+  private static consolidateTemporaryContainerLists(
+    contextualIdentitiesObjects: browser.contextualIdentities.ContextualIdentity[],
+  ): void {
+    const temporaryStoreIds = contextualIdentitiesObjects
+      .filter((container) => isTemporaryContainerName(container.name))
+      .map((container) => container.cookieStoreId)
+      .sort();
+
+    temporaryStoreIds.forEach((temporaryStoreId) => {
+      const expressions =
+        StoreUser.store.getState().lists[temporaryStoreId] || [];
+      expressions.forEach((expression) => {
+        StoreUser.store.dispatch(
+          addExpressionUI({
+            ...expression,
+            storeId: TEMPORARY_CONTAINER_STORE_ID,
+          }),
+        );
+      });
+      if (expressions.length > 0) {
+        StoreUser.store.dispatch(removeListUI(temporaryStoreId));
+      }
+    });
+  }
+
+  private static isEnabled(): boolean {
+    return Boolean(
+      browser.contextualIdentities &&
+        getSetting(
+          StoreUser.store.getState(),
+          SettingID.CONTEXTUAL_IDENTITIES,
+        ),
     );
   }
 

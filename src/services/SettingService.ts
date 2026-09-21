@@ -11,13 +11,16 @@
  * SOFTWARE.
  */
 
+import { SiteDataType, SettingID } from '../typings/Enums';
 import StoreUser from './StoreUser';
 import ContextualIdentitiesEvents from './ContextualIdentitiesEvents';
 import { validateSettings } from '../redux/Actions';
+import { initialState } from '../redux/State';
 import { cadLog, siteDataToBrowser, SITEDATATYPES } from './Libs';
 import { checkIfProtected, setGlobalIcon } from './BrowserActionService';
 import ContextMenuEvents from './ContextMenuEvents';
 import { ReduxConstants } from '../typings/ReduxConstants';
+import { supportsStorageType } from './BrowserCapabilities';
 
 export default class SettingService extends StoreUser {
   public static init(): void {
@@ -44,10 +47,22 @@ export default class SettingService extends StoreUser {
     // BrowsingData Settings Check
     for (const siteData of SITEDATATYPES) {
       const sd = `${siteDataToBrowser(siteData)}Cleanup`;
+      const currentSiteDataSetting = SettingService.current[sd];
       if (
+        currentSiteDataSetting !== undefined &&
         (previous[sd] === undefined || !previous[sd].value) &&
-        SettingService.current[sd].value
+        currentSiteDataSetting.value
       ) {
+        if (!supportsStorageType(StoreUser.store.getState().cache, siteData)) {
+          cadLog(
+            {
+              msg: `${siteData} cleanup is not supported by this browser/runtime. Skipping initial cleanup.`,
+              type: 'info',
+            },
+            SettingService.getCurrent(SettingID.DEBUG_MODE) as boolean,
+          );
+          continue;
+        }
         // Migration Check to prevent LocalStorage from being cleaned again.
         // Only if migrating from 3.4.0 to 3.5.1+
         if (
@@ -90,10 +105,29 @@ export default class SettingService extends StoreUser {
         await browser.alarms.clear('activeModeAlarm');
       }
       await setGlobalIcon(active);
-      ContextMenuEvents.updateMenuItemCheckbox(
-        ContextMenuEvents.MenuID.ACTIVE_MODE,
-        active,
-      );
+      // Context menus survive MV3 service-worker restarts while static class
+      // fields do not. Update the existing menu item based on persisted settings
+      // instead of relying on ContextMenuEvents.isInitialized in RAM.
+      if (
+        browser.contextMenus &&
+        SettingService.getCurrent(SettingID.CONTEXT_MENUS)
+      ) {
+        try {
+          await browser.contextMenus.update(
+            ContextMenuEvents.MenuID.ACTIVE_MODE,
+            { checked: active },
+          );
+        } catch (error) {
+          cadLog(
+            {
+              msg: 'Could not update the Auto-Clean context menu checkbox.',
+              type: 'warn',
+              x: error,
+            },
+            SettingService.getCurrent(SettingID.DEBUG_MODE) as boolean,
+          );
+        }
+      }
     }
 
     // Context Menu Changes
@@ -118,18 +152,24 @@ export default class SettingService extends StoreUser {
       SettingID.CLEANUP_LOCALSTORAGE,
     );
 
-    await checkIfProtected(StoreUser.store.getState());
-
-    // Validate Settings Again
+    // Normalize legacy persisted settings before consumers such as
+    // checkIfProtected() dereference keys that may not have existed when the
+    // profile was saved. Side effects above intentionally use the original
+    // pre-normalization snapshot so newly introduced defaults are not treated
+    // as user-enabled cleanup settings.
     StoreUser.store.dispatch<any>(validateSettings());
+    await checkIfProtected(StoreUser.store.getState());
   }
 
   private static getCurrent(s: SettingID): boolean | number | string {
-    return SettingService.current[s].value;
+    const setting = SettingService.current[s] || initialState.settings[s];
+    return setting.value;
   }
 
   private static hasNewValue(p: MapToSettingObject, s: SettingID): boolean {
-    return p[s].value !== SettingService.current[s].value;
+    const previous = p[s];
+    const current = SettingService.current[s];
+    return current !== undefined && (previous === undefined || previous.value !== current.value);
   }
 
   private static updateDeprecatedSetting(

@@ -11,8 +11,9 @@
  * SOFTWARE.
  */
 
+import { ListType } from '../typings/Enums';
 import { combineReducers } from 'redux';
-import shortid from 'shortid';
+import { generateId } from '../services/IdService';
 import { ReduxAction, ReduxConstants } from '../typings/ReduxConstants';
 import { initialState } from './State';
 
@@ -32,7 +33,9 @@ const newExpressionObject = (
   cleanSiteData: !action.payload.cleanSiteData
     ? []
     : action.payload.cleanSiteData,
-  id: shortid.generate(),
+  // Preserve IDs from imports/updates. Generate a new one only for genuinely
+  // new expressions that do not already carry an ID.
+  id: action.payload.id || generateId(),
   listType: !action.payload.listType ? ListType.WHITE : action.payload.listType,
 });
 
@@ -238,7 +241,7 @@ export const cache = (
   }
 };
 
-export default combineReducers<State, ReduxAction>({
+export default combineReducers({
   activityLog,
   cache,
   cookieDeletedCounterSession,

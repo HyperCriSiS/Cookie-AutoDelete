@@ -2,106 +2,40 @@ name: CI
 
 on:
   push:
-    branches-ignore:
-      - '_archived__**'
-  pull_request_target:
+    branches:
+      - '3.X.X-Branch'
+    paths-ignore:
+      - '**/*.md'
+  pull_request:
     branches-ignore:
       - '_archived__**'
     paths-ignore:
-      - '**/README.md'
+      - '**/*.md'
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  pre_info:
-    name: Initial Checks
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      skipCI: ${{ steps.checkci.outputs.result }}
-      gitSHA: ${{ steps.checkci.outputs.gitSHA }}
-    steps:
-      - name: Run CI Check
-        id: checkci
-        env:
-          GH_API: ${{ github.event.repository.commits_url }}
-          GH_TOKEN: ${{ github.token }}
-          GH_GH: ${{ toJson(github) }}
-          GH_SHA: ${{ github.event.after }}
-          PR_FIRSTSHA: ${{ github.event.pull_request.head.sha }}
-          PR_NUM: ${{ github.event.pull_request.number }}
-        run: |
-          echo "Run ID    : $GITHUB_RUN_ID"
-          echo "Event Name: $GITHUB_EVENT_NAME"
-          echo "PR_NUM    : $PR_NUM"
-          EXP_REF="ds\/(.*)$"
-          if [[ $GITHUB_REF =~ $EXP_REF ]]; then
-            GH_REF=${BASH_REMATCH[1]}
-          fi
-          REF=$([[ $GITHUB_HEAD_REF ]] && echo $GITHUB_HEAD_REF || echo $GH_REF)
-          echo "HEAD_REF  : $GITHUB_HEAD_REF"
-          echo "GITHUB_REF: $GITHUB_REF"
-          echo "GH_REF    : $GH_REF"
-          echo "Branch    : $REF"
-          GH_SHA=$([[ $GH_SHA ]] && echo $GH_SHA || echo $PR_FIRSTSHA)
-          echo "gitSHA=$GH_SHA" >> "$GITHUB_OUTPUT"
-          echo "Commit SHA: $GH_SHA"
-          echo "PR Head SHA: $PR_FIRSTSHA"
-          SKIP_A=$([[ "$REF" == l10n_* ]] && echo true || echo false)
-          echo "Starts With l10n_ :  $SKIP_A"
-          GH_API=${GH_API/'{/sha}'/}
-          echo "API: $GH_API"
-
-          RESPONSE_FILE=$(mktemp)
-          HTTP_STATUS=$(
-            curl --silent --show-error --location \
-              --header "Accept: application/vnd.github+json" \
-              --header "Authorization: Bearer $GH_TOKEN" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              --output "$RESPONSE_FILE" \
-              --write-out "%{http_code}" \
-              "$GH_API/$GH_SHA" || true
-          )
-
-          CM=""
-          if [[ "$HTTP_STATUS" == "200" ]] && \
-            jq -e '.commit.message | type == "string"' "$RESPONSE_FILE" > /dev/null 2>&1; then
-            CM=$(jq -r '.commit.message' "$RESPONSE_FILE")
-          else
-            echo "::warning::Could not read commit message from GitHub API (HTTP ${HTTP_STATUS:-unknown}); CI will run instead of failing."
-          fi
-          rm -f "$RESPONSE_FILE"
-
-          echo "Commit Message: $CM"
-          EXP_SKIP="\[ci skip]"
-          SKIP_B=$([[ "$CM" =~ $EXP_SKIP ]] && echo true || echo false)
-          echo "Skip via Commit: $SKIP_B"
-          RES=$([[ $SKIP_A == true || $SKIP_B == true ]] && echo true || echo false)
-          echo "Skip CI:  $RES"
-          echo "result=$RES" >> "$GITHUB_OUTPUT"
-
   all_jobs:
     name: Tests, Builds, Coverage
     runs-on: ubuntu-latest
-    needs: pre_info
-    if: needs.pre_info.outputs.skipCI == 'false' && github.event_name != 'pull_request_target'
-    permissions:
-      actions: write
-      contents: read
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'l10n_') }}
     steps:
-      - name: Checkout Default Commit
+      - name: Checkout tested commit
         uses: actions/checkout@v7
-      - name: Use Node.js LTS 22.x
-        id: node
+      - name: Use Node.js from .nvmrc
         uses: actions/setup-node@v7
         with:
-          node-version: '22.x'
+          node-version-file: '.nvmrc'
           cache: npm
       - name: Install locked dependencies
         run: npm ci --prefer-offline --no-fund
+      - name: Run TypeScript 7 typecheck
+        run: npm run typecheck
       - name: Run Tests
         run: npm run test -- --verbose
       - name: Run Lint
@@ -109,16 +43,196 @@ jobs:
       - name: Run Build
         run: npm run build
         env:
-          GITSHA: ${{ needs.pre_info.outputs.gitSHA }}
+          GITSHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Upload packages for real-browser E2E
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-test-packages
+          path: |
+            builds/*Chrome.zip
+            builds/*Firefox.xpi
+          if-no-files-found: error
+          retention-days: 3
       - name: Archive Code Coverage Results
         uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage
-      - name: Coveralls.io Coverage Upload
-        id: coveralls_action
-        uses: coverallsapp/github-action@v2.3.8
-        if: false
-        continue-on-error: true
+
+  browser_e2e_chromium:
+    name: Browser E2E — Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: all_jobs
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v7
+      - name: Use Node.js 24 for browser automation
+        uses: actions/setup-node@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          node-version: '24'
+      - name: Cache E2E npm downloads
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node24-e2e-npm-${{ hashFiles('tests/e2e/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node24-e2e-npm-
+      - name: Install isolated E2E dependencies
+        run: npm run test:e2e:install
+      - name: Install Playwright Chromium and Linux dependencies
+        run: npm --prefix tests/e2e exec -- playwright install --with-deps chromium
+      - name: Allow the controlled E2E server to bind HTTP port 80
+        run: sudo setcap 'cap_net_bind_service=+ep' "$(readlink -f "$(command -v node)")"
+      - name: Download exact packaged browser candidates
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-test-packages
+          path: builds/e2e-packages
+      - name: Extract packaged Chromium candidate
+        run: |
+          CHROME_ZIP=$(find builds/e2e-packages -maxdepth 1 -name '*Chrome.zip' -print -quit)
+          test -n "$CHROME_ZIP"
+          mkdir -p builds/e2e-chromium
+          unzip -q "$CHROME_ZIP" -d builds/e2e-chromium
+      - name: Run real-browser Chromium E2E
+        run: npm run test:e2e:chromium -- builds/e2e-chromium
+      - name: Upload Chromium E2E diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-e2e-chromium-results
+          path: tests/e2e/results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  browser_e2e_firefox:
+    name: Browser E2E — Firefox
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: all_jobs
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v7
+      - name: Use Node.js 24 for browser automation
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Cache E2E npm downloads
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node24-e2e-npm-${{ hashFiles('tests/e2e/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node24-e2e-npm-
+      - name: Install isolated E2E dependencies
+        run: npm run test:e2e:install
+      - name: Install current Mozilla Firefox and Firefox ESR
+        run: |
+          curl --fail --location --retry 4 \
+            'https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US' \
+            --output /tmp/cad-firefox-release.tar.xz &
+          RELEASE_PID=$!
+          curl --fail --location --retry 4 \
+            'https://download.mozilla.org/?product=firefox-esr-latest&os=linux64&lang=en-US' \
+            --output /tmp/cad-firefox-esr.tar.xz &
+          ESR_PID=$!
+          wait "$RELEASE_PID"
+          wait "$ESR_PID"
+
+          sudo rm -rf /opt/cad-firefox /opt/cad-firefox-esr
+          sudo mkdir -p /opt/cad-firefox /opt/cad-firefox-esr
+          sudo tar -xJf /tmp/cad-firefox-release.tar.xz -C /opt/cad-firefox --strip-components=1
+          sudo tar -xJf /tmp/cad-firefox-esr.tar.xz -C /opt/cad-firefox-esr --strip-components=1
+          test -x /opt/cad-firefox/firefox
+          test -x /opt/cad-firefox-esr/firefox
+          echo 'FIREFOX_BIN=/opt/cad-firefox/firefox' >> "$GITHUB_ENV"
+          echo 'FIREFOX_PERSISTENT_BIN=/opt/cad-firefox-esr/firefox' >> "$GITHUB_ENV"
+      - name: Allow the controlled E2E server to bind HTTP port 80
+        run: sudo setcap 'cap_net_bind_service=+ep' "$(readlink -f "$(command -v node)")"
+      - name: Download exact packaged browser candidates
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-test-packages
+          path: builds/e2e-packages
+      - name: Run real-browser Firefox E2E
+        run: |
+          FIREFOX_XPI=$(find builds/e2e-packages -maxdepth 1 -name '*Firefox.xpi' -print -quit)
+          test -n "$FIREFOX_XPI"
+          npm run test:e2e:firefox -- "$FIREFOX_XPI"
+      - name: Run persistent-install Firefox restart E2E
+        run: |
+          FIREFOX_XPI=$(find builds/e2e-packages -maxdepth 1 -name '*Firefox.xpi' -print -quit)
+          test -n "$FIREFOX_XPI"
+          node tests/e2e/firefox-persistent.mjs "$FIREFOX_XPI"
+      - name: Upload Firefox E2E diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-e2e-firefox-results
+          path: tests/e2e/results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  release_candidate:
+    name: Release Candidate Packages
+    runs-on: ubuntu-latest
+    needs:
+      - all_jobs
+      - browser_e2e_chromium
+      - browser_e2e_firefox
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Download exact browser-tested packages
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-test-packages
+          path: builds
+      - name: Create Release Candidate Checksums
+        run: |
+          cd builds
+          sha256sum *Chrome.zip *Firefox.xpi > SHA256SUMS.txt
+      - name: Upload Release Candidate Packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-candidate-packages
+          path: |
+            builds/*Chrome.zip
+            builds/*Firefox.xpi
+            builds/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Download published release candidate
+        uses: actions/download-artifact@v8
+        with:
+          name: release-candidate-packages
+          path: builds/rc-roundtrip
+      - name: Verify package checksums after artifact roundtrip
+        run: |
+          cd builds/rc-roundtrip
+          test -f SHA256SUMS.txt
+          test "$(find . -maxdepth 1 -name '*Chrome.zip' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -name '*Firefox.xpi' | wc -l)" -eq 1
+          test "$(wc -l < SHA256SUMS.txt)" -eq 2
+          sha256sum -c SHA256SUMS.txt
+      - name: Extract browser packages for convenience artifacts
+        id: extbuilds
+        run: |
+          CHROME_ZIP=$(find builds -maxdepth 1 -name '*Chrome.zip' -print -quit)
+          FIREFOX_XPI=$(find builds -maxdepth 1 -name '*Firefox.xpi' -print -quit)
+          CHROME_DIR="${CHROME_ZIP%.zip}"
+          FIREFOX_DIR="${FIREFOX_XPI%.xpi}"
+          mkdir -p "$CHROME_DIR" "$FIREFOX_DIR"
+          unzip -q "$CHROME_ZIP" -d "$CHROME_DIR"
+          unzip -q "$FIREFOX_XPI" -d "$FIREFOX_DIR"
+          echo "crdir=$(basename "$CHROME_DIR")" >> "$GITHUB_OUTPUT"
+          echo "ffdir=$(basename "$FIREFOX_DIR")" >> "$GITHUB_OUTPUT"
+      - name: Upload Artifact for Mozilla Firefox Build
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.extbuilds.outputs.ffdir }}
+          path: builds/${{ steps.extbuilds.outputs.ffdir }}
+      - name: Upload Artifact for Chromium Build
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.extbuilds.outputs.crdir }}
+          path: builds/${{ steps.extbuilds.outputs.crdir }}

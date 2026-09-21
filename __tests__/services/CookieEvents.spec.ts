@@ -20,7 +20,7 @@ import TabEvents from '../../src/services/TabEvents';
 jest.requireActual('../../src/services/Libs');
 const spyLib: JestSpyObject = global.generateSpies(Lib);
 
-const defaultCookie: browser.cookies.Cookie = {
+const defaultCookie: CadCookie = {
   domain: 'domain.com',
   hostOnly: false,
   httpOnly: false,

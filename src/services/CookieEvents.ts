@@ -18,7 +18,7 @@ import TabEvents from './TabEvents';
 export default class CookieEvents extends StoreUser {
   public static async onCookieChanged(changeInfo: {
     removed: boolean;
-    cookie: browser.cookies.Cookie;
+    cookie: CadCookie;
     cause: browser.cookies.OnChangedCause;
   }): Promise<void> {
     // Truncate cookie value (purely for debug)
@@ -29,8 +29,8 @@ export default class CookieEvents extends StoreUser {
       windowType: 'normal',
     });
     tabQuery.forEach((tab) => {
-      // Tabs.id with tabs.TAB_ID_NONE do not host content tabs
-      // Tabs.url is always present as we already have the 'tabs' permission.
+      // Tabs.id with tabs.TAB_ID_NONE do not host content tabs. Matching host
+      // permissions provide URL access for normal web tabs without "tabs".
       if (!tab.id || !tab.url) return;
       if (
         extractMainDomain(getHostname(tab.url)) ===

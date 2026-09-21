@@ -10,6 +10,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import { browserName, SiteDataType, SettingID, ListType } from '../../src/typings/Enums';
 import {
   activityLog,
   cache,
