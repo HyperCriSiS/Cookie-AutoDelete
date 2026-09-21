@@ -46,8 +46,8 @@ These are CI gates, **not manual retest instructions**.
 - [x] Packaged extension starts in a real browser and the real options UI works.
 - [x] Configured automatic last-tab cleanup removes cookie, LocalStorage, IndexedDB and website Service Worker data for an unlisted site.
 - [x] Domain change cleans the previous unlisted origin.
-- [x] Whitelist created through the real options UI retains protected data.
-- [x] Greylist created through the real options UI retains data on normal tab close.
+- [x] Whitelist created through the real expression UI retains protected data.
+- [x] Greylist created through the real expression UI retains data on normal tab close.
 - [x] Production persistence contains the settings and expression lists created through real browser/UI interactions.
 
 ### Chromium-specific
@@ -84,7 +84,7 @@ sha256sum -c SHA256SUMS.txt
 ```
 
 `Release Candidate Packages` job `106479075743` already performed this exact artifact roundtrip successfully after publishing the RC artifact. The optional command should likewise report `OK` for both `Cookie-AutoDelete_Dev_20260921_191436_308bd19_Firefox.xpi` and `Cookie-AutoDelete_Dev_20260921_191436_308bd19_Chrome.zip`. The GitHub artifact-wrapper digest is recorded separately and is not substituted for the inner package checksums.
-- [x] Replacement RC was qualified against base `7eecf7fbc281e8e0ea8a08047c0f617d6517ad8d` and PR #1 is currently mergeable/`clean` against that base as of 2026-09-21. The final mergeability gate remains open until residual testing is complete.
+- [x] Replacement RC was qualified against base `7eecf7fbc281e8e0ea8a08047c0f617d6517ad8d`; PR #1 reported `clean` at the technical RC commit. The current documentation-only head can report `unstable` because the external GHAS AI-agent check fails while CodeQL and repository analyses are green. Final mergeability/base-drift remains an explicit release gate after residual testing.
 
 ## Minimal manual packaged smoke
 
