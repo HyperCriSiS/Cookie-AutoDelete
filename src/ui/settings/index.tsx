@@ -10,31 +10,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-/* istanbul ignore file: React-redux init */
 import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
-import { createUIStore } from 'redux-webext';
-import { sleep } from '../../services/Libs';
+import createUIStore from '../../redux/UIStore';
+import ErrorBoundary from '../common_components/ErrorBoundary';
 import fontAwesomeImports from '../font-awesome-imports';
 import App from './App';
 
 fontAwesomeImports();
 
 async function initApp() {
-  let store = await createUIStore();
-  while (!store.getState()) {
-    await sleep(250);
-    store = await createUIStore();
-  }
+  const store = await createUIStore();
   const mountNode = document.createElement('div');
   document.body.appendChild(mountNode);
 
   ReactDOM.render(
     <Provider store={store}>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </Provider>,
     mountNode,
   );
 }
 
-initApp();
+void initApp().catch((error) => {
+  console.error('Cookie AutoDelete settings failed to initialize.', error);
+});

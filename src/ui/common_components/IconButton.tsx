@@ -24,7 +24,7 @@ interface IconButtonProps {
   className: string;
   styleReact?: React.CSSProperties;
   text?: string;
-  tag?: string;
+  tag?: React.ElementType;
   href?: string;
   type?: string;
   title?: string;
@@ -37,13 +37,7 @@ interface IconButtonProps {
 }
 
 export default class IconButton extends React.Component<IconButtonProps> {
-  public render(): Partial<
-    | HTMLButtonElement
-    | HTMLInputElement
-    | HTMLLabelElement
-    | HTMLBaseElement
-    | HTMLElement
-  > {
+  public render(): React.ReactElement {
     const {
       className,
       iconName,
@@ -55,10 +49,9 @@ export default class IconButton extends React.Component<IconButtonProps> {
     } = this.props;
 
     // Has to be PascalCase, else JSX will think it's a tag named 'tagName'.
-    const TagName = tag === 'input' ? 'label' : tag || 'button';
+    const TagName: React.ElementType =
+      tag === 'input' ? 'label' : tag || 'button';
     return (
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
       <TagName
         {...nativeProps}
         className={`btn ${className || ''}`}

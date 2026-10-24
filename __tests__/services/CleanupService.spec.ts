@@ -10,6 +10,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+import {
+  browserName,
+  SiteDataType,
+  SettingID,
+  ListType,
+  ReasonClean,
+  ReasonKeep,
+  OpenTabStatus,
+} from '../../src/typings/Enums';
 import { advanceTo, clear } from 'jest-date-mock';
 import { when } from 'jest-when';
 import { initialState } from '../../src/redux/State';
@@ -41,6 +50,7 @@ const spyCleanupService: JestSpyObject = global.generateSpies(CleanupService);
 
 const sampleTab: browser.tabs.Tab = {
   active: true,
+  id: 1,
   cookieStoreId: 'firefox-default',
   hidden: false,
   highlighted: false,
@@ -289,7 +299,7 @@ describe('CleanupService', () => {
 
     it('should be called 5 times for cookies.remove', async () => {
       await cleanCookies(initialState, removeCookies);
-      expect(global.browser.cookies.remove).toBeCalledTimes(5);
+      expect(global.browser.cookies.remove).toHaveBeenCalledTimes(5);
     });
 
     it('should throw an error for cookies.remove', async () => {
@@ -410,6 +420,7 @@ describe('CleanupService', () => {
       });
 
       it('Regular clean, exclude open tabs.', async () => {
+        (global.browser.cookies.remove as jest.Mock).mockResolvedValue({});
         const ffResult = await cleanCookiesOperation(
           firefoxState,
           cleanupProperties,
@@ -890,8 +901,8 @@ describe('CleanupService', () => {
       expect(await clearCookiesForThisDomain(initialState, googleTab)).toBe(
         true,
       );
-      expect(global.browser.cookies.remove).toBeCalledTimes(2);
-      expect(global.browser.notifications.create).toBeCalledTimes(1);
+      expect(global.browser.cookies.remove).toHaveBeenCalledTimes(2);
+      expect(global.browser.notifications.create).toHaveBeenCalledTimes(1);
       expect(global.browser.i18n.getMessage.mock.calls[1][0]).toBe(
         'manualCleanSuccess',
       );
@@ -912,8 +923,8 @@ describe('CleanupService', () => {
       expect(await clearCookiesForThisDomain(initialState, googleTab)).toBe(
         false,
       );
-      expect(global.browser.cookies.remove).toBeCalledTimes(0);
-      expect(global.browser.notifications.create).toBeCalledTimes(1);
+      expect(global.browser.cookies.remove).toHaveBeenCalledTimes(0);
+      expect(global.browser.notifications.create).toHaveBeenCalledTimes(1);
       expect(global.browser.i18n.getMessage.mock.calls[1][0]).toBe(
         'manualCleanNothing',
       );
@@ -930,8 +941,8 @@ describe('CleanupService', () => {
       expect(await clearCookiesForThisDomain(initialState, googleTab)).toBe(
         false,
       );
-      expect(global.browser.cookies.remove).toBeCalledTimes(1);
-      expect(global.browser.notifications.create).toBeCalledTimes(1);
+      expect(global.browser.cookies.remove).toHaveBeenCalledTimes(1);
+      expect(global.browser.notifications.create).toHaveBeenCalledTimes(1);
       expect(global.browser.i18n.getMessage.mock.calls[1][0]).toBe(
         'manualCleanSuccess',
       );
@@ -951,8 +962,8 @@ describe('CleanupService', () => {
       expect(
         await clearLocalStorageForThisDomain(initialState, sampleTab),
       ).toBe(true);
-      expect(global.browser.tabs.executeScript).toBeCalledTimes(1);
-      expect(global.browser.notifications.create).toBeCalledTimes(1);
+      expect(global.browser.tabs.executeScript).toHaveBeenCalledTimes(1);
+      expect(global.browser.notifications.create).toHaveBeenCalledTimes(1);
     });
     it('should show error notification if browser.tabs.executeScript threw an error', async () => {
       when(global.browser.tabs.executeScript)
@@ -961,9 +972,9 @@ describe('CleanupService', () => {
       expect(
         await clearLocalStorageForThisDomain(initialState, sampleTab),
       ).toBe(false);
-      expect(global.browser.tabs.executeScript).toBeCalledTimes(1);
-      expect(spyLib.throwErrorNotification).toBeCalledTimes(1);
-      expect(spyLib.showNotification).toBeCalledTimes(1);
+      expect(global.browser.tabs.executeScript).toHaveBeenCalledTimes(1);
+      expect(spyLib.throwErrorNotification).toHaveBeenCalledTimes(1);
+      expect(spyLib.showNotification).toHaveBeenCalledTimes(1);
     });
     it('should only show the no cleanup done notification if browser.tabs.executeScript threw a non-error type', async () => {
       when(global.browser.tabs.executeScript)
@@ -972,9 +983,9 @@ describe('CleanupService', () => {
       expect(
         await clearLocalStorageForThisDomain(initialState, sampleTab),
       ).toBe(false);
-      expect(global.browser.tabs.executeScript).toBeCalledTimes(1);
+      expect(global.browser.tabs.executeScript).toHaveBeenCalledTimes(1);
       expect(spyLib.throwErrorNotification).not.toHaveBeenCalled();
-      expect(spyLib.showNotification).toBeCalledTimes(1);
+      expect(spyLib.showNotification).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1282,7 +1293,7 @@ describe('CleanupService', () => {
       const result = filterSiteData(cleanReasonObj, SiteDataType.LOCALSTORAGE);
       expect(result).toBe(false);
     });
-    it('should return true because of restart cleanup and is expired cookie on restart.  Edge case => usually notInAnyList takes precidence already.', () => {
+    it('should not misclassify an expired restart cookie without a matching expression as CAD site data', () => {
       const cleanReasonObj: CleanReasonObject = {
         cached: false,
         cleanCookie: true,
@@ -1293,7 +1304,7 @@ describe('CleanupService', () => {
         reason: ReasonClean.ExpiredCookieRestart,
       };
       const result = filterSiteData(cleanReasonObj, SiteDataType.LOCALSTORAGE);
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
     it('should return false because of whitelist expression and is expired cookie.', () => {
       const cleanReasonObj: CleanReasonObject = {
@@ -1987,7 +1998,7 @@ describe('CleanupService', () => {
         expect(spyCleanupService.cleanSiteData).toHaveBeenCalledTimes(1);
       });
 
-      it('should call cleanSiteData for: Chrome, pluginDataCleanup true', async () => {
+      it('should not call cleanSiteData for deprecated Chromium pluginData cleanup', async () => {
         await otherBrowsingDataCleanup(
           {
             ...pluginDataState,
@@ -1997,7 +2008,7 @@ describe('CleanupService', () => {
           },
           [],
         );
-        expect(spyCleanupService.cleanSiteData).toHaveBeenCalledTimes(1);
+        expect(spyCleanupService.cleanSiteData).not.toHaveBeenCalled();
       });
     });
 

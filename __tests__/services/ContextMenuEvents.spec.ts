@@ -11,6 +11,7 @@
  * SOFTWARE.
  */
 
+import { SettingID, ListType } from '../../src/typings/Enums';
 import { when } from 'jest-when';
 import { Store } from 'redux';
 
@@ -62,6 +63,11 @@ class TestContextMenuEvents extends ContextMenuEvents {
   }
   public static setIsInitialized(value: boolean) {
     ContextMenuEvents.isInitialized = value;
+  }
+  public static createMenuForTest(
+    createProperties: Parameters<typeof browser.contextMenus.create>[0],
+  ) {
+    return TestContextMenuEvents.menuCreate(createProperties);
   }
   public static spyAddNewExpression = jest.spyOn(
     ContextMenuEvents,
@@ -120,6 +126,10 @@ describe('ContextMenuEvents', () => {
   });
   afterEach(() => {
     TestStore.resetSetting();
+    global.browser.runtime.getManifest.mockReturnValue({
+      manifest_version: 2,
+      version: '0.12.34',
+    });
   });
 
   describe('menuInit', () => {
@@ -137,28 +147,22 @@ describe('ContextMenuEvents', () => {
       ContextMenuEvents.menuInit();
       expect(global.browser.contextMenus.create).not.toHaveBeenCalled();
     });
-    it('should create its menus contextMenus setting is enabled and none was created beforehand', () => {
-      when(global.browser.contextMenus.onClicked.hasListener)
-        .calledWith(expect.any(Function))
-        .mockReturnValue(false);
+    it('should create its menus when contextMenus is enabled and none was created beforehand', () => {
       TestStore.changeSetting(SettingID.CONTEXT_MENUS, true);
       ContextMenuEvents.menuInit();
       expect(TestContextMenuEvents.getIsInitialized()).toBe(true);
       expect(global.browser.contextMenus.create).toHaveBeenCalledTimes(35);
-      expect(
-        global.browser.contextMenus.onClicked.addListener,
-      ).toHaveBeenCalledTimes(1);
     });
-    it('should not add another listener if one was already added', () => {
-      when(global.browser.contextMenus.onClicked.hasListener)
-        .calledWith(expect.any(Function))
-        .mockReturnValue(true);
-      TestStore.changeSetting(SettingID.CONTEXT_MENUS, true);
-      TestContextMenuEvents.setIsInitialized(false);
-      ContextMenuEvents.menuInit();
-      expect(
-        global.browser.contextMenus.onClicked.addListener,
-      ).not.toHaveBeenCalled();
+    it('should use the MV3 action context for default menu contexts', () => {
+      global.browser.runtime.getManifest.mockReturnValue({
+        manifest_version: 3,
+        version: '0.12.34',
+      });
+      TestContextMenuEvents.createMenuForTest({ title: 'test' });
+      expect(global.browser.contextMenus.create).toHaveBeenCalledWith(
+        expect.objectContaining({ contexts: ['action', 'page'] }),
+        expect.any(Function),
+      );
     });
     it('should do nothing if contextMenus setting is enabled and menus were already created', () => {
       TestStore.changeSetting(SettingID.CONTEXT_MENUS, true);
@@ -172,9 +176,7 @@ describe('ContextMenuEvents', () => {
     it('should work', async () => {
       TestContextMenuEvents.setIsInitialized(true);
       await ContextMenuEvents.menuClear();
-      expect(
-        global.browser.contextMenus.onClicked.removeListener,
-      ).toHaveBeenCalledTimes(1);
+      expect(global.browser.contextMenus.removeAll).toHaveBeenCalledTimes(1);
       expect(TestContextMenuEvents.getIsInitialized()).toBe(false);
     });
   });

@@ -32,26 +32,10 @@ interface CleanupPropertiesInternal extends CleanupProperties {
   openTabDomains: { [k: string]: string[] };
 }
 
-declare const enum ReasonKeep {
-  OpenTabs = 'reasonKeepOpenTab',
-  MatchedExpression = 'reasonKeep',
-}
+type ReasonKeep = import('./Enums').ReasonKeep;
+type ReasonClean = import('./Enums').ReasonClean;
 
-declare const enum ReasonClean {
-  StartupNoMatchedExpression = 'reasonCleanStartupNoList',
-  StartupCleanupAndGreyList = 'reasonCleanGreyList',
-  NoMatchedExpression = 'reasonCleanNoList',
-  MatchedExpressionButNoCookieName = 'reasonCleanCookieName',
-  ExpiredCookie = 'reasonCleanCookieExpired',
-  ExpiredCookieRestart = 'reasonCleanCookieExpiredRestart',
-  CADSiteDataCookie = 'reasonCADSiteDataCookie',
-  CADSiteDataCookieRestart = 'reasonCADSiteDataCookieRestart'
-}
-
-declare const enum OpenTabStatus {
-  TabsWasNotIgnored = 'reasonTabsWereNotIgnored',
-  TabsWereIgnored = 'reasonTabsWereIgnored',
-}
+type OpenTabStatus = import('./Enums').OpenTabStatus;
 
 interface CleanReasonObject {
   cached: boolean;
@@ -62,8 +46,8 @@ interface CleanReasonObject {
   cookie: CookiePropertiesCleanup;
 }
 
-interface CookiePropertiesCleanup extends browser.cookies.CookieProperties {
+type CookiePropertiesCleanup = CadCookie & {
   mainDomain: string;
   hostname: string;
   preparedCookieDomain: string;
-}
+};

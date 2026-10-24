@@ -70,7 +70,8 @@ If there are any bugs that only a certain browser has, and you have the fix for 
 #### Development
 
 - `npm install` - Installs all dependencies
-- `npm run dev` - This will run the webpack watcher and automatically pack `/src/background.ts`, popup, and setting items and its dependencies to `/extension`
+- `npm run dev:chromium` - Builds an unpacked Chromium MV3 extension in `/builds/dev-chromium`
+- `npm run dev:firefox` - Builds an unpacked Firefox MV3 extension in `/builds/dev-firefox`
 - `npm run lint` - Runs the eslinter for JS files
 - `npm test` - Runs the test suite located in `/test`
 - `npm run build` - Builds the Firefox (.xpi/.zip) and Chrome (.zip) builds
@@ -78,16 +79,18 @@ If there are any bugs that only a certain browser has, and you have the fix for 
 #### Testing
 
 1. Run `npm install` (if you haven't already)
-2. Run `npm run dev`
-3. Load the extension in the browser
+2. Run the development build for the browser you want to test:
+   - Firefox: `npm run dev:firefox`
+   - Chromium/Chrome: `npm run dev:chromium`
+3. Load the generated extension in the browser
 
 - Firefox
 
   - Easiest way would be to run the tool [web-ext](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/#Testing_out_an_extension)
-  - Another way is go into `about:debugging` and load `/extension/manifest.json`
+  - Another way is go into `about:debugging` and load `/builds/dev-firefox/manifest.json`
 
 - Chrome
-  - In the extension tab, enable Developer Mode, then `load unpacked extension` and load the `/extension` folder
+  - In the extension tab, enable Developer Mode, then `load unpacked extension` and load the `/builds/dev-chromium` folder
 
 #### Building
 

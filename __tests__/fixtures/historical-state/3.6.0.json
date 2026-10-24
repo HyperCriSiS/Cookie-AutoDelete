@@ -1,0 +1,48 @@
+{
+  "metadata": {
+    "kind": "upstream-release-initial-state",
+    "version": "3.6.0",
+    "tag": "v3.6.0",
+    "upstreamCommit": "d34e1581b1cc68732389f838ebd776556a903fc8",
+    "sourcePath": "src/redux/State.ts",
+    "sourceBlobSha": "2ad6d746296e7eb959689169c0a3e81cf1e48405",
+    "note": "Exact initialState schema derived from the tagged upstream release; not a real user profile export."
+  },
+  "state": {
+    "lists": {},
+    "cookieDeletedCounterTotal": 0,
+    "cookieDeletedCounterSession": 0,
+    "settings": {
+      "activeMode": {"name": "activeMode", "value": false},
+      "cacheCleanup": {"name": "cacheCleanup", "value": false},
+      "cleanCookiesFromOpenTabsOnStartup": {"name": "cleanCookiesFromOpenTabsOnStartup", "value": false},
+      "cleanExpiredCookies": {"name": "cleanExpiredCookies", "value": false},
+      "contextMenus": {"name": "contextMenus", "value": true},
+      "contextualIdentities": {"name": "contextualIdentities", "value": false},
+      "contextualIdentitiesAutoRemove": {"name": "contextualIdentitiesAutoRemove", "value": true},
+      "debugMode": {"name": "debugMode", "value": false},
+      "delayBeforeClean": {"name": "delayBeforeClean", "value": 15},
+      "discardedCleanup": {"name": "discardedCleanup", "value": false},
+      "domainChangeCleanup": {"name": "domainChangeCleanup", "value": false},
+      "enableGreyListCleanup": {"name": "enableGreyListCleanup", "value": true},
+      "enableNewVersionPopup": {"name": "enableNewVersionPopup", "value": false},
+      "greyCleanLocalstorage": {"id": "DEPRECATED - use default expressions", "name": "greyCleanLocalstorage", "value": false},
+      "indexedDBCleanup": {"name": "indexedDBCleanup", "value": false},
+      "keepDefaultIcon": {"name": "keepDefaultIcon", "value": false},
+      "localstorageCleanup": {"id": "DEPRECATED - use localStorageCleanup", "name": "localstorageCleanup", "value": false},
+      "localStorageCleanup": {"name": "localStorageCleanup", "value": false},
+      "manualNotifications": {"name": "manualNotifications", "value": true},
+      "notificationOnScreen": {"name": "notificationOnScreen", "value": 3},
+      "pluginDataCleanup": {"name": "pluginDataCleanup", "value": false},
+      "serviceWorkersCleanup": {"name": "serviceWorkersCleanup", "value": false},
+      "showNotificationAfterCleanup": {"name": "showNotificationAfterCleanup", "value": true},
+      "showNumOfCookiesInIcon": {"name": "showNumOfCookiesInIcon", "value": true},
+      "sizePopup": {"name": "sizePopup", "value": 16},
+      "sizeSetting": {"name": "sizeSetting", "value": 16},
+      "statLogging": {"name": "statLogging", "value": true},
+      "whiteCleanLocalstorage": {"id": "DEPRECATED - use default expressions", "name": "whiteCleanLocalstorage", "value": false}
+    },
+    "activityLog": [],
+    "cache": {}
+  }
+}

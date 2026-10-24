@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "kind": "public-upstream-user-persisted-state",
+    "browserFamily": "Firefox",
+    "browserVersion": "57.0b9",
+    "cadVersion": "2.0.1",
+    "os": "Linux Mint 18.2",
+    "upstreamIssue": 197,
+    "sourceUrl": "https://github.com/Cookie-AutoDelete/Cookie-AutoDelete/issues/197",
+    "capturedAt": "2017-10-17",
+    "sourceForm": "verbatim persisted Redux state posted in the issue body",
+    "note": "Public user-provided CAD state. It contains only a mozilla.org expression and generic Firefox container names; no secrets, cookies, tokens, browsing history, or private domains are included."
+  },
+  "state": {
+    "lists": {
+      "default": [],
+      "firefox-container-2": [
+        {
+          "expression": "*.mozilla.org",
+          "storeId": "firefox-container-2",
+          "listType": "WHITE",
+          "id": "H1ugOn7pb",
+          "cookieNames": []
+        }
+      ]
+    },
+    "cookieDeletedCounterTotal": 9,
+    "cookieDeletedCounterSession": 9,
+    "settings": {
+      "activeMode": {"name": "activeMode", "value": true, "id": "B1AQOhQTb"},
+      "delayBeforeClean": {"name": "delayBeforeClean", "value": "0.1", "id": "SJxfmu2Qpb"},
+      "statLogging": {"name": "statLogging", "value": true, "id": 3},
+      "showNumOfCookiesInIcon": {"name": "showNumOfCookiesInIcon", "value": true, "id": 4},
+      "showNotificationAfterCleanup": {"name": "showNotificationAfterCleanup", "value": true, "id": 5},
+      "cleanCookiesFromOpenTabsOnStartup": {"name": "cleanCookiesFromOpenTabsOnStartup", "value": false, "id": 6},
+      "contextualIdentities": {"id": "rJL1_3XaZ", "name": "contextualIdentities", "value": true}
+    },
+    "cache": {
+      "browserDetect": "Firefox",
+      "default": "Default",
+      "firefox-default": "Default",
+      "firefox-private": "Private",
+      "firefox-container-1": "Personal",
+      "firefox-container-2": "Work",
+      "firefox-container-3": "Banking",
+      "firefox-container-4": "Shopping"
+    }
+  }
+}

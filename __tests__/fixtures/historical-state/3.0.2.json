@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "kind": "upstream-release-initial-state",
+    "version": "3.0.2",
+    "tag": "3.0.2",
+    "upstreamCommit": "7563c02f07ecc7741fd58bad9f5a14d1a0be7b69",
+    "sourcePath": "src/redux/State.ts",
+    "sourceBlobSha": "f085e756a09fd10baf5063e7aca0bb91ab3d0fe8",
+    "note": "Exact initialState schema derived from the tagged upstream release; not a real user profile export."
+  },
+  "state": {
+    "lists": {},
+    "cookieDeletedCounterTotal": 0,
+    "cookieDeletedCounterSession": 0,
+    "settings": {
+      "activeMode": {"name": "activeMode", "value": false, "id": 1},
+      "delayBeforeClean": {"name": "delayBeforeClean", "value": 15, "id": 2},
+      "statLogging": {"name": "statLogging", "value": true, "id": 3},
+      "showNumOfCookiesInIcon": {"name": "showNumOfCookiesInIcon", "value": true, "id": 4},
+      "showNotificationAfterCleanup": {"name": "showNotificationAfterCleanup", "value": true, "id": 5},
+      "cleanCookiesFromOpenTabsOnStartup": {"name": "cleanCookiesFromOpenTabsOnStartup", "value": false, "id": 6},
+      "contextualIdentities": {"name": "contextualIdentities", "value": false, "id": 7},
+      "localstorageCleanup": {"name": "localstorageCleanup", "value": false, "id": 8},
+      "notificationOnScreen": {"name": "notificationOnScreen", "value": 3, "id": 9},
+      "domainChangeCleanup": {"name": "domainChangeCleanup", "value": false, "id": 10}
+    },
+    "activityLog": [],
+    "cache": {}
+  }
+}
